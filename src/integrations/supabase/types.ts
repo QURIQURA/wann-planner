@@ -14,7 +14,194 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      special_dates: {
+        Row: {
+          category: string
+          created_at: string
+          date: string
+          id: string
+          name: string
+          notes: string | null
+          show_age: boolean
+          type: string
+          user_id: string
+        }
+        Insert: {
+          category?: string
+          created_at?: string
+          date: string
+          id?: string
+          name: string
+          notes?: string | null
+          show_age?: boolean
+          type?: string
+          user_id: string
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          date?: string
+          id?: string
+          name?: string
+          notes?: string | null
+          show_age?: boolean
+          type?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      task_categories: {
+        Row: {
+          color: string
+          created_at: string
+          id: string
+          name: string
+          sort_order: number
+          user_id: string
+        }
+        Insert: {
+          color?: string
+          created_at?: string
+          id?: string
+          name: string
+          sort_order?: number
+          user_id: string
+        }
+        Update: {
+          color?: string
+          created_at?: string
+          id?: string
+          name?: string
+          sort_order?: number
+          user_id?: string
+        }
+        Relationships: []
+      }
+      task_subtags: {
+        Row: {
+          category_id: string
+          created_at: string
+          id: string
+          name: string
+          user_id: string
+        }
+        Insert: {
+          category_id: string
+          created_at?: string
+          id?: string
+          name: string
+          user_id: string
+        }
+        Update: {
+          category_id?: string
+          created_at?: string
+          id?: string
+          name?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "task_subtags_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "task_categories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tasks: {
+        Row: {
+          category_id: string | null
+          completed: boolean
+          completed_at: string | null
+          created_at: string
+          due_date: string | null
+          id: string
+          notes: string | null
+          recurrence: string
+          subtag_id: string | null
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          category_id?: string | null
+          completed?: boolean
+          completed_at?: string | null
+          created_at?: string
+          due_date?: string | null
+          id?: string
+          notes?: string | null
+          recurrence?: string
+          subtag_id?: string | null
+          title: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          category_id?: string | null
+          completed?: boolean
+          completed_at?: string | null
+          created_at?: string
+          due_date?: string | null
+          id?: string
+          notes?: string | null
+          recurrence?: string
+          subtag_id?: string | null
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tasks_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "task_categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tasks_subtag_id_fkey"
+            columns: ["subtag_id"]
+            isOneToOne: false
+            referencedRelation: "task_subtags"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_settings: {
+        Row: {
+          bg_color: string
+          border_color: string
+          created_at: string
+          font: string
+          text_color: string
+          updated_at: string
+          user_id: string
+          widget_visibility: Json
+        }
+        Insert: {
+          bg_color?: string
+          border_color?: string
+          created_at?: string
+          font?: string
+          text_color?: string
+          updated_at?: string
+          user_id: string
+          widget_visibility?: Json
+        }
+        Update: {
+          bg_color?: string
+          border_color?: string
+          created_at?: string
+          font?: string
+          text_color?: string
+          updated_at?: string
+          user_id?: string
+          widget_visibility?: Json
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
