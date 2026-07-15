@@ -34,6 +34,7 @@ function Dashboard() {
     const d = new Date(); d.setHours(0,0,0,0); return d;
   });
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [editingTask, setEditingTask] = useState<Task | null>(null);
 
   const settingsQ = useQuery({ queryKey: ["settings", user.id], queryFn: () => fetchSettings(user.id) });
   const categoriesQ = useQuery({ queryKey: ["categories", user.id], queryFn: () => fetchCategories(user.id) });
@@ -85,14 +86,31 @@ function Dashboard() {
   });
 
   const addTask = useMutation({
-    mutationFn: async (input: { title: string; categoryId: string | null; subtagId: string | null; dueDate: string | null }) => {
+    mutationFn: async (input: import("@/components/wann/TasksPanel").TaskFormValues) => {
       const { error } = await supabase.from("tasks").insert({
         user_id: user.id,
         title: input.title,
         category_id: input.categoryId,
         subtag_id: input.subtagId,
         due_date: input.dueDate,
+        due_time: input.dueTime,
+        recurrence: input.recurrence,
       });
+      if (error) throw error;
+    },
+    onSuccess: () => invalidate("tasks"),
+  });
+
+  const updateTask = useMutation({
+    mutationFn: async ({ id, input }: { id: string; input: import("@/components/wann/TasksPanel").TaskFormValues }) => {
+      const { error } = await supabase.from("tasks").update({
+        title: input.title,
+        category_id: input.categoryId,
+        subtag_id: input.subtagId,
+        due_date: input.dueDate,
+        due_time: input.dueTime,
+        recurrence: input.recurrence,
+      }).eq("id", id);
       if (error) throw error;
     },
     onSuccess: () => invalidate("tasks"),
@@ -208,7 +226,9 @@ function Dashboard() {
           onAnchorChange={setAnchor}
           tasks={tasksQ.data ?? []}
           categories={categoriesQ.data ?? []}
+          specialDates={datesQ.data ?? []}
           onToggleTask={(t) => toggleTask.mutate(t)}
+          onEditTask={(t) => setEditingTask(t)}
         />
 
         <div className="grid md:grid-cols-2 gap-6">
@@ -217,13 +237,15 @@ function Dashboard() {
               categories={categoriesQ.data ?? []}
               subtags={subtagsQ.data ?? []}
               tasks={tasksQ.data ?? []}
+              editingTask={editingTask}
+              onCancelEdit={() => setEditingTask(null)}
               onAddCategory={(name, color) => addCategory.mutate({ name, color })}
               onAddSubtag={(categoryId, name) => addSubtag.mutate({ categoryId, name })}
-              onAddTask={(title, categoryId, subtagId, dueDate) =>
-                addTask.mutate({ title, categoryId, subtagId, dueDate })
-              }
+              onAddTask={(v) => addTask.mutate(v)}
+              onUpdateTask={(id, v) => updateTask.mutate({ id, input: v })}
               onToggleTask={(t) => toggleTask.mutate(t)}
-              onDeleteTask={(id) => deleteTask.mutate(id)}
+              onEditTask={(t) => setEditingTask(t)}
+              onDeleteTask={(id) => { if (editingTask?.id === id) setEditingTask(null); deleteTask.mutate(id); }}
               onDeleteCategory={(id) => deleteCategory.mutate(id)}
             />
           </section>

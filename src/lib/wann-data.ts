@@ -70,9 +70,25 @@ export async function fetchSpecialDates(userId: string) {
   return data ?? [];
 }
 
+/** Parse a YYYY-MM-DD string into a local-timezone Date at midnight. */
+export function parseLocalDate(dateStr: string): Date {
+  const [y, m, d] = dateStr.split("-").map(Number);
+  return new Date(y, (m ?? 1) - 1, d ?? 1);
+}
+
+/** Format a Date as YYYY-MM-DD in local timezone. */
+export function formatLocalDate(d: Date): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+/** Local today as YYYY-MM-DD. */
+export function todayLocalStr(): string {
+  return formatLocalDate(new Date());
+}
+
 /** Days from today to next occurrence of a MM-DD date (annual). */
 export function daysUntilAnnual(dateStr: string, today = new Date()): number {
-  const d = new Date(dateStr);
+  const d = parseLocalDate(dateStr);
   const t = new Date(today.getFullYear(), today.getMonth(), today.getDate());
   let next = new Date(t.getFullYear(), d.getMonth(), d.getDate());
   if (next < t) next = new Date(t.getFullYear() + 1, d.getMonth(), d.getDate());
@@ -80,9 +96,15 @@ export function daysUntilAnnual(dateStr: string, today = new Date()): number {
 }
 
 export function ageOn(dateStr: string, today = new Date()): number {
-  const d = new Date(dateStr);
+  const d = parseLocalDate(dateStr);
   let age = today.getFullYear() - d.getFullYear();
   const m = today.getMonth() - d.getMonth();
   if (m < 0 || (m === 0 && today.getDate() < d.getDate())) age--;
   return age;
+}
+
+/** "HH:MM" from a Postgres time string (which may be "HH:MM:SS"). */
+export function shortTime(t: string | null | undefined): string {
+  if (!t) return "";
+  return t.slice(0, 5);
 }
