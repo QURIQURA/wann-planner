@@ -120,6 +120,7 @@ export type Database = {
           id: string
           notes: string | null
           recurrence: string
+          special_occasion_id: string | null
           subtag_id: string | null
           title: string
           updated_at: string
@@ -135,6 +136,7 @@ export type Database = {
           id?: string
           notes?: string | null
           recurrence?: string
+          special_occasion_id?: string | null
           subtag_id?: string | null
           title: string
           updated_at?: string
@@ -150,6 +152,7 @@ export type Database = {
           id?: string
           notes?: string | null
           recurrence?: string
+          special_occasion_id?: string | null
           subtag_id?: string | null
           title?: string
           updated_at?: string
@@ -161,6 +164,13 @@ export type Database = {
             columns: ["category_id"]
             isOneToOne: false
             referencedRelation: "task_categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tasks_special_occasion_id_fkey"
+            columns: ["special_occasion_id"]
+            isOneToOne: false
+            referencedRelation: "special_dates"
             referencedColumns: ["id"]
           },
           {

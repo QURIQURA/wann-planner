@@ -1,0 +1,2 @@
+ALTER TABLE public.tasks ADD COLUMN IF NOT EXISTS special_occasion_id uuid REFERENCES public.special_dates(id) ON DELETE SET NULL;
+CREATE INDEX IF NOT EXISTS tasks_special_occasion_id_idx ON public.tasks(special_occasion_id);
