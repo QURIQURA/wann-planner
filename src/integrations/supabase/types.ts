@@ -116,6 +116,7 @@ export type Database = {
           completed_at: string | null
           created_at: string
           due_date: string | null
+          due_time: string | null
           id: string
           notes: string | null
           recurrence: string
@@ -130,6 +131,7 @@ export type Database = {
           completed_at?: string | null
           created_at?: string
           due_date?: string | null
+          due_time?: string | null
           id?: string
           notes?: string | null
           recurrence?: string
@@ -144,6 +146,7 @@ export type Database = {
           completed_at?: string | null
           created_at?: string
           due_date?: string | null
+          due_time?: string | null
           id?: string
           notes?: string | null
           recurrence?: string
