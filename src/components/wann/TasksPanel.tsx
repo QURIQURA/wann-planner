@@ -55,6 +55,7 @@ export function TasksPanel({
     dueDate: todayLocalStr(),
     dueTime: null,
     recurrence: "none",
+    specialOccasionId: null,
   });
 
   const [form, setForm] = useState<TaskFormValues>(emptyForm);
@@ -69,6 +70,7 @@ export function TasksPanel({
         dueDate: editingTask.due_date ?? todayLocalStr(),
         dueTime: shortTime(editingTask.due_time) || null,
         recurrence: editingTask.recurrence ?? "none",
+        specialOccasionId: (editingTask as Task & { special_occasion_id: string | null }).special_occasion_id ?? null,
       });
     }
   }, [editingTask]);
