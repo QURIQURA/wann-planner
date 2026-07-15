@@ -262,6 +262,7 @@ function Dashboard() {
               categories={categoriesQ.data ?? []}
               subtags={subtagsQ.data ?? []}
               tasks={tasksQ.data ?? []}
+              specialDates={datesQ.data ?? []}
               editingTask={editingTask}
               onCancelEdit={() => setEditingTask(null)}
               onAddCategory={(name, color) => addCategory.mutate({ name, color })}
@@ -276,10 +277,15 @@ function Dashboard() {
           </section>
 
           <section className="card-flat p-4">
-            <BirthdaysPanel
+            <SpecialOccasionsPanel
               entries={datesQ.data ?? []}
+              tasks={tasksQ.data ?? []}
               onAdd={(e) => addSpecialDate.mutate(e)}
+              onUpdate={(id, patch) => updateSpecialDate.mutate({ id, patch })}
               onDelete={(id) => deleteSpecialDate.mutate(id)}
+              onAddChildTask={(occasionId, title) => addChildTask.mutate({ occasionId, title })}
+              onToggleTask={(t) => toggleTask.mutate(t)}
+              onDeleteTask={(id) => deleteTask.mutate(id)}
             />
           </section>
         </div>
