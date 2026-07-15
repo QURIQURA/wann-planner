@@ -85,14 +85,31 @@ function Dashboard() {
   });
 
   const addTask = useMutation({
-    mutationFn: async (input: { title: string; categoryId: string | null; subtagId: string | null; dueDate: string | null }) => {
+    mutationFn: async (input: import("@/components/wann/TasksPanel").TaskFormValues) => {
       const { error } = await supabase.from("tasks").insert({
         user_id: user.id,
         title: input.title,
         category_id: input.categoryId,
         subtag_id: input.subtagId,
         due_date: input.dueDate,
+        due_time: input.dueTime,
+        recurrence: input.recurrence,
       });
+      if (error) throw error;
+    },
+    onSuccess: () => invalidate("tasks"),
+  });
+
+  const updateTask = useMutation({
+    mutationFn: async ({ id, input }: { id: string; input: import("@/components/wann/TasksPanel").TaskFormValues }) => {
+      const { error } = await supabase.from("tasks").update({
+        title: input.title,
+        category_id: input.categoryId,
+        subtag_id: input.subtagId,
+        due_date: input.dueDate,
+        due_time: input.dueTime,
+        recurrence: input.recurrence,
+      }).eq("id", id);
       if (error) throw error;
     },
     onSuccess: () => invalidate("tasks"),
