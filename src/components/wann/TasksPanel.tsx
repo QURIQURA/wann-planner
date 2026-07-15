@@ -272,6 +272,17 @@ export function TasksPanel({
             <option value="weekly">weekly</option>
             <option value="monthly">monthly</option>
           </select>
+          <select
+            value={form.specialOccasionId ?? ""}
+            onChange={(e) => setForm({ ...form, specialOccasionId: e.target.value || null })}
+            className="bg-transparent outline-none text-sm border-b border-border py-1"
+            title="Link to Special Occasion"
+          >
+            <option value="">no occasion</option>
+            {specialDates.map((s) => (
+              <option key={s.id} value={s.id}>{s.name}</option>
+            ))}
+          </select>
           <button
             onClick={submit}
             className="ml-auto border border-border px-3 py-1 label-caps hover:bg-muted flex items-center gap-1"
