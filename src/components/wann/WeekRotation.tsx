@@ -113,15 +113,23 @@ export function WeekRotation({
               <div className="mb-2">
                 <p className="label-caps text-[10px] text-muted-foreground mb-1">All-day</p>
                 <div className="space-y-1">
-                  {specials.map((s) => (
-                    <div key={s.id} className="flex items-center gap-2 text-sm">
-                      <span className="inline-block h-3 w-3 border border-border flex-shrink-0" />
-                      <span className="flex-1 truncate">
-                        {s.name}
-                        <span className="text-muted-foreground"> · {s.type}</span>
-                      </span>
-                    </div>
-                  ))}
+                  {specials.map((s) => {
+                    const linked = tasks.filter((t) => t.special_occasion_id === s.id);
+                    const done = linked.filter((t) => t.completed).length;
+                    const pct = linked.length > 0 ? Math.round((done / linked.length) * 100) : null;
+                    return (
+                      <div key={s.id} className="flex items-center gap-2 text-sm">
+                        <span className="inline-block h-3 w-3 border border-border flex-shrink-0" />
+                        <span className="flex-1 truncate">
+                          {s.name}
+                          <span className="text-muted-foreground"> · {s.type}</span>
+                          {pct !== null && (
+                            <span className="text-muted-foreground"> · {pct}%</span>
+                          )}
+                        </span>
+                      </div>
+                    );
+                  })}
                   {allDay.map((t) => {
                     const cat = t.category_id ? catMap[t.category_id] : undefined;
                     return (

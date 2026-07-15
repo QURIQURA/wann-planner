@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import type { Category, Subtag, Task } from "@/lib/wann-data";
+import type { Category, Subtag, Task, SpecialDate } from "@/lib/wann-data";
 import { todayLocalStr, shortTime } from "@/lib/wann-data";
 import { Plus, Trash2, X } from "lucide-react";
 
@@ -10,12 +10,14 @@ export type TaskFormValues = {
   dueDate: string | null;
   dueTime: string | null;
   recurrence: string;
+  specialOccasionId: string | null;
 };
 
 export function TasksPanel({
   categories,
   subtags,
   tasks,
+  specialDates,
   editingTask,
   onCancelEdit,
   onAddCategory,
@@ -30,6 +32,7 @@ export function TasksPanel({
   categories: Category[];
   subtags: Subtag[];
   tasks: Task[];
+  specialDates: SpecialDate[];
   editingTask: Task | null;
   onCancelEdit: () => void;
   onAddCategory: (name: string, color: string) => void;
@@ -54,6 +57,7 @@ export function TasksPanel({
     dueDate: todayLocalStr(),
     dueTime: null,
     recurrence: "none",
+    specialOccasionId: null,
   });
 
   const [form, setForm] = useState<TaskFormValues>(emptyForm);
@@ -68,6 +72,7 @@ export function TasksPanel({
         dueDate: editingTask.due_date ?? todayLocalStr(),
         dueTime: shortTime(editingTask.due_time) || null,
         recurrence: editingTask.recurrence ?? "none",
+        specialOccasionId: editingTask.special_occasion_id ?? null,
       });
     }
   }, [editingTask]);
@@ -266,6 +271,17 @@ export function TasksPanel({
             <option value="daily">daily</option>
             <option value="weekly">weekly</option>
             <option value="monthly">monthly</option>
+          </select>
+          <select
+            value={form.specialOccasionId ?? ""}
+            onChange={(e) => setForm({ ...form, specialOccasionId: e.target.value || null })}
+            className="bg-transparent outline-none text-sm border-b border-border py-1"
+            title="Link to Special Occasion"
+          >
+            <option value="">no occasion</option>
+            {specialDates.map((s) => (
+              <option key={s.id} value={s.id}>{s.name}</option>
+            ))}
           </select>
           <button
             onClick={submit}

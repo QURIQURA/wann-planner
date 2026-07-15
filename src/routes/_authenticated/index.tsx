@@ -20,7 +20,7 @@ import {
 import { useApplySettings } from "@/lib/use-apply-settings";
 import { WeekRotation } from "@/components/wann/WeekRotation";
 import { TasksPanel } from "@/components/wann/TasksPanel";
-import { BirthdaysPanel } from "@/components/wann/BirthdaysPanel";
+import { SpecialOccasionsPanel } from "@/components/wann/SpecialOccasionsPanel";
 import { SettingsPanel } from "@/components/wann/SettingsPanel";
 
 export const Route = createFileRoute("/_authenticated/")({
@@ -95,6 +95,7 @@ function Dashboard() {
         due_date: input.dueDate,
         due_time: input.dueTime,
         recurrence: input.recurrence,
+        special_occasion_id: input.specialOccasionId,
       });
       if (error) throw error;
     },
@@ -110,7 +111,23 @@ function Dashboard() {
         due_date: input.dueDate,
         due_time: input.dueTime,
         recurrence: input.recurrence,
+        special_occasion_id: input.specialOccasionId,
       }).eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => invalidate("tasks"),
+  });
+
+  const addChildTask = useMutation({
+    mutationFn: async ({ occasionId, title }: { occasionId: string; title: string }) => {
+      const occ = (datesQ.data ?? []).find((d) => d.id === occasionId);
+      const { error } = await supabase.from("tasks").insert({
+        user_id: user.id,
+        title,
+        due_date: occ?.date ?? null,
+        special_occasion_id: occasionId,
+        recurrence: "none",
+      });
       if (error) throw error;
     },
     onSuccess: () => invalidate("tasks"),
@@ -144,12 +161,20 @@ function Dashboard() {
     onSuccess: () => invalidate("dates"),
   });
 
+  const updateSpecialDate = useMutation({
+    mutationFn: async ({ id, patch }: { id: string; patch: Partial<Omit<SpecialDate, "id" | "user_id" | "created_at">> }) => {
+      const { error } = await supabase.from("special_dates").update(patch).eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => invalidate("dates"),
+  });
+
   const deleteSpecialDate = useMutation({
     mutationFn: async (id: string) => {
       const { error } = await supabase.from("special_dates").delete().eq("id", id);
       if (error) throw error;
     },
-    onSuccess: () => invalidate("dates"),
+    onSuccess: () => { invalidate("dates"); invalidate("tasks"); },
   });
 
   const upcoming = useMemo(() => {
@@ -237,6 +262,7 @@ function Dashboard() {
               categories={categoriesQ.data ?? []}
               subtags={subtagsQ.data ?? []}
               tasks={tasksQ.data ?? []}
+              specialDates={datesQ.data ?? []}
               editingTask={editingTask}
               onCancelEdit={() => setEditingTask(null)}
               onAddCategory={(name, color) => addCategory.mutate({ name, color })}
@@ -251,10 +277,15 @@ function Dashboard() {
           </section>
 
           <section className="card-flat p-4">
-            <BirthdaysPanel
+            <SpecialOccasionsPanel
               entries={datesQ.data ?? []}
+              tasks={tasksQ.data ?? []}
               onAdd={(e) => addSpecialDate.mutate(e)}
+              onUpdate={(id, patch) => updateSpecialDate.mutate({ id, patch })}
               onDelete={(id) => deleteSpecialDate.mutate(id)}
+              onAddChildTask={(occasionId, title) => addChildTask.mutate({ occasionId, title })}
+              onToggleTask={(t) => toggleTask.mutate(t)}
+              onDeleteTask={(id) => deleteTask.mutate(id)}
             />
           </section>
         </div>
