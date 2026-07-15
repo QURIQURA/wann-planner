@@ -34,6 +34,7 @@ function Dashboard() {
     const d = new Date(); d.setHours(0,0,0,0); return d;
   });
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [editingTask, setEditingTask] = useState<Task | null>(null);
 
   const settingsQ = useQuery({ queryKey: ["settings", user.id], queryFn: () => fetchSettings(user.id) });
   const categoriesQ = useQuery({ queryKey: ["categories", user.id], queryFn: () => fetchCategories(user.id) });
