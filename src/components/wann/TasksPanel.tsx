@@ -72,7 +72,7 @@ export function TasksPanel({
         dueDate: editingTask.due_date ?? todayLocalStr(),
         dueTime: shortTime(editingTask.due_time) || null,
         recurrence: editingTask.recurrence ?? "none",
-        specialOccasionId: (editingTask as Task & { special_occasion_id: string | null }).special_occasion_id ?? null,
+        specialOccasionId: editingTask.special_occasion_id ?? null,
       });
     }
   }, [editingTask]);
