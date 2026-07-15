@@ -226,7 +226,9 @@ function Dashboard() {
           onAnchorChange={setAnchor}
           tasks={tasksQ.data ?? []}
           categories={categoriesQ.data ?? []}
+          specialDates={datesQ.data ?? []}
           onToggleTask={(t) => toggleTask.mutate(t)}
+          onEditTask={(t) => setEditingTask(t)}
         />
 
         <div className="grid md:grid-cols-2 gap-6">
@@ -235,13 +237,15 @@ function Dashboard() {
               categories={categoriesQ.data ?? []}
               subtags={subtagsQ.data ?? []}
               tasks={tasksQ.data ?? []}
+              editingTask={editingTask}
+              onCancelEdit={() => setEditingTask(null)}
               onAddCategory={(name, color) => addCategory.mutate({ name, color })}
               onAddSubtag={(categoryId, name) => addSubtag.mutate({ categoryId, name })}
-              onAddTask={(title, categoryId, subtagId, dueDate) =>
-                addTask.mutate({ title, categoryId, subtagId, dueDate })
-              }
+              onAddTask={(v) => addTask.mutate(v)}
+              onUpdateTask={(id, v) => updateTask.mutate({ id, input: v })}
               onToggleTask={(t) => toggleTask.mutate(t)}
-              onDeleteTask={(id) => deleteTask.mutate(id)}
+              onEditTask={(t) => setEditingTask(t)}
+              onDeleteTask={(id) => { if (editingTask?.id === id) setEditingTask(null); deleteTask.mutate(id); }}
               onDeleteCategory={(id) => deleteCategory.mutate(id)}
             />
           </section>
