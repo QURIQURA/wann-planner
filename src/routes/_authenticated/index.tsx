@@ -95,6 +95,7 @@ function Dashboard() {
         due_date: input.dueDate,
         due_time: input.dueTime,
         recurrence: input.recurrence,
+        special_occasion_id: input.specialOccasionId,
       });
       if (error) throw error;
     },
@@ -110,7 +111,23 @@ function Dashboard() {
         due_date: input.dueDate,
         due_time: input.dueTime,
         recurrence: input.recurrence,
+        special_occasion_id: input.specialOccasionId,
       }).eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => invalidate("tasks"),
+  });
+
+  const addChildTask = useMutation({
+    mutationFn: async ({ occasionId, title }: { occasionId: string; title: string }) => {
+      const occ = (datesQ.data ?? []).find((d) => d.id === occasionId);
+      const { error } = await supabase.from("tasks").insert({
+        user_id: user.id,
+        title,
+        due_date: occ?.date ?? null,
+        special_occasion_id: occasionId,
+        recurrence: "none",
+      });
       if (error) throw error;
     },
     onSuccess: () => invalidate("tasks"),
