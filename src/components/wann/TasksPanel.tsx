@@ -17,6 +17,7 @@ export function TasksPanel({
   categories,
   subtags,
   tasks,
+  specialDates,
   editingTask,
   onCancelEdit,
   onAddCategory,
@@ -31,6 +32,7 @@ export function TasksPanel({
   categories: Category[];
   subtags: Subtag[];
   tasks: Task[];
+  specialDates: SpecialDate[];
   editingTask: Task | null;
   onCancelEdit: () => void;
   onAddCategory: (name: string, color: string) => void;
