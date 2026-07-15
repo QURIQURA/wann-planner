@@ -161,12 +161,20 @@ function Dashboard() {
     onSuccess: () => invalidate("dates"),
   });
 
+  const updateSpecialDate = useMutation({
+    mutationFn: async ({ id, patch }: { id: string; patch: Partial<Omit<SpecialDate, "id" | "user_id" | "created_at">> }) => {
+      const { error } = await supabase.from("special_dates").update(patch).eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => invalidate("dates"),
+  });
+
   const deleteSpecialDate = useMutation({
     mutationFn: async (id: string) => {
       const { error } = await supabase.from("special_dates").delete().eq("id", id);
       if (error) throw error;
     },
-    onSuccess: () => invalidate("dates"),
+    onSuccess: () => { invalidate("dates"); invalidate("tasks"); },
   });
 
   const upcoming = useMemo(() => {
