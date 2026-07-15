@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import type { Category, Subtag, Task } from "@/lib/wann-data";
+import type { Category, Subtag, Task, SpecialDate } from "@/lib/wann-data";
 import { todayLocalStr, shortTime } from "@/lib/wann-data";
 import { Plus, Trash2, X } from "lucide-react";
 
@@ -10,6 +10,7 @@ export type TaskFormValues = {
   dueDate: string | null;
   dueTime: string | null;
   recurrence: string;
+  specialOccasionId: string | null;
 };
 
 export function TasksPanel({
