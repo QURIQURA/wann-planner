@@ -20,7 +20,7 @@ import {
 import { useApplySettings } from "@/lib/use-apply-settings";
 import { WeekRotation } from "@/components/wann/WeekRotation";
 import { TasksPanel } from "@/components/wann/TasksPanel";
-import { BirthdaysPanel } from "@/components/wann/BirthdaysPanel";
+import { SpecialOccasionsPanel } from "@/components/wann/SpecialOccasionsPanel";
 import { SettingsPanel } from "@/components/wann/SettingsPanel";
 
 export const Route = createFileRoute("/_authenticated/")({
