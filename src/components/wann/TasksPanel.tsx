@@ -276,8 +276,10 @@ export function TasksPanel({
             <option value="none">once</option>
             <option value="daily">daily</option>
             <option value="weekly">weekly</option>
+            <option value="biweekly">biweekly</option>
             <option value="monthly">monthly</option>
           </select>
+
           <select
             value={form.specialOccasionId ?? ""}
             onChange={(e) => setForm({ ...form, specialOccasionId: e.target.value || null })}
