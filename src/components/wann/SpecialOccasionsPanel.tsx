@@ -12,14 +12,15 @@ type OccasionForm = {
   show_age: boolean;
 };
 
-const empty: OccasionForm = {
+const emptyForm = (): OccasionForm => ({
   name: "",
-  date: "",
+  date: todayLocalStr(),
   type: "birthday",
   category: "Family",
   notes: "",
   show_age: true,
-};
+});
+
 
 export function SpecialOccasionsPanel({
   entries,
