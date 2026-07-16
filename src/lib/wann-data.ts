@@ -2,6 +2,7 @@ import { supabase } from "@/integrations/supabase/client";
 import type { Tables } from "@/integrations/supabase/types";
 
 export type UserSettings = {
+
   user_id: string;
   bg_color: string;
   border_color: string;
