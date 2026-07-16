@@ -12,11 +12,16 @@ import {
   fetchSubtags,
   fetchTasks,
   fetchSpecialDates,
+  fetchCompletions,
   daysUntilAnnual,
+  isOccurrenceCompleted,
+  todayLocalStr,
   type UserSettings,
   type Task,
   type SpecialDate,
+  type TaskCompletion,
 } from "@/lib/wann-data";
+
 import { useApplySettings } from "@/lib/use-apply-settings";
 import { WeekRotation } from "@/components/wann/WeekRotation";
 import { TasksPanel } from "@/components/wann/TasksPanel";
