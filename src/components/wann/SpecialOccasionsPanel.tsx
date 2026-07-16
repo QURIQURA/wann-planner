@@ -246,7 +246,7 @@ function OccasionEditor({
       <div className="flex gap-2 flex-wrap">
         <input
           type="date"
-          value={value.date || todayLocalStr()}
+          value={value.date}
           onChange={(e) => onChange({ ...value, date: e.target.value })}
           className="bg-transparent outline-none border-b border-border py-1 text-sm"
         />
