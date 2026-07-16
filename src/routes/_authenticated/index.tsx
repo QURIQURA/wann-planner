@@ -291,9 +291,11 @@ function Dashboard() {
           tasks={tasksQ.data ?? []}
           categories={categoriesQ.data ?? []}
           specialDates={datesQ.data ?? []}
-          onToggleTask={(t) => toggleTask.mutate(t)}
+          completions={completionsQ.data ?? []}
+          onToggleOccurrence={(task, date) => toggleOccurrence.mutate({ task, date })}
           onEditTask={(t) => setEditingTask(t)}
         />
+
 
         <div className="grid md:grid-cols-2 gap-6">
           <section className="card-flat p-4">
