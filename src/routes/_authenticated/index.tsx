@@ -304,17 +304,19 @@ function Dashboard() {
               subtags={subtagsQ.data ?? []}
               tasks={tasksQ.data ?? []}
               specialDates={datesQ.data ?? []}
+              completions={completionsQ.data ?? []}
               editingTask={editingTask}
               onCancelEdit={() => setEditingTask(null)}
               onAddCategory={(name, color) => addCategory.mutate({ name, color })}
               onAddSubtag={(categoryId, name) => addSubtag.mutate({ categoryId, name })}
               onAddTask={(v) => addTask.mutate(v)}
               onUpdateTask={(id, v) => updateTask.mutate({ id, input: v })}
-              onToggleTask={(t) => toggleTask.mutate(t)}
+              onToggleTask={(t) => toggleOccurrence.mutate({ task: t, date: todayLocalStr() })}
               onEditTask={(t) => setEditingTask(t)}
               onDeleteTask={(id) => { if (editingTask?.id === id) setEditingTask(null); deleteTask.mutate(id); }}
               onDeleteCategory={(id) => deleteCategory.mutate(id)}
             />
+
           </section>
 
           <section className="card-flat p-4">
