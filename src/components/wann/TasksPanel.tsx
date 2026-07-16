@@ -19,6 +19,7 @@ export function TasksPanel({
   subtags,
   tasks,
   specialDates,
+  completions,
   editingTask,
   onCancelEdit,
   onAddCategory,
@@ -34,6 +35,7 @@ export function TasksPanel({
   subtags: Subtag[];
   tasks: Task[];
   specialDates: SpecialDate[];
+  completions: TaskCompletion[];
   editingTask: Task | null;
   onCancelEdit: () => void;
   onAddCategory: (name: string, color: string) => void;
@@ -45,6 +47,9 @@ export function TasksPanel({
   onDeleteTask: (id: string) => void;
   onDeleteCategory: (id: string) => void;
 }) {
+  const today = todayLocalStr();
+  const [showDone, setShowDone] = useState(false);
+
   const [filter, setFilter] = useState<{ categoryId: string | null; subtagId: string | null }>({
     categoryId: null,
     subtagId: null,
