@@ -46,8 +46,10 @@ function Dashboard() {
   const subtagsQ = useQuery({ queryKey: ["subtags", user.id], queryFn: () => fetchSubtags(user.id) });
   const tasksQ = useQuery({ queryKey: ["tasks", user.id], queryFn: () => fetchTasks(user.id) });
   const datesQ = useQuery({ queryKey: ["dates", user.id], queryFn: () => fetchSpecialDates(user.id) });
+  const completionsQ = useQuery({ queryKey: ["completions", user.id], queryFn: () => fetchCompletions(user.id) });
 
   useApplySettings(settingsQ.data);
+
 
   const settingsMutation = useMutation({
     mutationFn: (patch: Partial<UserSettings>) => updateSettings(user.id, patch),
