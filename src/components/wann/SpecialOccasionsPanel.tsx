@@ -42,9 +42,9 @@ export function SpecialOccasionsPanel({
   onDeleteTask: (id: string) => void;
 }) {
   const [creating, setCreating] = useState(false);
-  const [form, setForm] = useState<OccasionForm>(empty);
+  const [form, setForm] = useState<OccasionForm>(emptyForm());
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [editForm, setEditForm] = useState<OccasionForm>(empty);
+  const [editForm, setEditForm] = useState<OccasionForm>(emptyForm());
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [childInput, setChildInput] = useState<Record<string, string>>({});
 
@@ -82,11 +82,11 @@ export function SpecialOccasionsPanel({
           onSubmit={() => {
             if (form.name && form.date) {
               onAdd(form);
-              setForm(empty);
+              setForm(emptyForm());
               setCreating(false);
             }
           }}
-          onCancel={() => { setCreating(false); setForm(empty); }}
+          onCancel={() => { setCreating(false); setForm(emptyForm()); }}
           submitLabel="Add"
         />
       )}
