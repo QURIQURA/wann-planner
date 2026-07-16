@@ -152,6 +152,38 @@ function Dashboard() {
     onSuccess: () => invalidate("tasks"),
   });
 
+  const toggleOccurrence = useMutation({
+    mutationFn: async ({ task, date }: { task: Task; date: string }) => {
+      const completions = completionsQ.data ?? [];
+      const existing = completions.find(
+        (c) => c.task_id === task.id && c.occurrence_date === date,
+      );
+      if ((task.recurrence ?? "none") === "none") {
+        const completed = !task.completed;
+        const { error } = await supabase
+          .from("tasks")
+          .update({ completed, completed_at: completed ? new Date().toISOString() : null })
+          .eq("id", task.id);
+        if (error) throw error;
+        return;
+      }
+      if (existing) {
+        const { error } = await supabase
+          .from("task_completions" as never)
+          .delete()
+          .eq("id", existing.id);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase
+          .from("task_completions" as never)
+          .insert({ task_id: task.id, user_id: user.id, occurrence_date: date } as never);
+        if (error) throw error;
+      }
+    },
+    onSuccess: () => { invalidate("completions"); invalidate("tasks"); },
+  });
+
+
   const deleteTask = useMutation({
     mutationFn: async (id: string) => {
       const { error } = await supabase.from("tasks").delete().eq("id", id);
