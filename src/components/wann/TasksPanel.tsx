@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
-import type { Category, Subtag, Task, SpecialDate } from "@/lib/wann-data";
-import { todayLocalStr, shortTime } from "@/lib/wann-data";
-import { Plus, Trash2, X } from "lucide-react";
+import type { Category, Subtag, Task, SpecialDate, TaskCompletion } from "@/lib/wann-data";
+import { todayLocalStr, shortTime, isOccurrenceCompleted } from "@/lib/wann-data";
+import { Plus, Trash2, X, ChevronDown, ChevronUp } from "lucide-react";
+
 
 export type TaskFormValues = {
   title: string;
