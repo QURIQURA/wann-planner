@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
-import type { Category, Subtag, Task, SpecialDate } from "@/lib/wann-data";
-import { todayLocalStr, shortTime } from "@/lib/wann-data";
-import { Plus, Trash2, X } from "lucide-react";
+import type { Category, Subtag, Task, SpecialDate, TaskCompletion } from "@/lib/wann-data";
+import { todayLocalStr, shortTime, isOccurrenceCompleted } from "@/lib/wann-data";
+import { Plus, Trash2, X, ChevronDown, ChevronUp } from "lucide-react";
+
 
 export type TaskFormValues = {
   title: string;
@@ -18,6 +19,7 @@ export function TasksPanel({
   subtags,
   tasks,
   specialDates,
+  completions,
   editingTask,
   onCancelEdit,
   onAddCategory,
@@ -33,6 +35,7 @@ export function TasksPanel({
   subtags: Subtag[];
   tasks: Task[];
   specialDates: SpecialDate[];
+  completions: TaskCompletion[];
   editingTask: Task | null;
   onCancelEdit: () => void;
   onAddCategory: (name: string, color: string) => void;
@@ -44,6 +47,9 @@ export function TasksPanel({
   onDeleteTask: (id: string) => void;
   onDeleteCategory: (id: string) => void;
 }) {
+  const today = todayLocalStr();
+  const [showDone, setShowDone] = useState(false);
+
   const [filter, setFilter] = useState<{ categoryId: string | null; subtagId: string | null }>({
     categoryId: null,
     subtagId: null,
@@ -270,8 +276,10 @@ export function TasksPanel({
             <option value="none">once</option>
             <option value="daily">daily</option>
             <option value="weekly">weekly</option>
+            <option value="biweekly">biweekly</option>
             <option value="monthly">monthly</option>
           </select>
+
           <select
             value={form.specialOccasionId ?? ""}
             onChange={(e) => setForm({ ...form, specialOccasionId: e.target.value || null })}
@@ -293,46 +301,114 @@ export function TasksPanel({
       </div>
 
       {/* task list */}
-      <div className="space-y-1">
-        {filtered.length === 0 && <p className="text-xs text-muted-foreground italic">No tasks</p>}
-        {filtered.map((t) => {
-          const cat = t.category_id ? categories.find((c) => c.id === t.category_id) : null;
-          return (
-            <div
-              key={t.id}
-              className={`flex items-center gap-2 py-1 border-b border-border/50 group ${editingTask?.id === t.id ? "bg-muted" : ""}`}
+      <TaskList
+        items={filtered.filter((t) => !isOccurrenceCompleted(t, today, completions))}
+        categories={categories}
+        editingId={editingTask?.id ?? null}
+        onToggle={onToggleTask}
+        onEdit={onEditTask}
+        onDelete={onDeleteTask}
+      />
+
+      {(() => {
+        const done = filtered.filter((t) => isOccurrenceCompleted(t, today, completions));
+        if (done.length === 0) return null;
+        return (
+          <div className="mt-3 border-t border-border pt-2">
+            <button
+              onClick={() => setShowDone((v) => !v)}
+              className="flex items-center gap-1 text-[10px] label-caps text-muted-foreground hover:text-foreground"
             >
-              <button
-                onClick={() => onToggleTask(t)}
-                aria-label="Toggle"
-                className={`h-3 w-3 border border-border flex-shrink-0 ${t.completed ? "bg-foreground" : ""}`}
-              />
-              <button
-                onClick={() => onEditTask(t)}
-                className={`text-sm flex-1 text-left hover:underline ${t.completed ? "line-through text-muted-foreground" : ""}`}
-              >
-                {t.title}
-              </button>
-              {cat && (
-                <span className="text-[10px] label-caps" style={{ color: cat.color }}>
-                  {cat.name}
-                </span>
-              )}
-              {t.due_date && <span className="text-[10px] text-muted-foreground">{t.due_date.slice(5)}</span>}
-              {t.due_time && (
-                <span className="text-[10px] text-muted-foreground tabular-nums">{shortTime(t.due_time)}</span>
-              )}
-              <button
-                onClick={() => onDeleteTask(t.id)}
-                aria-label="Delete"
-                className="opacity-0 group-hover:opacity-100 hover:text-destructive"
-              >
-                <Trash2 size={12} />
-              </button>
-            </div>
-          );
-        })}
-      </div>
+              {showDone ? <ChevronUp size={10} /> : <ChevronDown size={10} />}
+              Completed ({done.length})
+            </button>
+            {showDone && (
+              <div className="mt-1">
+                <TaskList
+                  items={done}
+                  categories={categories}
+                  editingId={editingTask?.id ?? null}
+                  onToggle={onToggleTask}
+                  onEdit={onEditTask}
+                  onDelete={onDeleteTask}
+                  completed
+                />
+              </div>
+            )}
+          </div>
+        );
+      })()}
     </div>
   );
 }
+
+function TaskList({
+  items,
+  categories,
+  editingId,
+  onToggle,
+  onEdit,
+  onDelete,
+  completed = false,
+}: {
+  items: Task[];
+  categories: Category[];
+  editingId: string | null;
+  onToggle: (t: Task) => void;
+  onEdit: (t: Task) => void;
+  onDelete: (id: string) => void;
+  completed?: boolean;
+}) {
+  if (items.length === 0 && !completed) {
+    return <p className="text-xs text-muted-foreground italic">No tasks</p>;
+  }
+  return (
+    <div className="space-y-1">
+      {items.map((t) => {
+        const cat = t.category_id ? categories.find((c) => c.id === t.category_id) : null;
+        return (
+          <div
+            key={t.id}
+            className={`flex items-center gap-2 py-1 border-b border-border/50 group ${editingId === t.id ? "bg-muted" : ""}`}
+          >
+            <button
+              onClick={() => onToggle(t)}
+              aria-label="Toggle"
+              className={`h-3 w-3 border border-border flex-shrink-0 ${completed ? "bg-foreground" : ""}`}
+            />
+            <button
+              onClick={() => onEdit(t)}
+              className={`text-sm flex-1 text-left hover:underline ${completed ? "line-through text-muted-foreground" : ""}`}
+            >
+              {t.title}
+              {(t.recurrence ?? "none") !== "none" && (
+                <span className="ml-1 text-[10px] text-muted-foreground">↻</span>
+              )}
+            </button>
+            {cat && (
+              <span className="text-[10px] label-caps" style={{ color: cat.color }}>
+                {cat.name}
+              </span>
+            )}
+            {t.due_date && (
+              <span className="text-[10px] text-muted-foreground">{t.due_date.slice(5)}</span>
+            )}
+            {t.due_time && (
+              <span className="text-[10px] text-muted-foreground tabular-nums">
+                {shortTime(t.due_time)}
+              </span>
+            )}
+            <button
+              onClick={() => onDelete(t.id)}
+              aria-label="Delete"
+              className="opacity-0 group-hover:opacity-100 hover:text-destructive"
+            >
+              <Trash2 size={12} />
+            </button>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+

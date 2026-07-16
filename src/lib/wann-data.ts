@@ -2,6 +2,7 @@ import { supabase } from "@/integrations/supabase/client";
 import type { Tables } from "@/integrations/supabase/types";
 
 export type UserSettings = {
+
   user_id: string;
   bg_color: string;
   border_color: string;
@@ -69,6 +70,61 @@ export async function fetchSpecialDates(userId: string) {
   if (error) throw error;
   return data ?? [];
 }
+
+export type TaskCompletion = {
+  id: string;
+  task_id: string;
+  user_id: string;
+  occurrence_date: string;
+  completed_at: string;
+};
+
+export async function fetchCompletions(userId: string): Promise<TaskCompletion[]> {
+  const { data, error } = await supabase
+    .from("task_completions" as never)
+    .select("*")
+    .eq("user_id", userId);
+  if (error) throw error;
+  return (data ?? []) as unknown as TaskCompletion[];
+}
+
+/**
+ * Returns true if a task (recurring or one-off) occurs on the given local date.
+ * Recurrence rules are evaluated against `task.due_date` as the anchor/start date.
+ */
+export function taskOccursOn(task: Task, dateStr: string): boolean {
+  if (!task.due_date) return false;
+  const anchor = parseLocalDate(task.due_date);
+  const target = parseLocalDate(dateStr);
+  if (target < anchor) return false;
+  const rec = task.recurrence ?? "none";
+  if (rec === "none") return task.due_date === dateStr;
+  const diffMs = target.getTime() - anchor.getTime();
+  const diffDays = Math.round(diffMs / 86400000);
+  if (rec === "daily") return true;
+  if (rec === "weekly") return diffDays % 7 === 0;
+  if (rec === "biweekly") return diffDays % 14 === 0;
+  if (rec === "monthly") return anchor.getDate() === target.getDate();
+  return false;
+}
+
+/** Expand tasks to those occurring on a given local YYYY-MM-DD date. */
+export function tasksOnDate(tasks: Task[], dateStr: string): Task[] {
+  return tasks.filter((t) => taskOccursOn(t, dateStr));
+}
+
+/** Is this specific occurrence completed? */
+export function isOccurrenceCompleted(
+  task: Task,
+  dateStr: string,
+  completions: TaskCompletion[],
+): boolean {
+  if ((task.recurrence ?? "none") === "none") {
+    return !!task.completed;
+  }
+  return completions.some((c) => c.task_id === task.id && c.occurrence_date === dateStr);
+}
+
 
 /** Parse a YYYY-MM-DD string into a local-timezone Date at midnight. */
 export function parseLocalDate(dateStr: string): Date {

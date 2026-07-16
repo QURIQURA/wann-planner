@@ -12,14 +12,15 @@ type OccasionForm = {
   show_age: boolean;
 };
 
-const empty: OccasionForm = {
+const emptyForm = (): OccasionForm => ({
   name: "",
-  date: "",
+  date: todayLocalStr(),
   type: "birthday",
   category: "Family",
   notes: "",
   show_age: true,
-};
+});
+
 
 export function SpecialOccasionsPanel({
   entries,
@@ -41,9 +42,9 @@ export function SpecialOccasionsPanel({
   onDeleteTask: (id: string) => void;
 }) {
   const [creating, setCreating] = useState(false);
-  const [form, setForm] = useState<OccasionForm>(empty);
+  const [form, setForm] = useState<OccasionForm>(emptyForm());
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [editForm, setEditForm] = useState<OccasionForm>(empty);
+  const [editForm, setEditForm] = useState<OccasionForm>(emptyForm());
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [childInput, setChildInput] = useState<Record<string, string>>({});
 
@@ -81,11 +82,11 @@ export function SpecialOccasionsPanel({
           onSubmit={() => {
             if (form.name && form.date) {
               onAdd(form);
-              setForm(empty);
+              setForm(emptyForm());
               setCreating(false);
             }
           }}
-          onCancel={() => { setCreating(false); setForm(empty); }}
+          onCancel={() => { setCreating(false); setForm(emptyForm()); }}
           submitLabel="Add"
         />
       )}
@@ -245,7 +246,7 @@ function OccasionEditor({
       <div className="flex gap-2 flex-wrap">
         <input
           type="date"
-          value={value.date || todayLocalStr()}
+          value={value.date}
           onChange={(e) => onChange({ ...value, date: e.target.value })}
           className="bg-transparent outline-none border-b border-border py-1 text-sm"
         />

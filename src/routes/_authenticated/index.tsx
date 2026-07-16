@@ -12,11 +12,16 @@ import {
   fetchSubtags,
   fetchTasks,
   fetchSpecialDates,
+  fetchCompletions,
   daysUntilAnnual,
+  isOccurrenceCompleted,
+  todayLocalStr,
   type UserSettings,
   type Task,
   type SpecialDate,
+  type TaskCompletion,
 } from "@/lib/wann-data";
+
 import { useApplySettings } from "@/lib/use-apply-settings";
 import { WeekRotation } from "@/components/wann/WeekRotation";
 import { TasksPanel } from "@/components/wann/TasksPanel";
@@ -41,8 +46,10 @@ function Dashboard() {
   const subtagsQ = useQuery({ queryKey: ["subtags", user.id], queryFn: () => fetchSubtags(user.id) });
   const tasksQ = useQuery({ queryKey: ["tasks", user.id], queryFn: () => fetchTasks(user.id) });
   const datesQ = useQuery({ queryKey: ["dates", user.id], queryFn: () => fetchSpecialDates(user.id) });
+  const completionsQ = useQuery({ queryKey: ["completions", user.id], queryFn: () => fetchCompletions(user.id) });
 
   useApplySettings(settingsQ.data);
+
 
   const settingsMutation = useMutation({
     mutationFn: (patch: Partial<UserSettings>) => updateSettings(user.id, patch),
@@ -144,6 +151,38 @@ function Dashboard() {
     },
     onSuccess: () => invalidate("tasks"),
   });
+
+  const toggleOccurrence = useMutation({
+    mutationFn: async ({ task, date }: { task: Task; date: string }) => {
+      const completions = completionsQ.data ?? [];
+      const existing = completions.find(
+        (c) => c.task_id === task.id && c.occurrence_date === date,
+      );
+      if ((task.recurrence ?? "none") === "none") {
+        const completed = !task.completed;
+        const { error } = await supabase
+          .from("tasks")
+          .update({ completed, completed_at: completed ? new Date().toISOString() : null })
+          .eq("id", task.id);
+        if (error) throw error;
+        return;
+      }
+      if (existing) {
+        const { error } = await supabase
+          .from("task_completions" as never)
+          .delete()
+          .eq("id", existing.id);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase
+          .from("task_completions" as never)
+          .insert({ task_id: task.id, user_id: user.id, occurrence_date: date } as never);
+        if (error) throw error;
+      }
+    },
+    onSuccess: () => { invalidate("completions"); invalidate("tasks"); },
+  });
+
 
   const deleteTask = useMutation({
     mutationFn: async (id: string) => {
@@ -252,9 +291,11 @@ function Dashboard() {
           tasks={tasksQ.data ?? []}
           categories={categoriesQ.data ?? []}
           specialDates={datesQ.data ?? []}
-          onToggleTask={(t) => toggleTask.mutate(t)}
+          completions={completionsQ.data ?? []}
+          onToggleOccurrence={(task, date) => toggleOccurrence.mutate({ task, date })}
           onEditTask={(t) => setEditingTask(t)}
         />
+
 
         <div className="grid md:grid-cols-2 gap-6">
           <section className="card-flat p-4">
@@ -263,17 +304,19 @@ function Dashboard() {
               subtags={subtagsQ.data ?? []}
               tasks={tasksQ.data ?? []}
               specialDates={datesQ.data ?? []}
+              completions={completionsQ.data ?? []}
               editingTask={editingTask}
               onCancelEdit={() => setEditingTask(null)}
               onAddCategory={(name, color) => addCategory.mutate({ name, color })}
               onAddSubtag={(categoryId, name) => addSubtag.mutate({ categoryId, name })}
               onAddTask={(v) => addTask.mutate(v)}
               onUpdateTask={(id, v) => updateTask.mutate({ id, input: v })}
-              onToggleTask={(t) => toggleTask.mutate(t)}
+              onToggleTask={(t) => toggleOccurrence.mutate({ task: t, date: todayLocalStr() })}
               onEditTask={(t) => setEditingTask(t)}
               onDeleteTask={(id) => { if (editingTask?.id === id) setEditingTask(null); deleteTask.mutate(id); }}
               onDeleteCategory={(id) => deleteCategory.mutate(id)}
             />
+
           </section>
 
           <section className="card-flat p-4">
