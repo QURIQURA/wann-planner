@@ -352,6 +352,16 @@ function Dashboard() {
           categories={categoriesQ.data ?? []}
           events={eventsQ.data ?? []}
           completions={completionsQ.data ?? []}
+          multipleTasks={multipleQ.data ?? []}
+          multipleTaskItems={multipleItemsQ.data ?? []}
+          onOpenMultiple={(id) => {
+            const el = document.getElementById(`mt-${id}`);
+            if (el) {
+              el.scrollIntoView({ behavior: "smooth", block: "center" });
+              el.classList.add("ring-2", "ring-foreground");
+              setTimeout(() => el.classList.remove("ring-2", "ring-foreground"), 1500);
+            }
+          }}
           onToggleOccurrence={(task, date) => toggleOccurrence.mutate({ task, date })}
           onEditTask={(t) => setEditingTask(t)}
         />
