@@ -16,17 +16,17 @@ export type UserSettings = {
   };
 };
 
-export type Category = Tables<"task_categories">;
-export type Subtag = Tables<"task_subtags">;
-export type Task = Tables<"tasks">;
-export type SpecialDate = Tables<"special_dates">;
+export type Category = Tables<"planner_task_categories">;
+export type Subtag = Tables<"planner_task_subtags">;
+export type Task = Tables<"planner_tasks">;
+export type SpecialDate = Tables<"planner_special_dates">;
 
 export async function fetchSettings(userId: string): Promise<UserSettings> {
-  const { data, error } = await supabase.from("user_settings").select("*").eq("user_id", userId).maybeSingle();
+  const { data, error } = await supabase.from("planner_user_settings").select("*").eq("user_id", userId).maybeSingle();
   if (error) throw error;
   if (data) return data as unknown as UserSettings;
   const { data: created, error: cErr } = await supabase
-    .from("user_settings")
+    .from("planner_user_settings")
     .insert({ user_id: userId })
     .select()
     .single();
@@ -35,38 +35,36 @@ export async function fetchSettings(userId: string): Promise<UserSettings> {
 }
 
 export async function updateSettings(userId: string, patch: Partial<UserSettings>) {
-  const { error } = await supabase.from("user_settings").update(patch).eq("user_id", userId);
+  const { error } = await supabase.from("planner_user_settings").update(patch).eq("user_id", userId);
   if (error) throw error;
 }
 
-export async function fetchCategories(userId: string) {
+export async function fetchCategories(_userId: string) {
   const { data, error } = await supabase
-    .from("task_categories")
+    .from("planner_task_categories")
     .select("*")
-    .eq("user_id", userId)
     .order("sort_order");
   if (error) throw error;
   return data ?? [];
 }
 
-export async function fetchSubtags(userId: string) {
-  const { data, error } = await supabase.from("task_subtags").select("*").eq("user_id", userId);
+export async function fetchSubtags(_userId: string) {
+  const { data, error } = await supabase.from("planner_task_subtags").select("*");
   if (error) throw error;
   return data ?? [];
 }
 
-export async function fetchTasks(userId: string) {
+export async function fetchTasks(_userId: string) {
   const { data, error } = await supabase
-    .from("tasks")
+    .from("planner_tasks")
     .select("*")
-    .eq("user_id", userId)
     .order("due_date", { ascending: true, nullsFirst: false });
   if (error) throw error;
   return data ?? [];
 }
 
-export async function fetchSpecialDates(userId: string) {
-  const { data, error } = await supabase.from("special_dates").select("*").eq("user_id", userId);
+export async function fetchSpecialDates(_userId: string) {
+  const { data, error } = await supabase.from("planner_special_dates").select("*");
   if (error) throw error;
   return data ?? [];
 }
@@ -79,14 +77,14 @@ export type TaskCompletion = {
   completed_at: string;
 };
 
-export async function fetchCompletions(userId: string): Promise<TaskCompletion[]> {
+export async function fetchCompletions(_userId: string): Promise<TaskCompletion[]> {
   const { data, error } = await supabase
-    .from("task_completions" as never)
-    .select("*")
-    .eq("user_id", userId);
+    .from("planner_task_completions" as never)
+    .select("*");
   if (error) throw error;
   return (data ?? []) as unknown as TaskCompletion[];
 }
+
 
 /**
  * Returns true if a task (recurring or one-off) occurs on the given local date.

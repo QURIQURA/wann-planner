@@ -70,7 +70,7 @@ function Dashboard() {
   const addCategory = useMutation({
     mutationFn: async ({ name, color }: { name: string; color: string }) => {
       const sort = (categoriesQ.data?.length ?? 0);
-      const { error } = await supabase.from("task_categories").insert({ user_id: user.id, name, color, sort_order: sort });
+      const { error } = await supabase.from("planner_task_categories").insert({ user_id: user.id, name, color, sort_order: sort });
       if (error) throw error;
     },
     onSuccess: () => invalidate("categories"),
@@ -78,7 +78,7 @@ function Dashboard() {
 
   const deleteCategory = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.from("task_categories").delete().eq("id", id);
+      const { error } = await supabase.from("planner_task_categories").delete().eq("id", id);
       if (error) throw error;
     },
     onSuccess: () => { invalidate("categories"); invalidate("subtags"); invalidate("tasks"); },
@@ -86,7 +86,7 @@ function Dashboard() {
 
   const addSubtag = useMutation({
     mutationFn: async ({ categoryId, name }: { categoryId: string; name: string }) => {
-      const { error } = await supabase.from("task_subtags").insert({ user_id: user.id, category_id: categoryId, name });
+      const { error } = await supabase.from("planner_task_subtags").insert({ user_id: user.id, category_id: categoryId, name });
       if (error) throw error;
     },
     onSuccess: () => invalidate("subtags"),
@@ -94,7 +94,7 @@ function Dashboard() {
 
   const addTask = useMutation({
     mutationFn: async (input: import("@/components/wann/TasksPanel").TaskFormValues) => {
-      const { error } = await supabase.from("tasks").insert({
+      const { error } = await supabase.from("planner_tasks").insert({
         user_id: user.id,
         title: input.title,
         category_id: input.categoryId,
@@ -111,7 +111,7 @@ function Dashboard() {
 
   const updateTask = useMutation({
     mutationFn: async ({ id, input }: { id: string; input: import("@/components/wann/TasksPanel").TaskFormValues }) => {
-      const { error } = await supabase.from("tasks").update({
+      const { error } = await supabase.from("planner_tasks").update({
         title: input.title,
         category_id: input.categoryId,
         subtag_id: input.subtagId,
@@ -128,7 +128,7 @@ function Dashboard() {
   const addChildTask = useMutation({
     mutationFn: async ({ occasionId, title }: { occasionId: string; title: string }) => {
       const occ = (datesQ.data ?? []).find((d) => d.id === occasionId);
-      const { error } = await supabase.from("tasks").insert({
+      const { error } = await supabase.from("planner_tasks").insert({
         user_id: user.id,
         title,
         due_date: occ?.date ?? null,
@@ -144,7 +144,7 @@ function Dashboard() {
     mutationFn: async (t: Task) => {
       const completed = !t.completed;
       const { error } = await supabase
-        .from("tasks")
+        .from("planner_tasks")
         .update({ completed, completed_at: completed ? new Date().toISOString() : null })
         .eq("id", t.id);
       if (error) throw error;
@@ -161,7 +161,7 @@ function Dashboard() {
       if ((task.recurrence ?? "none") === "none") {
         const completed = !task.completed;
         const { error } = await supabase
-          .from("tasks")
+          .from("planner_tasks")
           .update({ completed, completed_at: completed ? new Date().toISOString() : null })
           .eq("id", task.id);
         if (error) throw error;
@@ -169,13 +169,13 @@ function Dashboard() {
       }
       if (existing) {
         const { error } = await supabase
-          .from("task_completions" as never)
+          .from("planner_task_completions" as never)
           .delete()
           .eq("id", existing.id);
         if (error) throw error;
       } else {
         const { error } = await supabase
-          .from("task_completions" as never)
+          .from("planner_task_completions" as never)
           .insert({ task_id: task.id, user_id: user.id, occurrence_date: date } as never);
         if (error) throw error;
       }
@@ -186,7 +186,7 @@ function Dashboard() {
 
   const deleteTask = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.from("tasks").delete().eq("id", id);
+      const { error } = await supabase.from("planner_tasks").delete().eq("id", id);
       if (error) throw error;
     },
     onSuccess: () => invalidate("tasks"),
@@ -194,7 +194,7 @@ function Dashboard() {
 
   const addSpecialDate = useMutation({
     mutationFn: async (input: Omit<SpecialDate, "id" | "user_id" | "created_at">) => {
-      const { error } = await supabase.from("special_dates").insert({ ...input, user_id: user.id });
+      const { error } = await supabase.from("planner_special_dates").insert({ ...input, user_id: user.id });
       if (error) throw error;
     },
     onSuccess: () => invalidate("dates"),
@@ -202,7 +202,7 @@ function Dashboard() {
 
   const updateSpecialDate = useMutation({
     mutationFn: async ({ id, patch }: { id: string; patch: Partial<Omit<SpecialDate, "id" | "user_id" | "created_at">> }) => {
-      const { error } = await supabase.from("special_dates").update(patch).eq("id", id);
+      const { error } = await supabase.from("planner_special_dates").update(patch).eq("id", id);
       if (error) throw error;
     },
     onSuccess: () => invalidate("dates"),
@@ -210,7 +210,7 @@ function Dashboard() {
 
   const deleteSpecialDate = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.from("special_dates").delete().eq("id", id);
+      const { error } = await supabase.from("planner_special_dates").delete().eq("id", id);
       if (error) throw error;
     },
     onSuccess: () => { invalidate("dates"); invalidate("tasks"); },
