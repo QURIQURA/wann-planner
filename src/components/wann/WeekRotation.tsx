@@ -1,6 +1,14 @@
 import { useMemo, useRef, useState } from "react";
-import type { Task, Category, SpecialDate, TaskCompletion } from "@/lib/wann-data";
-import { formatLocalDate, shortTime, tasksOnDate, isOccurrenceCompleted } from "@/lib/wann-data";
+import type { Task, Category, EventEntry, TaskCompletion } from "@/lib/wann-data";
+import {
+  formatLocalDate,
+  shortTime,
+  tasksOnDate,
+  isOccurrenceCompleted,
+  eventsOnDate,
+  EVENT_COLORS,
+  EVENT_PRIORITY,
+} from "@/lib/wann-data";
 import { ChevronLeft, ChevronRight, ChevronDown, ChevronUp } from "lucide-react";
 
 function addDays(d: Date, n: number) {
@@ -16,7 +24,7 @@ export function WeekRotation({
   onAnchorChange,
   tasks,
   categories,
-  specialDates,
+  events,
   completions,
   onToggleOccurrence,
   onEditTask,
@@ -25,7 +33,7 @@ export function WeekRotation({
   onAnchorChange: (d: Date) => void;
   tasks: Task[];
   categories: Category[];
-  specialDates: SpecialDate[];
+  events: EventEntry[];
   completions: TaskCompletion[];
   onToggleOccurrence: (task: Task, date: string) => void;
   onEditTask: (t: Task) => void;
@@ -39,16 +47,6 @@ export function WeekRotation({
     [categories],
   );
 
-  const datesByMMDD = useMemo(() => {
-    const map: Record<string, SpecialDate[]> = {};
-    for (const e of specialDates) {
-      const mmdd = e.date.slice(5);
-      (map[mmdd] ||= []).push(e);
-    }
-    return map;
-  }, [specialDates]);
-
-  // touch swipe state (mobile only)
   const touchStartX = useRef<number | null>(null);
   const onTouchStart = (e: React.TouchEvent) => {
     touchStartX.current = e.touches[0].clientX;
@@ -71,9 +69,20 @@ export function WeekRotation({
     const timed = dayTasks
       .filter((t) => !!t.due_time)
       .sort((a, b) => (a.due_time ?? "").localeCompare(b.due_time ?? ""));
-    const specials = datesByMMDD[key.slice(5)] ?? [];
+    const dayEvents = eventsOnDate(events, key);
+    // pick highest-priority event type for border color
+    const primaryType = EVENT_PRIORITY.find((t) => dayEvents.some((e) => e.type === t));
+    const borderColor = primaryType ? EVENT_COLORS[primaryType] : undefined;
+
+    const cardStyle = borderColor
+      ? { borderColor, borderWidth: 2 }
+      : undefined;
     return (
-      <div key={key} className={`card-flat p-3 flex flex-col min-h-[320px] ${extraClass}`}>
+      <div
+        key={key}
+        className={`card-flat p-3 flex flex-col min-h-[320px] ${extraClass}`}
+        style={cardStyle}
+      >
         <div className="flex items-baseline justify-between mb-2">
           <span className="label-caps">
             {isToday ? "Today · " : ""}
@@ -84,25 +93,21 @@ export function WeekRotation({
           </span>
         </div>
 
-        {/* ALL-DAY */}
         <div className="mb-2">
           <p className="label-caps text-[10px] text-muted-foreground mb-1">All-day</p>
           <div className="space-y-1">
-            {specials.map((s) => {
-              const linked = tasks.filter((t) => t.special_occasion_id === s.id);
-              const done = linked.filter((t) => t.completed).length;
-              const pct = linked.length > 0 ? Math.round((done / linked.length) * 100) : null;
-              return (
-                <div key={s.id} className="flex items-center gap-2 text-sm">
-                  <span className="inline-block h-3 w-3 border border-border flex-shrink-0" />
-                  <span className="flex-1 truncate">
-                    {s.name}
-                    <span className="text-muted-foreground"> · {s.type}</span>
-                    {pct !== null && <span className="text-muted-foreground"> · {pct}%</span>}
-                  </span>
-                </div>
-              );
-            })}
+            {dayEvents.map((ev) => (
+              <div key={ev.id} className="flex items-center gap-2 text-sm">
+                <span
+                  className="inline-block h-3 w-3 flex-shrink-0"
+                  style={{ background: EVENT_COLORS[ev.type] ?? "transparent" }}
+                />
+                <span className="flex-1 truncate">
+                  {ev.name}
+                  <span className="text-muted-foreground"> · {ev.type}</span>
+                </span>
+              </div>
+            ))}
             <TaskLines
               items={allDay}
               date={key}
@@ -111,13 +116,12 @@ export function WeekRotation({
               onToggle={onToggleOccurrence}
               onEdit={onEditTask}
             />
-            {specials.length === 0 && allDay.length === 0 && (
+            {dayEvents.length === 0 && allDay.length === 0 && (
               <p className="text-xs text-muted-foreground italic">—</p>
             )}
           </div>
         </div>
 
-        {/* TIMELINE */}
         <div className="border-t border-border pt-2 flex-1">
           <p className="label-caps text-[10px] text-muted-foreground mb-1">Timeline</p>
           <div className="space-y-1">
@@ -171,7 +175,6 @@ export function WeekRotation({
         </div>
       </div>
 
-      {/* MOBILE: single-day card with swipe */}
       <div
         className="md:hidden"
         onTouchStart={onTouchStart}
@@ -180,7 +183,6 @@ export function WeekRotation({
         {renderDayCard(anchorDate, true, "")}
       </div>
 
-      {/* DESKTOP: 5-day grid, today spans 3 cols */}
       <div className="hidden md:grid md:grid-cols-7 gap-2 auto-rows-fr">
         {days.map((d, i) => renderDayCard(d, i === 0, i === 0 ? "md:col-span-3" : ""))}
       </div>
