@@ -76,6 +76,7 @@ export function WeekRotation({
       .filter((t) => !!t.due_time)
       .sort((a, b) => (a.due_time ?? "").localeCompare(b.due_time ?? ""));
     const dayEvents = eventsOnDate(events, key);
+    const dayMultiples = multipleTasks.filter((m) => m.date === key);
     // pick highest-priority event type for border color
     const primaryType = EVENT_PRIORITY.find((t) => dayEvents.some((e) => e.type === t));
     const borderColor = primaryType ? EVENT_COLORS[primaryType] : undefined;
@@ -114,6 +115,27 @@ export function WeekRotation({
                 </span>
               </div>
             ))}
+            {dayMultiples.map((m) => {
+              const children = multipleTaskItems.filter((i) => i.parent_id === m.id);
+              const done = children.filter((i) => i.completed).length;
+              const total = children.length;
+              return (
+                <button
+                  key={m.id}
+                  onClick={() => onOpenMultiple(m.id)}
+                  className="flex items-center gap-2 text-sm w-full text-left hover:underline"
+                  title="Open in Multiple Task"
+                >
+                  <ListChecks size={12} className="flex-shrink-0 text-muted-foreground" />
+                  <span className="flex-1 truncate">
+                    {m.name}
+                    {total > 0 && (
+                      <span className="text-muted-foreground"> · {done}/{total}</span>
+                    )}
+                  </span>
+                </button>
+              );
+            })}
             <TaskLines
               items={allDay}
               date={key}
@@ -122,11 +144,12 @@ export function WeekRotation({
               onToggle={onToggleOccurrence}
               onEdit={onEditTask}
             />
-            {dayEvents.length === 0 && allDay.length === 0 && (
+            {dayEvents.length === 0 && allDay.length === 0 && dayMultiples.length === 0 && (
               <p className="text-xs text-muted-foreground italic">—</p>
             )}
           </div>
         </div>
+
 
         <div className="border-t border-border pt-2 flex-1">
           <p className="label-caps text-[10px] text-muted-foreground mb-1">Timeline</p>
