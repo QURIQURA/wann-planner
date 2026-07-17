@@ -39,34 +39,32 @@ export async function updateSettings(userId: string, patch: Partial<UserSettings
   if (error) throw error;
 }
 
-export async function fetchCategories(userId: string) {
+export async function fetchCategories(_userId: string) {
   const { data, error } = await supabase
     .from("planner_task_categories")
     .select("*")
-    .eq("user_id", userId)
     .order("sort_order");
   if (error) throw error;
   return data ?? [];
 }
 
-export async function fetchSubtags(userId: string) {
-  const { data, error } = await supabase.from("planner_task_subtags").select("*").eq("user_id", userId);
+export async function fetchSubtags(_userId: string) {
+  const { data, error } = await supabase.from("planner_task_subtags").select("*");
   if (error) throw error;
   return data ?? [];
 }
 
-export async function fetchTasks(userId: string) {
+export async function fetchTasks(_userId: string) {
   const { data, error } = await supabase
     .from("planner_tasks")
     .select("*")
-    .eq("user_id", userId)
     .order("due_date", { ascending: true, nullsFirst: false });
   if (error) throw error;
   return data ?? [];
 }
 
-export async function fetchSpecialDates(userId: string) {
-  const { data, error } = await supabase.from("planner_special_dates").select("*").eq("user_id", userId);
+export async function fetchSpecialDates(_userId: string) {
+  const { data, error } = await supabase.from("planner_special_dates").select("*");
   if (error) throw error;
   return data ?? [];
 }
@@ -79,14 +77,14 @@ export type TaskCompletion = {
   completed_at: string;
 };
 
-export async function fetchCompletions(userId: string): Promise<TaskCompletion[]> {
+export async function fetchCompletions(_userId: string): Promise<TaskCompletion[]> {
   const { data, error } = await supabase
     .from("planner_task_completions" as never)
-    .select("*")
-    .eq("user_id", userId);
+    .select("*");
   if (error) throw error;
   return (data ?? []) as unknown as TaskCompletion[];
 }
+
 
 /**
  * Returns true if a task (recurring or one-off) occurs on the given local date.
