@@ -378,6 +378,239 @@ export type Database = {
           },
         ]
       }
+      planner_special_dates: {
+        Row: {
+          category: string
+          created_at: string
+          date: string
+          id: string
+          name: string
+          notes: string | null
+          show_age: boolean
+          type: string
+          user_id: string
+        }
+        Insert: {
+          category?: string
+          created_at?: string
+          date: string
+          id?: string
+          name: string
+          notes?: string | null
+          show_age?: boolean
+          type?: string
+          user_id: string
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          date?: string
+          id?: string
+          name?: string
+          notes?: string | null
+          show_age?: boolean
+          type?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      planner_task_categories: {
+        Row: {
+          color: string
+          created_at: string
+          id: string
+          name: string
+          sort_order: number
+          user_id: string
+        }
+        Insert: {
+          color?: string
+          created_at?: string
+          id?: string
+          name: string
+          sort_order?: number
+          user_id: string
+        }
+        Update: {
+          color?: string
+          created_at?: string
+          id?: string
+          name?: string
+          sort_order?: number
+          user_id?: string
+        }
+        Relationships: []
+      }
+      planner_task_completions: {
+        Row: {
+          completed_at: string
+          id: string
+          occurrence_date: string
+          task_id: string
+          user_id: string
+        }
+        Insert: {
+          completed_at?: string
+          id?: string
+          occurrence_date: string
+          task_id: string
+          user_id: string
+        }
+        Update: {
+          completed_at?: string
+          id?: string
+          occurrence_date?: string
+          task_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "planner_task_completions_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "planner_tasks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      planner_task_subtags: {
+        Row: {
+          category_id: string
+          created_at: string
+          id: string
+          name: string
+          user_id: string
+        }
+        Insert: {
+          category_id: string
+          created_at?: string
+          id?: string
+          name: string
+          user_id: string
+        }
+        Update: {
+          category_id?: string
+          created_at?: string
+          id?: string
+          name?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "planner_task_subtags_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "planner_task_categories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      planner_tasks: {
+        Row: {
+          category_id: string | null
+          completed: boolean
+          completed_at: string | null
+          created_at: string
+          due_date: string | null
+          due_time: string | null
+          id: string
+          notes: string | null
+          recurrence: string
+          special_occasion_id: string | null
+          subtag_id: string | null
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          category_id?: string | null
+          completed?: boolean
+          completed_at?: string | null
+          created_at?: string
+          due_date?: string | null
+          due_time?: string | null
+          id?: string
+          notes?: string | null
+          recurrence?: string
+          special_occasion_id?: string | null
+          subtag_id?: string | null
+          title: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          category_id?: string | null
+          completed?: boolean
+          completed_at?: string | null
+          created_at?: string
+          due_date?: string | null
+          due_time?: string | null
+          id?: string
+          notes?: string | null
+          recurrence?: string
+          special_occasion_id?: string | null
+          subtag_id?: string | null
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "planner_tasks_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "planner_task_categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "planner_tasks_special_occasion_id_fkey"
+            columns: ["special_occasion_id"]
+            isOneToOne: false
+            referencedRelation: "planner_special_dates"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "planner_tasks_subtag_id_fkey"
+            columns: ["subtag_id"]
+            isOneToOne: false
+            referencedRelation: "planner_task_subtags"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      planner_user_settings: {
+        Row: {
+          bg_color: string
+          border_color: string
+          created_at: string
+          font: string
+          text_color: string
+          updated_at: string
+          user_id: string
+          widget_visibility: Json
+        }
+        Insert: {
+          bg_color?: string
+          border_color?: string
+          created_at?: string
+          font?: string
+          text_color?: string
+          updated_at?: string
+          user_id: string
+          widget_visibility?: Json
+        }
+        Update: {
+          bg_color?: string
+          border_color?: string
+          created_at?: string
+          font?: string
+          text_color?: string
+          updated_at?: string
+          user_id?: string
+          widget_visibility?: Json
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
