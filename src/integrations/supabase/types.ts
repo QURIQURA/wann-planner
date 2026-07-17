@@ -644,6 +644,75 @@ export type Database = {
           },
         ]
       }
+      planner_alerts: {
+        Row: {
+          created_at: string
+          date: string
+          id: string
+          message: string
+          resolved: boolean
+          source_app: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          date?: string
+          id?: string
+          message: string
+          resolved?: boolean
+          source_app: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          date?: string
+          id?: string
+          message?: string
+          resolved?: boolean
+          source_app?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      planner_diary_entries: {
+        Row: {
+          content_html: string
+          created_at: string
+          date: string
+          has_sticker: boolean
+          id: string
+          preview: string
+          thumbnail_sticker_path: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          content_html?: string
+          created_at?: string
+          date: string
+          has_sticker?: boolean
+          id?: string
+          preview?: string
+          thumbnail_sticker_path?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          content_html?: string
+          created_at?: string
+          date?: string
+          has_sticker?: boolean
+          id?: string
+          preview?: string
+          thumbnail_sticker_path?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       planner_events: {
         Row: {
           birth_year: number | null
@@ -678,6 +747,173 @@ export type Database = {
           name?: string
           notes?: string | null
           type?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      planner_habit_completions: {
+        Row: {
+          created_at: string
+          date: string
+          habit_id: string
+          id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          date: string
+          habit_id: string
+          id?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          date?: string
+          habit_id?: string
+          id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "planner_habit_completions_habit_id_fkey"
+            columns: ["habit_id"]
+            isOneToOne: false
+            referencedRelation: "planner_habits"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      planner_habits: {
+        Row: {
+          color: string | null
+          created_at: string
+          id: string
+          name: string
+          sort_order: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          color?: string | null
+          created_at?: string
+          id?: string
+          name: string
+          sort_order?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          color?: string | null
+          created_at?: string
+          id?: string
+          name?: string
+          sort_order?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      planner_kora_orders: {
+        Row: {
+          created_at: string
+          customer_name: string | null
+          delivery_date: string | null
+          id: string
+          items: Json | null
+          notes: string | null
+          order_date: string | null
+          status: string | null
+          total_amount: number | null
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          customer_name?: string | null
+          delivery_date?: string | null
+          id?: string
+          items?: Json | null
+          notes?: string | null
+          order_date?: string | null
+          status?: string | null
+          total_amount?: number | null
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          customer_name?: string | null
+          delivery_date?: string | null
+          id?: string
+          items?: Json | null
+          notes?: string | null
+          order_date?: string | null
+          status?: string | null
+          total_amount?: number | null
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      planner_kora_setup_items: {
+        Row: {
+          category: string
+          completed: boolean
+          created_at: string
+          id: string
+          next_action_date: string | null
+          sort_order: number
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          category: string
+          completed?: boolean
+          created_at?: string
+          id?: string
+          next_action_date?: string | null
+          sort_order?: number
+          title: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          category?: string
+          completed?: boolean
+          created_at?: string
+          id?: string
+          next_action_date?: string | null
+          sort_order?: number
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      planner_monthly_hyatt_hours: {
+        Row: {
+          created_at: string
+          hours: number
+          id: string
+          month: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          hours?: number
+          id?: string
+          month: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          hours?: number
+          id?: string
+          month?: string
           updated_at?: string
           user_id?: string
         }
@@ -758,6 +994,121 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      planner_routine_completions: {
+        Row: {
+          created_at: string
+          date: string
+          id: string
+          item_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          date: string
+          id?: string
+          item_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          date?: string
+          id?: string
+          item_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "planner_routine_completions_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "planner_routine_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      planner_routine_groups: {
+        Row: {
+          created_at: string
+          days_of_week: number[]
+          id: string
+          name: string
+          sort_order: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          days_of_week?: number[]
+          id?: string
+          name: string
+          sort_order?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          days_of_week?: number[]
+          id?: string
+          name?: string
+          sort_order?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      planner_routine_items: {
+        Row: {
+          created_at: string
+          group_id: string
+          id: string
+          sort_order: number
+          title: string
+        }
+        Insert: {
+          created_at?: string
+          group_id: string
+          id?: string
+          sort_order?: number
+          title: string
+        }
+        Update: {
+          created_at?: string
+          group_id?: string
+          id?: string
+          sort_order?: number
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "planner_routine_items_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "planner_routine_groups"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      planner_stickers: {
+        Row: {
+          created_at: string
+          id: string
+          storage_path: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          storage_path: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          storage_path?: string
+          user_id?: string
+        }
+        Relationships: []
       }
       planner_task_categories: {
         Row: {
