@@ -2,7 +2,6 @@ import { supabase } from "@/integrations/supabase/client";
 import type { Tables } from "@/integrations/supabase/types";
 
 export type UserSettings = {
-
   user_id: string;
   bg_color: string;
   border_color: string;
@@ -19,7 +18,18 @@ export type UserSettings = {
 export type Category = Tables<"planner_task_categories">;
 export type Subtag = Tables<"planner_task_subtags">;
 export type Task = Tables<"planner_tasks">;
-export type SpecialDate = Tables<"planner_special_dates">;
+export type MultipleTask = Tables<"planner_multiple_tasks">;
+export type MultipleTaskItem = Tables<"planner_multiple_task_items">;
+export type EventEntry = Tables<"planner_events">;
+
+export const EVENT_COLORS: Record<string, string> = {
+  birthday: "#D4A574",
+  anniversary: "#C99BA3",
+  holiday: "#C17A6E",
+};
+
+/** Priority for showing a single border color when a date has multiple events. */
+export const EVENT_PRIORITY = ["birthday", "anniversary", "holiday"] as const;
 
 export async function fetchSettings(userId: string): Promise<UserSettings> {
   const { data, error } = await supabase.from("planner_user_settings").select("*").eq("user_id", userId).maybeSingle();
@@ -63,8 +73,29 @@ export async function fetchTasks(_userId: string) {
   return data ?? [];
 }
 
-export async function fetchSpecialDates(_userId: string) {
-  const { data, error } = await supabase.from("planner_special_dates").select("*");
+export async function fetchMultipleTasks(_userId: string) {
+  const { data, error } = await supabase
+    .from("planner_multiple_tasks")
+    .select("*")
+    .order("created_at", { ascending: false });
+  if (error) throw error;
+  return data ?? [];
+}
+
+export async function fetchMultipleTaskItems(_userId: string) {
+  const { data, error } = await supabase
+    .from("planner_multiple_task_items")
+    .select("*")
+    .order("sort_order", { ascending: true });
+  if (error) throw error;
+  return data ?? [];
+}
+
+export async function fetchEvents(_userId: string) {
+  const { data, error } = await supabase
+    .from("planner_events")
+    .select("*")
+    .order("date", { ascending: true });
   if (error) throw error;
   return data ?? [];
 }
@@ -79,16 +110,14 @@ export type TaskCompletion = {
 
 export async function fetchCompletions(_userId: string): Promise<TaskCompletion[]> {
   const { data, error } = await supabase
-    .from("planner_task_completions" as never)
+    .from("planner_task_completions")
     .select("*");
   if (error) throw error;
   return (data ?? []) as unknown as TaskCompletion[];
 }
 
-
 /**
  * Returns true if a task (recurring or one-off) occurs on the given local date.
- * Recurrence rules are evaluated against `task.due_date` as the anchor/start date.
  */
 export function taskOccursOn(task: Task, dateStr: string): boolean {
   if (!task.due_date) return false;
@@ -106,12 +135,10 @@ export function taskOccursOn(task: Task, dateStr: string): boolean {
   return false;
 }
 
-/** Expand tasks to those occurring on a given local YYYY-MM-DD date. */
 export function tasksOnDate(tasks: Task[], dateStr: string): Task[] {
   return tasks.filter((t) => taskOccursOn(t, dateStr));
 }
 
-/** Is this specific occurrence completed? */
 export function isOccurrenceCompleted(
   task: Task,
   dateStr: string,
@@ -123,24 +150,31 @@ export function isOccurrenceCompleted(
   return completions.some((c) => c.task_id === task.id && c.occurrence_date === dateStr);
 }
 
+/** Does an event fall on the given local date (annual repeat if is_recurring). */
+export function eventOccursOn(event: EventEntry, dateStr: string): boolean {
+  if (event.is_recurring) {
+    return event.date.slice(5) === dateStr.slice(5);
+  }
+  return event.date === dateStr;
+}
 
-/** Parse a YYYY-MM-DD string into a local-timezone Date at midnight. */
+export function eventsOnDate(events: EventEntry[], dateStr: string): EventEntry[] {
+  return events.filter((e) => eventOccursOn(e, dateStr));
+}
+
 export function parseLocalDate(dateStr: string): Date {
   const [y, m, d] = dateStr.split("-").map(Number);
   return new Date(y, (m ?? 1) - 1, d ?? 1);
 }
 
-/** Format a Date as YYYY-MM-DD in local timezone. */
 export function formatLocalDate(d: Date): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
-/** Local today as YYYY-MM-DD. */
 export function todayLocalStr(): string {
   return formatLocalDate(new Date());
 }
 
-/** Days from today to next occurrence of a MM-DD date (annual). */
 export function daysUntilAnnual(dateStr: string, today = new Date()): number {
   const d = parseLocalDate(dateStr);
   const t = new Date(today.getFullYear(), today.getMonth(), today.getDate());
@@ -157,7 +191,6 @@ export function ageOn(dateStr: string, today = new Date()): number {
   return age;
 }
 
-/** "HH:MM" from a Postgres time string (which may be "HH:MM:SS"). */
 export function shortTime(t: string | null | undefined): string {
   if (!t) return "";
   return t.slice(0, 5);

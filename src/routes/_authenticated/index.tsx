@@ -11,21 +11,22 @@ import {
   fetchCategories,
   fetchSubtags,
   fetchTasks,
-  fetchSpecialDates,
+  fetchEvents,
+  fetchMultipleTasks,
+  fetchMultipleTaskItems,
   fetchCompletions,
   daysUntilAnnual,
-  isOccurrenceCompleted,
   todayLocalStr,
   type UserSettings,
   type Task,
-  type SpecialDate,
-  type TaskCompletion,
+  type MultipleTaskItem,
 } from "@/lib/wann-data";
 
 import { useApplySettings } from "@/lib/use-apply-settings";
 import { WeekRotation } from "@/components/wann/WeekRotation";
 import { TasksPanel } from "@/components/wann/TasksPanel";
-import { SpecialOccasionsPanel } from "@/components/wann/SpecialOccasionsPanel";
+import { MultipleTasksPanel, type MultipleTaskForm } from "@/components/wann/MultipleTasksPanel";
+import { EventsPanel, type EventForm } from "@/components/wann/EventsPanel";
 import { SettingsPanel } from "@/components/wann/SettingsPanel";
 
 export const Route = createFileRoute("/_authenticated/")({
@@ -45,11 +46,12 @@ function Dashboard() {
   const categoriesQ = useQuery({ queryKey: ["categories", user.id], queryFn: () => fetchCategories(user.id) });
   const subtagsQ = useQuery({ queryKey: ["subtags", user.id], queryFn: () => fetchSubtags(user.id) });
   const tasksQ = useQuery({ queryKey: ["tasks", user.id], queryFn: () => fetchTasks(user.id) });
-  const datesQ = useQuery({ queryKey: ["dates", user.id], queryFn: () => fetchSpecialDates(user.id) });
+  const eventsQ = useQuery({ queryKey: ["events", user.id], queryFn: () => fetchEvents(user.id) });
+  const multipleQ = useQuery({ queryKey: ["multiple_tasks", user.id], queryFn: () => fetchMultipleTasks(user.id) });
+  const multipleItemsQ = useQuery({ queryKey: ["multiple_task_items", user.id], queryFn: () => fetchMultipleTaskItems(user.id) });
   const completionsQ = useQuery({ queryKey: ["completions", user.id], queryFn: () => fetchCompletions(user.id) });
 
   useApplySettings(settingsQ.data);
-
 
   const settingsMutation = useMutation({
     mutationFn: (patch: Partial<UserSettings>) => updateSettings(user.id, patch),
@@ -102,7 +104,6 @@ function Dashboard() {
         due_date: input.dueDate,
         due_time: input.dueTime,
         recurrence: input.recurrence,
-        special_occasion_id: input.specialOccasionId,
       });
       if (error) throw error;
     },
@@ -118,35 +119,7 @@ function Dashboard() {
         due_date: input.dueDate,
         due_time: input.dueTime,
         recurrence: input.recurrence,
-        special_occasion_id: input.specialOccasionId,
       }).eq("id", id);
-      if (error) throw error;
-    },
-    onSuccess: () => invalidate("tasks"),
-  });
-
-  const addChildTask = useMutation({
-    mutationFn: async ({ occasionId, title }: { occasionId: string; title: string }) => {
-      const occ = (datesQ.data ?? []).find((d) => d.id === occasionId);
-      const { error } = await supabase.from("planner_tasks").insert({
-        user_id: user.id,
-        title,
-        due_date: occ?.date ?? null,
-        special_occasion_id: occasionId,
-        recurrence: "none",
-      });
-      if (error) throw error;
-    },
-    onSuccess: () => invalidate("tasks"),
-  });
-
-  const toggleTask = useMutation({
-    mutationFn: async (t: Task) => {
-      const completed = !t.completed;
-      const { error } = await supabase
-        .from("planner_tasks")
-        .update({ completed, completed_at: completed ? new Date().toISOString() : null })
-        .eq("id", t.id);
       if (error) throw error;
     },
     onSuccess: () => invalidate("tasks"),
@@ -169,20 +142,19 @@ function Dashboard() {
       }
       if (existing) {
         const { error } = await supabase
-          .from("planner_task_completions" as never)
+          .from("planner_task_completions")
           .delete()
           .eq("id", existing.id);
         if (error) throw error;
       } else {
         const { error } = await supabase
-          .from("planner_task_completions" as never)
-          .insert({ task_id: task.id, user_id: user.id, occurrence_date: date } as never);
+          .from("planner_task_completions")
+          .insert({ task_id: task.id, user_id: user.id, occurrence_date: date });
         if (error) throw error;
       }
     },
     onSuccess: () => { invalidate("completions"); invalidate("tasks"); },
   });
-
 
   const deleteTask = useMutation({
     mutationFn: async (id: string) => {
@@ -192,36 +164,126 @@ function Dashboard() {
     onSuccess: () => invalidate("tasks"),
   });
 
-  const addSpecialDate = useMutation({
-    mutationFn: async (input: Omit<SpecialDate, "id" | "user_id" | "created_at">) => {
-      const { error } = await supabase.from("planner_special_dates").insert({ ...input, user_id: user.id });
+  // --- Multiple Tasks ---
+  const addMultiple = useMutation({
+    mutationFn: async (v: MultipleTaskForm) => {
+      const { error } = await supabase.from("planner_multiple_tasks").insert({
+        user_id: user.id,
+        name: v.name,
+        category_id: v.categoryId,
+        date: v.date,
+      });
       if (error) throw error;
     },
-    onSuccess: () => invalidate("dates"),
+    onSuccess: () => invalidate("multiple_tasks"),
   });
 
-  const updateSpecialDate = useMutation({
-    mutationFn: async ({ id, patch }: { id: string; patch: Partial<Omit<SpecialDate, "id" | "user_id" | "created_at">> }) => {
-      const { error } = await supabase.from("planner_special_dates").update(patch).eq("id", id);
+  const updateMultiple = useMutation({
+    mutationFn: async ({ id, patch }: { id: string; patch: MultipleTaskForm }) => {
+      const { error } = await supabase.from("planner_multiple_tasks").update({
+        name: patch.name,
+        category_id: patch.categoryId,
+        date: patch.date,
+      }).eq("id", id);
       if (error) throw error;
     },
-    onSuccess: () => invalidate("dates"),
+    onSuccess: () => invalidate("multiple_tasks"),
   });
 
-  const deleteSpecialDate = useMutation({
+  const deleteMultiple = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.from("planner_special_dates").delete().eq("id", id);
+      const { error } = await supabase.from("planner_multiple_tasks").delete().eq("id", id);
       if (error) throw error;
     },
-    onSuccess: () => { invalidate("dates"); invalidate("tasks"); },
+    onSuccess: () => { invalidate("multiple_tasks"); invalidate("multiple_task_items"); },
+  });
+
+  const addMultipleItem = useMutation({
+    mutationFn: async ({ parentId, title }: { parentId: string; title: string }) => {
+      const siblings = (multipleItemsQ.data ?? []).filter((i) => i.parent_id === parentId);
+      const { error } = await supabase.from("planner_multiple_task_items").insert({
+        parent_id: parentId,
+        title,
+        sort_order: siblings.length,
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => invalidate("multiple_task_items"),
+  });
+
+  const updateMultipleItem = useMutation({
+    mutationFn: async ({ id, title }: { id: string; title: string }) => {
+      const { error } = await supabase.from("planner_multiple_task_items").update({ title }).eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => invalidate("multiple_task_items"),
+  });
+
+  const toggleMultipleItem = useMutation({
+    mutationFn: async (item: MultipleTaskItem) => {
+      const { error } = await supabase
+        .from("planner_multiple_task_items")
+        .update({ completed: !item.completed })
+        .eq("id", item.id);
+      if (error) throw error;
+    },
+    onSuccess: () => invalidate("multiple_task_items"),
+  });
+
+  const deleteMultipleItem = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from("planner_multiple_task_items").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => invalidate("multiple_task_items"),
+  });
+
+  // --- Events ---
+  const addEvent = useMutation({
+    mutationFn: async (v: EventForm) => {
+      const { error } = await supabase.from("planner_events").insert({
+        user_id: user.id,
+        name: v.name,
+        date: v.date,
+        type: v.type,
+        notes: v.notes || null,
+        is_recurring: v.is_recurring,
+        birth_year: v.birth_year,
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => invalidate("events"),
+  });
+
+  const updateEvent = useMutation({
+    mutationFn: async ({ id, patch }: { id: string; patch: EventForm }) => {
+      const { error } = await supabase.from("planner_events").update({
+        name: patch.name,
+        date: patch.date,
+        type: patch.type,
+        notes: patch.notes || null,
+        is_recurring: patch.is_recurring,
+        birth_year: patch.birth_year,
+      }).eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => invalidate("events"),
+  });
+
+  const deleteEvent = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from("planner_events").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => invalidate("events"),
   });
 
   const upcoming = useMemo(() => {
-    return (datesQ.data ?? [])
-      .map((e) => ({ e, dd: daysUntilAnnual(e.date) }))
+    return (eventsQ.data ?? [])
+      .map((e) => ({ e, dd: e.is_recurring ? daysUntilAnnual(e.date) : Infinity }))
       .filter((x) => x.dd <= 14)
       .sort((a, b) => a.dd - b.dd);
-  }, [datesQ.data]);
+  }, [eventsQ.data]);
 
   const handleSignOut = async () => {
     await qc.cancelQueries();
@@ -239,7 +301,6 @@ function Dashboard() {
 
   return (
     <div className="min-h-screen">
-      {/* Header */}
       <header className="border-b border-border">
         <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
           <div>
@@ -266,7 +327,6 @@ function Dashboard() {
         </div>
       </header>
 
-      {/* Upcoming birthday banner */}
       {upcoming.length > 0 && (
         <div className="border-b border-border bg-muted">
           <div className="max-w-7xl mx-auto px-6 py-3 flex items-center gap-4 flex-wrap">
@@ -290,12 +350,11 @@ function Dashboard() {
           onAnchorChange={setAnchor}
           tasks={tasksQ.data ?? []}
           categories={categoriesQ.data ?? []}
-          specialDates={datesQ.data ?? []}
+          events={eventsQ.data ?? []}
           completions={completionsQ.data ?? []}
           onToggleOccurrence={(task, date) => toggleOccurrence.mutate({ task, date })}
           onEditTask={(t) => setEditingTask(t)}
         />
-
 
         <div className="grid md:grid-cols-2 gap-6">
           <section className="card-flat p-4">
@@ -303,7 +362,6 @@ function Dashboard() {
               categories={categoriesQ.data ?? []}
               subtags={subtagsQ.data ?? []}
               tasks={tasksQ.data ?? []}
-              specialDates={datesQ.data ?? []}
               completions={completionsQ.data ?? []}
               editingTask={editingTask}
               onCancelEdit={() => setEditingTask(null)}
@@ -316,19 +374,26 @@ function Dashboard() {
               onDeleteTask={(id) => { if (editingTask?.id === id) setEditingTask(null); deleteTask.mutate(id); }}
               onDeleteCategory={(id) => deleteCategory.mutate(id)}
             />
-
           </section>
 
-          <section className="card-flat p-4">
-            <SpecialOccasionsPanel
-              entries={datesQ.data ?? []}
-              tasks={tasksQ.data ?? []}
-              onAdd={(e) => addSpecialDate.mutate(e)}
-              onUpdate={(id, patch) => updateSpecialDate.mutate({ id, patch })}
-              onDelete={(id) => deleteSpecialDate.mutate(id)}
-              onAddChildTask={(occasionId, title) => addChildTask.mutate({ occasionId, title })}
-              onToggleTask={(t) => toggleTask.mutate(t)}
-              onDeleteTask={(id) => deleteTask.mutate(id)}
+          <section className="card-flat p-4 space-y-8">
+            <MultipleTasksPanel
+              entries={multipleQ.data ?? []}
+              items={multipleItemsQ.data ?? []}
+              categories={categoriesQ.data ?? []}
+              onAdd={(v) => addMultiple.mutate(v)}
+              onUpdate={(id, patch) => updateMultiple.mutate({ id, patch })}
+              onDelete={(id) => deleteMultiple.mutate(id)}
+              onAddItem={(parentId, title) => addMultipleItem.mutate({ parentId, title })}
+              onUpdateItem={(id, title) => updateMultipleItem.mutate({ id, title })}
+              onToggleItem={(item) => toggleMultipleItem.mutate(item)}
+              onDeleteItem={(id) => deleteMultipleItem.mutate(id)}
+            />
+            <EventsPanel
+              entries={eventsQ.data ?? []}
+              onAdd={(v) => addEvent.mutate(v)}
+              onUpdate={(id, patch) => updateEvent.mutate({ id, patch })}
+              onDelete={(id) => deleteEvent.mutate(id)}
             />
           </section>
         </div>
