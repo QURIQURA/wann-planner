@@ -378,41 +378,120 @@ export type Database = {
           },
         ]
       }
-      planner_special_dates: {
+      planner_events: {
         Row: {
-          category: string
+          birth_year: number | null
           created_at: string
           date: string
           id: string
+          is_recurring: boolean
           name: string
           notes: string | null
-          show_age: boolean
           type: string
+          updated_at: string
           user_id: string
         }
         Insert: {
-          category?: string
+          birth_year?: number | null
           created_at?: string
           date: string
           id?: string
+          is_recurring?: boolean
           name: string
           notes?: string | null
-          show_age?: boolean
           type?: string
+          updated_at?: string
           user_id: string
         }
         Update: {
-          category?: string
+          birth_year?: number | null
           created_at?: string
           date?: string
           id?: string
+          is_recurring?: boolean
           name?: string
           notes?: string | null
-          show_age?: boolean
           type?: string
+          updated_at?: string
           user_id?: string
         }
         Relationships: []
+      }
+      planner_multiple_task_items: {
+        Row: {
+          completed: boolean
+          created_at: string
+          id: string
+          parent_id: string
+          sort_order: number
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          completed?: boolean
+          created_at?: string
+          id?: string
+          parent_id: string
+          sort_order?: number
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          completed?: boolean
+          created_at?: string
+          id?: string
+          parent_id?: string
+          sort_order?: number
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "planner_multiple_task_items_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "planner_multiple_tasks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      planner_multiple_tasks: {
+        Row: {
+          category_id: string | null
+          created_at: string
+          date: string | null
+          id: string
+          name: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          category_id?: string | null
+          created_at?: string
+          date?: string | null
+          id?: string
+          name: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          category_id?: string | null
+          created_at?: string
+          date?: string | null
+          id?: string
+          name?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "planner_multiple_tasks_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "planner_task_categories"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       planner_task_categories: {
         Row: {
@@ -516,7 +595,6 @@ export type Database = {
           id: string
           notes: string | null
           recurrence: string
-          special_occasion_id: string | null
           subtag_id: string | null
           title: string
           updated_at: string
@@ -532,7 +610,6 @@ export type Database = {
           id?: string
           notes?: string | null
           recurrence?: string
-          special_occasion_id?: string | null
           subtag_id?: string | null
           title: string
           updated_at?: string
@@ -548,7 +625,6 @@ export type Database = {
           id?: string
           notes?: string | null
           recurrence?: string
-          special_occasion_id?: string | null
           subtag_id?: string | null
           title?: string
           updated_at?: string
@@ -560,13 +636,6 @@ export type Database = {
             columns: ["category_id"]
             isOneToOne: false
             referencedRelation: "planner_task_categories"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "planner_tasks_special_occasion_id_fkey"
-            columns: ["special_occasion_id"]
-            isOneToOne: false
-            referencedRelation: "planner_special_dates"
             referencedColumns: ["id"]
           },
           {
