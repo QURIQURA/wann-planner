@@ -1,7 +1,7 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
-import { Settings as SettingsIcon, LogOut } from "lucide-react";
+import { Settings as SettingsIcon, LogOut, BookOpen } from "lucide-react";
 import { toast } from "sonner";
 
 import { supabase } from "@/integrations/supabase/client";
@@ -28,6 +28,10 @@ import { TasksPanel } from "@/components/wann/TasksPanel";
 import { MultipleTasksPanel, type MultipleTaskForm } from "@/components/wann/MultipleTasksPanel";
 import { EventsPanel, type EventForm } from "@/components/wann/EventsPanel";
 import { SettingsPanel } from "@/components/wann/SettingsPanel";
+import { HabitTrackerPanel } from "@/components/wann/HabitTrackerPanel";
+import { RoutinesPanel } from "@/components/wann/RoutinesPanel";
+import { MonthlySummaryPanel } from "@/components/wann/MonthlySummaryPanel";
+import { AlertsPanel } from "@/components/wann/AlertsPanel";
 
 export const Route = createFileRoute("/_authenticated/")({
   component: Dashboard,
@@ -308,6 +312,14 @@ function Dashboard() {
             <h1 className="text-lg font-light tracking-tight">Weekly OS</h1>
           </div>
           <div className="flex items-center gap-2">
+            <Link
+              to="/diary"
+              className="border border-border p-2 hover:bg-muted flex items-center gap-1"
+              aria-label="Diary"
+            >
+              <BookOpen size={14} />
+              <span className="label-caps hidden sm:inline">Diary</span>
+            </Link>
             <span className="text-xs text-muted-foreground hidden sm:block">{user.email}</span>
             <button
               onClick={() => setSettingsOpen(true)}
@@ -407,6 +419,15 @@ function Dashboard() {
             />
           </section>
         </div>
+
+        <HabitTrackerPanel userId={user.id} anchorDate={anchor} />
+
+        <div className="grid md:grid-cols-2 gap-6">
+          <RoutinesPanel userId={user.id} />
+          <AlertsPanel userId={user.id} />
+        </div>
+
+        <MonthlySummaryPanel userId={user.id} />
       </main>
 
       {settingsOpen && (
