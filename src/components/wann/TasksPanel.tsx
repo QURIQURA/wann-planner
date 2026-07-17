@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import type { Category, Subtag, Task, SpecialDate, TaskCompletion } from "@/lib/wann-data";
+import type { Category, Subtag, Task, TaskCompletion } from "@/lib/wann-data";
 import { todayLocalStr, shortTime, isOccurrenceCompleted } from "@/lib/wann-data";
 import { Plus, Trash2, X, ChevronDown, ChevronUp } from "lucide-react";
 
@@ -11,14 +11,12 @@ export type TaskFormValues = {
   dueDate: string | null;
   dueTime: string | null;
   recurrence: string;
-  specialOccasionId: string | null;
 };
 
 export function TasksPanel({
   categories,
   subtags,
   tasks,
-  specialDates,
   completions,
   editingTask,
   onCancelEdit,
@@ -34,7 +32,6 @@ export function TasksPanel({
   categories: Category[];
   subtags: Subtag[];
   tasks: Task[];
-  specialDates: SpecialDate[];
   completions: TaskCompletion[];
   editingTask: Task | null;
   onCancelEdit: () => void;
@@ -63,12 +60,10 @@ export function TasksPanel({
     dueDate: todayLocalStr(),
     dueTime: null,
     recurrence: "none",
-    specialOccasionId: null,
   });
 
   const [form, setForm] = useState<TaskFormValues>(emptyForm);
 
-  // Sync form with editing task
   useEffect(() => {
     if (editingTask) {
       setForm({
@@ -78,7 +73,6 @@ export function TasksPanel({
         dueDate: editingTask.due_date ?? todayLocalStr(),
         dueTime: shortTime(editingTask.due_time) || null,
         recurrence: editingTask.recurrence ?? "none",
-        specialOccasionId: editingTask.special_occasion_id ?? null,
       });
     }
   }, [editingTask]);
@@ -167,7 +161,6 @@ export function TasksPanel({
         </div>
       )}
 
-      {/* subtags */}
       {activeCat && (
         <div className="flex flex-wrap gap-1 mb-3">
           <button
@@ -208,7 +201,6 @@ export function TasksPanel({
         </div>
       )}
 
-      {/* task form (create/edit) */}
       <div className="card-flat p-2 mb-3 space-y-2">
         <div className="flex items-center gap-2">
           <p className="label-caps text-[10px]">{editingTask ? "Edit task" : "New task"}</p>
@@ -279,18 +271,6 @@ export function TasksPanel({
             <option value="biweekly">biweekly</option>
             <option value="monthly">monthly</option>
           </select>
-
-          <select
-            value={form.specialOccasionId ?? ""}
-            onChange={(e) => setForm({ ...form, specialOccasionId: e.target.value || null })}
-            className="bg-transparent outline-none text-sm border-b border-border py-1"
-            title="Link to Special Occasion"
-          >
-            <option value="">no occasion</option>
-            {specialDates.map((s) => (
-              <option key={s.id} value={s.id}>{s.name}</option>
-            ))}
-          </select>
           <button
             onClick={submit}
             className="ml-auto border border-border px-3 py-1 label-caps hover:bg-muted flex items-center gap-1"
@@ -300,7 +280,6 @@ export function TasksPanel({
         </div>
       </div>
 
-      {/* task list */}
       <TaskList
         items={filtered.filter((t) => !isOccurrenceCompleted(t, today, completions))}
         categories={categories}
@@ -411,4 +390,3 @@ function TaskList({
     </div>
   );
 }
-
