@@ -1,5 +1,5 @@
 import { useMemo, useRef, useState } from "react";
-import type { Task, Category, EventEntry, TaskCompletion } from "@/lib/wann-data";
+import type { Task, Category, EventEntry, TaskCompletion, MultipleTask, MultipleTaskItem } from "@/lib/wann-data";
 import {
   formatLocalDate,
   shortTime,
@@ -9,7 +9,7 @@ import {
   EVENT_COLORS,
   EVENT_PRIORITY,
 } from "@/lib/wann-data";
-import { ChevronLeft, ChevronRight, ChevronDown, ChevronUp } from "lucide-react";
+import { ChevronLeft, ChevronRight, ChevronDown, ChevronUp, ListChecks } from "lucide-react";
 
 function addDays(d: Date, n: number) {
   const r = new Date(d);
