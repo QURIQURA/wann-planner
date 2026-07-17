@@ -14,6 +14,272 @@ export type Database = {
   }
   public: {
     Tables: {
+      croijang_consumed_items: {
+        Row: {
+          category: string | null
+          consume_count: number
+          created_at: string
+          first_consumed_at: string
+          id: string
+          last_consumed_at: string
+          location: string | null
+          name: string
+          normalized_name: string
+          total_quantity: number
+          unit: string | null
+          updated_at: string
+        }
+        Insert: {
+          category?: string | null
+          consume_count?: number
+          created_at?: string
+          first_consumed_at?: string
+          id?: string
+          last_consumed_at?: string
+          location?: string | null
+          name: string
+          normalized_name: string
+          total_quantity?: number
+          unit?: string | null
+          updated_at?: string
+        }
+        Update: {
+          category?: string | null
+          consume_count?: number
+          created_at?: string
+          first_consumed_at?: string
+          id?: string
+          last_consumed_at?: string
+          location?: string | null
+          name?: string
+          normalized_name?: string
+          total_quantity?: number
+          unit?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      croijang_meal_plans: {
+        Row: {
+          allergens: string[] | null
+          created_at: string
+          dish_name: string
+          id: string
+          plan_date: string
+          recipe_id: string | null
+          section: string
+          slot: string
+          sort_order: number
+          substitutions: string | null
+          updated_at: string
+        }
+        Insert: {
+          allergens?: string[] | null
+          created_at?: string
+          dish_name: string
+          id?: string
+          plan_date: string
+          recipe_id?: string | null
+          section: string
+          slot: string
+          sort_order?: number
+          substitutions?: string | null
+          updated_at?: string
+        }
+        Update: {
+          allergens?: string[] | null
+          created_at?: string
+          dish_name?: string
+          id?: string
+          plan_date?: string
+          recipe_id?: string | null
+          section?: string
+          slot?: string
+          sort_order?: number
+          substitutions?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "croijang_meal_plans_recipe_id_fkey"
+            columns: ["recipe_id"]
+            isOneToOne: false
+            referencedRelation: "croijang_recipes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      croijang_purchases: {
+        Row: {
+          created_at: string
+          grocery_category: string | null
+          id: string
+          items: Json
+          photo_url: string | null
+          purchase_date: string
+          purchase_type: string
+          store: string | null
+          total: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          grocery_category?: string | null
+          id?: string
+          items?: Json
+          photo_url?: string | null
+          purchase_date?: string
+          purchase_type?: string
+          store?: string | null
+          total?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          grocery_category?: string | null
+          id?: string
+          items?: Json
+          photo_url?: string | null
+          purchase_date?: string
+          purchase_type?: string
+          store?: string | null
+          total?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      croijang_recipes: {
+        Row: {
+          allergens: string[] | null
+          calories: number | null
+          carbs: number | null
+          created_at: string
+          cuisine: string | null
+          difficulty: string | null
+          dish_type: string | null
+          fat: number | null
+          fiber: number | null
+          id: string
+          ingredients: Json
+          is_baby: boolean
+          is_meal_kit: boolean
+          meal_kit_brand: string | null
+          name: string
+          notes: string | null
+          prep_time_minutes: number | null
+          price: number | null
+          protein: number | null
+          servings: number
+          source_url: string | null
+          steps: string[] | null
+          updated_at: string
+        }
+        Insert: {
+          allergens?: string[] | null
+          calories?: number | null
+          carbs?: number | null
+          created_at?: string
+          cuisine?: string | null
+          difficulty?: string | null
+          dish_type?: string | null
+          fat?: number | null
+          fiber?: number | null
+          id?: string
+          ingredients?: Json
+          is_baby?: boolean
+          is_meal_kit?: boolean
+          meal_kit_brand?: string | null
+          name: string
+          notes?: string | null
+          prep_time_minutes?: number | null
+          price?: number | null
+          protein?: number | null
+          servings?: number
+          source_url?: string | null
+          steps?: string[] | null
+          updated_at?: string
+        }
+        Update: {
+          allergens?: string[] | null
+          calories?: number | null
+          carbs?: number | null
+          created_at?: string
+          cuisine?: string | null
+          difficulty?: string | null
+          dish_type?: string | null
+          fat?: number | null
+          fiber?: number | null
+          id?: string
+          ingredients?: Json
+          is_baby?: boolean
+          is_meal_kit?: boolean
+          meal_kit_brand?: string | null
+          name?: string
+          notes?: string | null
+          prep_time_minutes?: number | null
+          price?: number | null
+          protein?: number | null
+          servings?: number
+          source_url?: string | null
+          steps?: string[] | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      croijang_settings: {
+        Row: {
+          custom_categories: Json | null
+          id: string
+          updated_at: string
+        }
+        Insert: {
+          custom_categories?: Json | null
+          id?: string
+          updated_at?: string
+        }
+        Update: {
+          custom_categories?: Json | null
+          id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      croijang_storage_items: {
+        Row: {
+          category: string
+          created_at: string
+          id: string
+          location: string
+          name: string
+          notes: string | null
+          quantity: number
+          unit: string | null
+          updated_at: string
+        }
+        Insert: {
+          category: string
+          created_at?: string
+          id?: string
+          location: string
+          name: string
+          notes?: string | null
+          quantity?: number
+          unit?: string | null
+          updated_at?: string
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          id?: string
+          location?: string
+          name?: string
+          notes?: string | null
+          quantity?: number
+          unit?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       finance_business_inputs: {
         Row: {
           airbnbs: Json
