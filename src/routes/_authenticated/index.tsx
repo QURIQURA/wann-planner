@@ -1,7 +1,7 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
-import { Settings as SettingsIcon, LogOut } from "lucide-react";
+import { Settings as SettingsIcon, LogOut, BookOpen } from "lucide-react";
 import { toast } from "sonner";
 
 import { supabase } from "@/integrations/supabase/client";
@@ -28,6 +28,10 @@ import { TasksPanel } from "@/components/wann/TasksPanel";
 import { MultipleTasksPanel, type MultipleTaskForm } from "@/components/wann/MultipleTasksPanel";
 import { EventsPanel, type EventForm } from "@/components/wann/EventsPanel";
 import { SettingsPanel } from "@/components/wann/SettingsPanel";
+import { HabitTrackerPanel } from "@/components/wann/HabitTrackerPanel";
+import { RoutinesPanel } from "@/components/wann/RoutinesPanel";
+import { MonthlySummaryPanel } from "@/components/wann/MonthlySummaryPanel";
+import { AlertsPanel } from "@/components/wann/AlertsPanel";
 
 export const Route = createFileRoute("/_authenticated/")({
   component: Dashboard,
