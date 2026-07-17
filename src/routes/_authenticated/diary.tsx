@@ -357,8 +357,9 @@ function MonthView({
     return () => { cancelled = true; };
   }, [previewsQ.data]);
 
+  type Preview = NonNullable<typeof previewsQ.data>[number];
   const byDate = useMemo(() => {
-    const m: Record<string, (typeof previewsQ.data)[number]> = {};
+    const m: Record<string, Preview> = {};
     for (const p of previewsQ.data ?? []) m[p.date] = p;
     return m;
   }, [previewsQ.data]);
