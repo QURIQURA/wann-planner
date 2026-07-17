@@ -26,6 +26,9 @@ export function WeekRotation({
   categories,
   events,
   completions,
+  multipleTasks,
+  multipleTaskItems,
+  onOpenMultiple,
   onToggleOccurrence,
   onEditTask,
 }: {
@@ -35,6 +38,9 @@ export function WeekRotation({
   categories: Category[];
   events: EventEntry[];
   completions: TaskCompletion[];
+  multipleTasks: MultipleTask[];
+  multipleTaskItems: MultipleTaskItem[];
+  onOpenMultiple: (id: string) => void;
   onToggleOccurrence: (task: Task, date: string) => void;
   onEditTask: (t: Task) => void;
 }) {
