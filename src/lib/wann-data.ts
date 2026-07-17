@@ -18,7 +18,7 @@ export type UserSettings = {
 
 export type Category = Tables<"planner_task_categories">;
 export type Subtag = Tables<"planner_task_subtags">;
-export type Task = Tables<"tasks">;
+export type Task = Tables<"planner_tasks">;
 export type SpecialDate = Tables<"planner_special_dates">;
 
 export async function fetchSettings(userId: string): Promise<UserSettings> {
