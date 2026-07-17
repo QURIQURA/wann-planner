@@ -96,7 +96,7 @@ export function MultipleTasksPanel({
           const editing = editingId === e.id;
 
           return (
-            <div key={e.id} className="border-b border-border/50">
+            <div key={e.id} id={`mt-${e.id}`} className="border-b border-border/50 rounded-sm transition-shadow">
               <div className="flex items-center gap-2 py-1 group">
                 <button
                   onClick={() => setExpandedId(expanded ? null : e.id)}
