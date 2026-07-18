@@ -21,6 +21,74 @@ export type Task = Tables<"planner_tasks">;
 export type MultipleTask = Tables<"planner_multiple_tasks">;
 export type MultipleTaskItem = Tables<"planner_multiple_task_items">;
 export type EventEntry = Tables<"planner_events">;
+export type RecurringException = Tables<"planner_recurring_task_exceptions">;
+
+export async function fetchExceptions(_userId: string): Promise<RecurringException[]> {
+  const { data, error } = await supabase.from("planner_recurring_task_exceptions").select("*");
+  if (error) throw error;
+  return (data ?? []) as RecurringException[];
+}
+
+/**
+ * Effective occurrence of a task on a given date, after applying moves via
+ * planner_recurring_task_exceptions. `originalDate` is the date the occurrence
+ * *would* have happened on (used as the key for completions).
+ */
+export type EffectiveOccurrence = {
+  task: Task;
+  effectiveTime: string | null;
+  originalDate: string;
+  isMoved: boolean;
+};
+
+export function effectiveOccurrencesOnDate(
+  tasks: Task[],
+  exceptions: RecurringException[],
+  dateStr: string,
+): EffectiveOccurrence[] {
+  const out: EffectiveOccurrence[] = [];
+  for (const task of tasks) {
+    const rec = task.recurrence ?? "none";
+    const taskExc = exceptions.filter((e) => e.task_id === task.id);
+
+    if (rec === "none") {
+      if (!task.due_date) continue;
+      const moved = taskExc.find((e) => e.original_date === task.due_date);
+      if (moved) {
+        if (moved.new_date === dateStr) {
+          out.push({ task, effectiveTime: moved.new_time ?? task.due_time, originalDate: task.due_date, isMoved: true });
+        }
+      } else if (task.due_date === dateStr) {
+        out.push({ task, effectiveTime: task.due_time, originalDate: task.due_date, isMoved: false });
+      }
+      continue;
+    }
+
+    // Recurring: natural occurrence, unless moved away
+    if (taskOccursOn(task, dateStr)) {
+      const movedAway = taskExc.find((e) => e.original_date === dateStr && e.new_date !== dateStr);
+      if (!movedAway) {
+        out.push({ task, effectiveTime: task.due_time, originalDate: dateStr, isMoved: false });
+      }
+    }
+    // Recurring: an occurrence moved into this date
+    for (const e of taskExc) {
+      if (e.new_date !== dateStr) continue;
+      if (e.original_date === dateStr) continue; // pure time change already covered below
+      if (!taskOccursOn(task, e.original_date)) continue;
+      out.push({ task, effectiveTime: e.new_time ?? task.due_time, originalDate: e.original_date, isMoved: true });
+    }
+    // Recurring: time-only override (original_date === new_date === dateStr)
+    const timeOnly = taskExc.find((e) => e.original_date === dateStr && e.new_date === dateStr);
+    if (timeOnly) {
+      const idx = out.findIndex((o) => o.task.id === task.id && o.originalDate === dateStr && !o.isMoved);
+      if (idx >= 0) {
+        out[idx] = { ...out[idx], effectiveTime: timeOnly.new_time ?? task.due_time, isMoved: true };
+      }
+    }
+  }
+  return out;
+}
 
 export const EVENT_COLORS: Record<string, string> = {
   birthday: "#D4A574",

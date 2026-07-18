@@ -995,6 +995,44 @@ export type Database = {
           },
         ]
       }
+      planner_recurring_task_exceptions: {
+        Row: {
+          created_at: string
+          id: string
+          new_date: string
+          new_time: string | null
+          original_date: string
+          task_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          new_date: string
+          new_time?: string | null
+          original_date: string
+          task_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          new_date?: string
+          new_time?: string | null
+          original_date?: string
+          task_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "planner_recurring_task_exceptions_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "planner_tasks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       planner_routine_completions: {
         Row: {
           created_at: string
