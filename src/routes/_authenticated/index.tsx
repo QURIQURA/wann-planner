@@ -176,7 +176,7 @@ function Dashboard() {
     }) => {
       const rec = task.recurrence ?? "none";
       if (rec === "none") {
-        const patch: Record<string, unknown> = { due_date: newDate };
+        const patch: { due_date: string; due_time?: string | null } = { due_date: newDate };
         if (newTime !== null) patch.due_time = newTime;
         const { error } = await supabase.from("planner_tasks").update(patch).eq("id", task.id);
         if (error) throw error;
