@@ -15,6 +15,7 @@ import {
   fetchMultipleTasks,
   fetchMultipleTaskItems,
   fetchCompletions,
+  fetchExceptions,
   daysUntilAnnual,
   todayLocalStr,
   type UserSettings,
