@@ -162,7 +162,78 @@ function Dashboard() {
     onSuccess: () => { invalidate("completions"); invalidate("tasks"); },
   });
 
-  const deleteTask = useMutation({
+  const moveTask = useMutation({
+    mutationFn: async ({
+      task,
+      originalDate,
+      newDate,
+      newTime,
+    }: {
+      task: Task;
+      originalDate: string;
+      newDate: string;
+      newTime: string | null;
+    }) => {
+      const rec = task.recurrence ?? "none";
+      if (rec === "none") {
+        const patch: Record<string, unknown> = { due_date: newDate };
+        if (newTime !== null) patch.due_time = newTime;
+        const { error } = await supabase.from("planner_tasks").update(patch).eq("id", task.id);
+        if (error) throw error;
+        return;
+      }
+      // Recurring: upsert per-occurrence exception
+      const finalTime = newTime ?? task.due_time ?? null;
+      const { error } = await supabase
+        .from("planner_recurring_task_exceptions")
+        .upsert(
+          { task_id: task.id, original_date: originalDate, new_date: newDate, new_time: finalTime },
+          { onConflict: "task_id,original_date" },
+        );
+      if (error) throw error;
+    },
+    onMutate: async (vars) => {
+      await qc.cancelQueries({ queryKey: ["tasks", user.id] });
+      await qc.cancelQueries({ queryKey: ["exceptions", user.id] });
+      const prevTasks = qc.getQueryData<Task[]>(["tasks", user.id]);
+      const prevExc = qc.getQueryData<import("@/lib/wann-data").RecurringException[]>(["exceptions", user.id]);
+      const rec = vars.task.recurrence ?? "none";
+      if (rec === "none" && prevTasks) {
+        qc.setQueryData<Task[]>(
+          ["tasks", user.id],
+          prevTasks.map((t) =>
+            t.id === vars.task.id
+              ? { ...t, due_date: vars.newDate, due_time: vars.newTime ?? t.due_time }
+              : t,
+          ),
+        );
+      } else if (prevExc) {
+        const finalTime = vars.newTime ?? vars.task.due_time ?? null;
+        const other = prevExc.filter(
+          (e) => !(e.task_id === vars.task.id && e.original_date === vars.originalDate),
+        );
+        qc.setQueryData(["exceptions", user.id], [
+          ...other,
+          {
+            id: `optimistic-${vars.task.id}-${vars.originalDate}`,
+            task_id: vars.task.id,
+            original_date: vars.originalDate,
+            new_date: vars.newDate,
+            new_time: finalTime,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          },
+        ]);
+      }
+      return { prevTasks, prevExc };
+    },
+    onError: (_e, _v, ctx) => {
+      if (ctx?.prevTasks) qc.setQueryData(["tasks", user.id], ctx.prevTasks);
+      if (ctx?.prevExc) qc.setQueryData(["exceptions", user.id], ctx.prevExc);
+      toast.error("Could not move task");
+    },
+    onSettled: () => { invalidate("tasks"); invalidate("exceptions"); },
+  });
     mutationFn: async (id: string) => {
       const { error } = await supabase.from("planner_tasks").delete().eq("id", id);
       if (error) throw error;
