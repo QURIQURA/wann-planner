@@ -439,6 +439,8 @@ function Dashboard() {
           categories={categoriesQ.data ?? []}
           events={eventsQ.data ?? []}
           completions={completionsQ.data ?? []}
+          exceptions={exceptionsQ.data ?? []}
+          onMoveTask={(args) => moveTask.mutate(args)}
           multipleTasks={multipleQ.data ?? []}
           multipleTaskItems={multipleItemsQ.data ?? []}
           onOpenMultiple={(id) => {
