@@ -754,6 +754,7 @@ export type Database = {
       }
       planner_habit_completions: {
         Row: {
+          count: number
           created_at: string
           date: string
           habit_id: string
@@ -761,6 +762,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          count?: number
           created_at?: string
           date: string
           habit_id: string
@@ -768,6 +770,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          count?: number
           created_at?: string
           date?: string
           habit_id?: string
@@ -788,27 +791,33 @@ export type Database = {
         Row: {
           color: string | null
           created_at: string
+          days_of_week: number[]
           id: string
           name: string
           sort_order: number
+          target_count: number
           updated_at: string
           user_id: string
         }
         Insert: {
           color?: string | null
           created_at?: string
+          days_of_week?: number[]
           id?: string
           name: string
           sort_order?: number
+          target_count?: number
           updated_at?: string
           user_id: string
         }
         Update: {
           color?: string | null
           created_at?: string
+          days_of_week?: number[]
           id?: string
           name?: string
           sort_order?: number
+          target_count?: number
           updated_at?: string
           user_id?: string
         }
