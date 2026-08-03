@@ -13,6 +13,8 @@ import {
 } from "@/lib/wann-extra";
 import { formatLocalDate, todayLocalStr, parseLocalDate } from "@/lib/wann-data";
 import { StickerPicker } from "@/components/wann/StickerPicker";
+import { DaySummaryPanel } from "@/components/wann/DaySummaryPanel";
+
 
 export const Route = createFileRoute("/_authenticated/diary")({
   component: DiaryPage,
@@ -260,6 +262,8 @@ function DayView({ userId, date, onNavigate }: { userId: string; date: string; o
         ><ImagePlus size={14} /></button>
       </div>
 
+      <DaySummaryPanel date={date} />
+
       <div
         ref={editorRef}
         contentEditable
@@ -267,6 +271,7 @@ function DayView({ userId, date, onNavigate }: { userId: string; date: string; o
         onBlur={() => { saveSelection(); save.mutate(); }}
         className="wann-diary-editor min-h-[400px] card-flat p-6 text-base leading-relaxed focus:outline-none"
       />
+
 
       {otdOther.length > 0 && (
         <div className="card-flat p-4">
