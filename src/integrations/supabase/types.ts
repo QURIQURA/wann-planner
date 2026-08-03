@@ -973,6 +973,7 @@ export type Database = {
           date: string | null
           id: string
           name: string
+          subtag_id: string | null
           updated_at: string
           user_id: string
         }
@@ -982,6 +983,7 @@ export type Database = {
           date?: string | null
           id?: string
           name: string
+          subtag_id?: string | null
           updated_at?: string
           user_id: string
         }
@@ -991,6 +993,7 @@ export type Database = {
           date?: string | null
           id?: string
           name?: string
+          subtag_id?: string | null
           updated_at?: string
           user_id?: string
         }
@@ -1000,6 +1003,13 @@ export type Database = {
             columns: ["category_id"]
             isOneToOne: false
             referencedRelation: "planner_task_categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "planner_multiple_tasks_subtag_id_fkey"
+            columns: ["subtag_id"]
+            isOneToOne: false
+            referencedRelation: "planner_task_subtags"
             referencedColumns: ["id"]
           },
         ]
