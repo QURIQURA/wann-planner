@@ -228,6 +228,13 @@ export type DaySummary = {
   multipleItems: Array<{ id: string; title: string; parent: string | null }>;
 };
 
+function localDateOf(ts: string | null | undefined): string | null {
+  if (!ts) return null;
+  const d = new Date(ts);
+  if (Number.isNaN(d.getTime())) return null;
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
 export async function fetchDaySummary(date: string): Promise<DaySummary> {
   const mmdd = date.slice(5);
   const [
@@ -265,7 +272,7 @@ export async function fetchDaySummary(date: string): Promise<DaySummary> {
       const rec = t.recurrence ?? "none";
       if (rec === "none") {
         if (!t.completed) return false;
-        const when = t.completed_at ? t.completed_at.slice(0, 10) : t.due_date;
+        const when = t.completed_at ? localDateOf(t.completed_at) : t.due_date;
         return when === date;
       }
       return completedIds.has(t.id);
@@ -289,7 +296,7 @@ export async function fetchDaySummary(date: string): Promise<DaySummary> {
 
   const mtById = new Map((mtRes.data ?? []).map((m) => [m.id, m.name]));
   const multipleItems = (mtItemsRes.data ?? [])
-    .filter((i) => (i.updated_at ?? "").slice(0, 10) === date)
+    .filter((i) => localDateOf(i.updated_at) === date)
     .map((i) => ({ id: i.id, title: i.title, parent: mtById.get(i.parent_id) ?? null }));
 
   return { tasks, habits, events, multipleItems };
