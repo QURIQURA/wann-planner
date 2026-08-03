@@ -260,6 +260,8 @@ function DayView({ userId, date, onNavigate }: { userId: string; date: string; o
         ><ImagePlus size={14} /></button>
       </div>
 
+      <DaySummaryPanel date={date} />
+
       <div
         ref={editorRef}
         contentEditable
@@ -267,6 +269,7 @@ function DayView({ userId, date, onNavigate }: { userId: string; date: string; o
         onBlur={() => { saveSelection(); save.mutate(); }}
         className="wann-diary-editor min-h-[400px] card-flat p-6 text-base leading-relaxed focus:outline-none"
       />
+
 
       {otdOther.length > 0 && (
         <div className="card-flat p-4">
