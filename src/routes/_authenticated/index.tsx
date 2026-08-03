@@ -92,6 +92,14 @@ function Dashboard() {
     onSuccess: () => { invalidate("categories"); invalidate("subtags"); invalidate("tasks"); },
   });
 
+  const updateCategory = useMutation({
+    mutationFn: async ({ id, name, color }: { id: string; name: string; color: string }) => {
+      const { error } = await supabase.from("planner_task_categories").update({ name, color }).eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => invalidate("categories"),
+  });
+
   const addSubtag = useMutation({
     mutationFn: async ({ categoryId, name }: { categoryId: string; name: string }) => {
       const { error } = await supabase.from("planner_task_subtags").insert({ user_id: user.id, category_id: categoryId, name });
@@ -99,6 +107,24 @@ function Dashboard() {
     },
     onSuccess: () => invalidate("subtags"),
   });
+
+  const updateSubtag = useMutation({
+    mutationFn: async ({ id, name }: { id: string; name: string }) => {
+      const { error } = await supabase.from("planner_task_subtags").update({ name }).eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => invalidate("subtags"),
+  });
+
+  const deleteSubtag = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from("planner_task_subtags").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => { invalidate("subtags"); invalidate("tasks"); invalidate("multiple_tasks"); },
+    onError: () => toast.error("Could not delete subcategory"),
+  });
+
 
   const addTask = useMutation({
     mutationFn: async (input: import("@/components/wann/TasksPanel").TaskFormValues) => {
@@ -250,6 +276,7 @@ function Dashboard() {
         user_id: user.id,
         name: v.name,
         category_id: v.categoryId,
+        subtag_id: v.subtagId,
         date: v.date,
       });
       if (error) throw error;
@@ -262,6 +289,7 @@ function Dashboard() {
       const { error } = await supabase.from("planner_multiple_tasks").update({
         name: patch.name,
         category_id: patch.categoryId,
+        subtag_id: patch.subtagId,
         date: patch.date,
       }).eq("id", id);
       if (error) throw error;
@@ -472,6 +500,9 @@ function Dashboard() {
               onEditTask={(t) => setEditingTask(t)}
               onDeleteTask={(id) => { if (editingTask?.id === id) setEditingTask(null); deleteTask.mutate(id); }}
               onDeleteCategory={(id) => deleteCategory.mutate(id)}
+              onUpdateCategory={(id, name, color) => updateCategory.mutate({ id, name, color })}
+              onUpdateSubtag={(id, name) => updateSubtag.mutate({ id, name })}
+              onDeleteSubtag={(id) => deleteSubtag.mutate(id)}
             />
           </section>
 
@@ -480,6 +511,7 @@ function Dashboard() {
               entries={multipleQ.data ?? []}
               items={multipleItemsQ.data ?? []}
               categories={categoriesQ.data ?? []}
+              subtags={subtagsQ.data ?? []}
               onAdd={(v) => addMultiple.mutate(v)}
               onUpdate={(id, patch) => updateMultiple.mutate({ id, patch })}
               onDelete={(id) => deleteMultiple.mutate(id)}
