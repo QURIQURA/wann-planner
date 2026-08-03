@@ -46,6 +46,9 @@ export function TasksPanel({
   onEditTask: (t: Task) => void;
   onDeleteTask: (id: string) => void;
   onDeleteCategory: (id: string) => void;
+  onUpdateCategory: (id: string, name: string, color: string) => void;
+  onUpdateSubtag: (id: string, name: string) => void;
+  onDeleteSubtag: (id: string) => void;
 }) {
   const today = todayLocalStr();
   const [showDone, setShowDone] = useState(false);
