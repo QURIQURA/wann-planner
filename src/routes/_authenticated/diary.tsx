@@ -13,6 +13,8 @@ import {
 } from "@/lib/wann-extra";
 import { formatLocalDate, todayLocalStr, parseLocalDate } from "@/lib/wann-data";
 import { StickerPicker } from "@/components/wann/StickerPicker";
+import { DaySummaryPanel } from "@/components/wann/DaySummaryPanel";
+
 
 export const Route = createFileRoute("/_authenticated/diary")({
   component: DiaryPage,
