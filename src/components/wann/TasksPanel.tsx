@@ -28,6 +28,9 @@ export function TasksPanel({
   onEditTask,
   onDeleteTask,
   onDeleteCategory,
+  onUpdateCategory,
+  onUpdateSubtag,
+  onDeleteSubtag,
 }: {
   categories: Category[];
   subtags: Subtag[];
