@@ -92,6 +92,14 @@ function Dashboard() {
     onSuccess: () => { invalidate("categories"); invalidate("subtags"); invalidate("tasks"); },
   });
 
+  const updateCategory = useMutation({
+    mutationFn: async ({ id, name, color }: { id: string; name: string; color: string }) => {
+      const { error } = await supabase.from("planner_task_categories").update({ name, color }).eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => invalidate("categories"),
+  });
+
   const addSubtag = useMutation({
     mutationFn: async ({ categoryId, name }: { categoryId: string; name: string }) => {
       const { error } = await supabase.from("planner_task_subtags").insert({ user_id: user.id, category_id: categoryId, name });
@@ -99,6 +107,24 @@ function Dashboard() {
     },
     onSuccess: () => invalidate("subtags"),
   });
+
+  const updateSubtag = useMutation({
+    mutationFn: async ({ id, name }: { id: string; name: string }) => {
+      const { error } = await supabase.from("planner_task_subtags").update({ name }).eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => invalidate("subtags"),
+  });
+
+  const deleteSubtag = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from("planner_task_subtags").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => { invalidate("subtags"); invalidate("tasks"); invalidate("multiple_tasks"); },
+    onError: () => toast.error("Could not delete subcategory"),
+  });
+
 
   const addTask = useMutation({
     mutationFn: async (input: import("@/components/wann/TasksPanel").TaskFormValues) => {
