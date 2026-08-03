@@ -1,17 +1,19 @@
 import { useState } from "react";
-import type { Category, MultipleTask, MultipleTaskItem } from "@/lib/wann-data";
+import type { Category, MultipleTask, MultipleTaskItem, Subtag } from "@/lib/wann-data";
 import { todayLocalStr } from "@/lib/wann-data";
 import { Plus, Trash2, X, Pencil, ChevronDown, ChevronRight } from "lucide-react";
 
 export type MultipleTaskForm = {
   name: string;
   categoryId: string | null;
+  subtagId: string | null;
   date: string | null;
 };
 
 const emptyForm = (): MultipleTaskForm => ({
   name: "",
   categoryId: null,
+  subtagId: null,
   date: todayLocalStr(),
 });
 
@@ -19,6 +21,7 @@ export function MultipleTasksPanel({
   entries,
   items,
   categories,
+  subtags,
   onAdd,
   onUpdate,
   onDelete,
@@ -30,6 +33,7 @@ export function MultipleTasksPanel({
   entries: MultipleTask[];
   items: MultipleTaskItem[];
   categories: Category[];
+  subtags: Subtag[];
   onAdd: (v: MultipleTaskForm) => void;
   onUpdate: (id: string, patch: MultipleTaskForm) => void;
   onDelete: (id: string) => void;
@@ -46,11 +50,30 @@ export function MultipleTasksPanel({
   const [childInput, setChildInput] = useState<Record<string, string>>({});
   const [editingItemId, setEditingItemId] = useState<string | null>(null);
   const [editingItemTitle, setEditingItemTitle] = useState("");
+  const [filter, setFilter] = useState<{ categoryId: string | null; subtagId: string | null }>({
+    categoryId: null,
+    subtagId: null,
+  });
 
   const startEdit = (e: MultipleTask) => {
     setEditingId(e.id);
-    setEditForm({ name: e.name, categoryId: e.category_id, date: e.date });
+    setEditForm({
+      name: e.name,
+      categoryId: e.category_id,
+      subtagId: (e as MultipleTask & { subtag_id: string | null }).subtag_id ?? null,
+      date: e.date,
+    });
   };
+
+  const filterSubtags = filter.categoryId
+    ? subtags.filter((s) => s.category_id === filter.categoryId)
+    : [];
+
+  const visible = entries.filter((e) => {
+    if (filter.categoryId && e.category_id !== filter.categoryId) return false;
+    if (filter.subtagId && (e as MultipleTask & { subtag_id: string | null }).subtag_id !== filter.subtagId) return false;
+    return true;
+  });
 
   return (
     <div>
@@ -65,11 +88,51 @@ export function MultipleTasksPanel({
         </button>
       </div>
 
+      {/* filters */}
+      <div className="flex flex-wrap gap-1 mb-2">
+        <button
+          onClick={() => setFilter({ categoryId: null, subtagId: null })}
+          className={`border border-border px-2 py-1 label-caps text-[10px] ${!filter.categoryId ? "bg-foreground text-background" : "hover:bg-muted"}`}
+        >
+          All
+        </button>
+        {categories.map((c) => (
+          <button
+            key={c.id}
+            onClick={() => setFilter({ categoryId: c.id, subtagId: null })}
+            className={`border border-border px-2 py-1 label-caps text-[10px] flex items-center gap-1 ${filter.categoryId === c.id ? "bg-foreground text-background" : "hover:bg-muted"}`}
+          >
+            <span className="inline-block h-2 w-2" style={{ background: c.color }} />
+            {c.name}
+          </button>
+        ))}
+      </div>
+      {filter.categoryId && filterSubtags.length > 0 && (
+        <div className="flex flex-wrap gap-1 mb-3">
+          <button
+            onClick={() => setFilter({ ...filter, subtagId: null })}
+            className={`border border-border px-2 py-1 text-xs ${!filter.subtagId ? "bg-muted" : "hover:bg-muted"}`}
+          >
+            all
+          </button>
+          {filterSubtags.map((s) => (
+            <button
+              key={s.id}
+              onClick={() => setFilter({ ...filter, subtagId: s.id })}
+              className={`border border-border px-2 py-1 text-xs ${filter.subtagId === s.id ? "bg-muted" : "hover:bg-muted"}`}
+            >
+              {s.name}
+            </button>
+          ))}
+        </div>
+      )}
+
       {creating && (
         <MultipleTaskEditor
           value={form}
           onChange={setForm}
           categories={categories}
+          subtags={subtags}
           submitLabel="Add"
           onSubmit={() => {
             if (form.name.trim()) {
@@ -83,11 +146,14 @@ export function MultipleTasksPanel({
       )}
 
       <div className="space-y-1">
-        {entries.length === 0 && (
+        {visible.length === 0 && (
           <p className="text-xs text-muted-foreground italic">No entries</p>
         )}
-        {entries.map((e) => {
+        {visible.map((e) => {
           const cat = e.category_id ? categories.find((c) => c.id === e.category_id) : null;
+          const subId = (e as MultipleTask & { subtag_id: string | null }).subtag_id ?? null;
+          const sub = subId ? subtags.find((s) => s.id === subId) : null;
+          const showSub = sub && sub.name.trim().toLowerCase() !== e.name.trim().toLowerCase();
           const children = items.filter((i) => i.parent_id === e.id);
           const done = children.filter((i) => i.completed).length;
           const total = children.length;
@@ -125,6 +191,11 @@ export function MultipleTasksPanel({
                     {cat.name}
                   </span>
                 )}
+                {showSub && (
+                  <span className="text-[9px] text-muted-foreground border-b border-border">
+                    {sub!.name}
+                  </span>
+                )}
                 <button
                   onClick={() => startEdit(e)}
                   className="opacity-0 group-hover:opacity-100 hover:text-foreground"
@@ -153,6 +224,7 @@ export function MultipleTasksPanel({
                     value={editForm}
                     onChange={setEditForm}
                     categories={categories}
+                    subtags={subtags}
                     submitLabel="Save"
                     onSubmit={() => {
                       onUpdate(e.id, { ...editForm, name: editForm.name.trim() });
@@ -240,6 +312,7 @@ function MultipleTaskEditor({
   value,
   onChange,
   categories,
+  subtags,
   onSubmit,
   onCancel,
   submitLabel,
@@ -247,6 +320,7 @@ function MultipleTaskEditor({
   value: MultipleTaskForm;
   onChange: (v: MultipleTaskForm) => void;
   categories: Category[];
+  subtags: Subtag[];
   onSubmit: () => void;
   onCancel: () => void;
   submitLabel: string;
@@ -274,12 +348,23 @@ function MultipleTaskEditor({
         />
         <select
           value={value.categoryId ?? ""}
-          onChange={(e) => onChange({ ...value, categoryId: e.target.value || null })}
+          onChange={(e) => onChange({ ...value, categoryId: e.target.value || null, subtagId: null })}
           className="bg-transparent outline-none border-b border-border py-1 text-sm"
         >
           <option value="">no cat</option>
           {categories.map((c) => (
             <option key={c.id} value={c.id}>{c.name}</option>
+          ))}
+        </select>
+        <select
+          value={value.subtagId ?? ""}
+          onChange={(e) => onChange({ ...value, subtagId: e.target.value || null })}
+          disabled={!value.categoryId}
+          className="bg-transparent outline-none border-b border-border py-1 text-sm"
+        >
+          <option value="">no sub</option>
+          {subtags.filter((s) => s.category_id === value.categoryId).map((s) => (
+            <option key={s.id} value={s.id}>{s.name}</option>
           ))}
         </select>
         <button
