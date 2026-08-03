@@ -58,6 +58,9 @@ export function TasksPanel({
     subtagId: null,
   });
   const [newCat, setNewCat] = useState({ open: false, name: "", color: "#1A1A18" });
+  const [editCat, setEditCat] = useState<{ id: string; name: string; color: string } | null>(null);
+  const [editingSubtagId, setEditingSubtagId] = useState<string | null>(null);
+  const [editingSubtagName, setEditingSubtagName] = useState("");
 
   const emptyForm = (): TaskFormValues => ({
     title: "",
