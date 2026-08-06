@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import type { Category, Subtag, Task, TaskCompletion } from "@/lib/wann-data";
+import type { Category, MultipleTask, Subtag, Task, TaskCompletion } from "@/lib/wann-data";
 import { todayLocalStr, shortTime, isOccurrenceCompleted } from "@/lib/wann-data";
 import { Plus, Trash2, X, ChevronDown, ChevronUp, Pencil } from "lucide-react";
 

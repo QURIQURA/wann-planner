@@ -515,6 +515,7 @@ function Dashboard() {
             <TasksPanel
               categories={categoriesQ.data ?? []}
               subtags={subtagsQ.data ?? []}
+              projects={multipleQ.data ?? []}
               tasks={tasksQ.data ?? []}
               completions={completionsQ.data ?? []}
               editingTask={editingTask}
