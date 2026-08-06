@@ -16,6 +16,7 @@ export type TaskFormValues = {
 export function TasksPanel({
   categories,
   subtags,
+  projects,
   tasks,
   completions,
   editingTask,
@@ -34,6 +35,7 @@ export function TasksPanel({
 }: {
   categories: Category[];
   subtags: Subtag[];
+  projects: MultipleTask[];
   tasks: Task[];
   completions: TaskCompletion[];
   editingTask: Task | null;
@@ -374,6 +376,7 @@ export function TasksPanel({
       <TaskList
         items={filtered.filter((t) => !isOccurrenceCompleted(t, today, completions))}
         categories={categories}
+        projects={projects}
         editingId={editingTask?.id ?? null}
         onToggle={onToggleTask}
         onEdit={onEditTask}
@@ -397,6 +400,7 @@ export function TasksPanel({
                 <TaskList
                   items={done}
                   categories={categories}
+                  projects={projects}
                   editingId={editingTask?.id ?? null}
                   onToggle={onToggleTask}
                   onEdit={onEditTask}
@@ -413,6 +417,7 @@ export function TasksPanel({
 }
 
 function TaskList({
+  projects,
   items,
   categories,
   editingId,
@@ -428,6 +433,7 @@ function TaskList({
   onEdit: (t: Task) => void;
   onDelete: (id: string) => void;
   completed?: boolean;
+  projects: MultipleTask[];
 }) {
   if (items.length === 0 && !completed) {
     return <p className="text-xs text-muted-foreground italic">No tasks</p>;
@@ -436,6 +442,7 @@ function TaskList({
     <div className="space-y-1">
       {items.map((t) => {
         const cat = t.category_id ? categories.find((c) => c.id === t.category_id) : null;
+        const project = t.multiple_task_id ? projects.find((p) => p.id === t.multiple_task_id) : null;
         return (
           <div
             key={t.id}
@@ -455,6 +462,11 @@ function TaskList({
                 <span className="ml-1 text-[10px] text-muted-foreground">↻</span>
               )}
             </button>
+            {project && (
+              <span className="text-[10px] text-muted-foreground border-b border-border max-w-[90px] truncate">
+                {project.name}
+              </span>
+            )}
             {cat && (
               <span className="text-[10px] label-caps" style={{ color: cat.color }}>
                 {cat.name}
