@@ -105,6 +105,10 @@ export function WeekRotation({
     () => Object.fromEntries(categories.map((c) => [c.id, c])),
     [categories],
   );
+  const projMap = useMemo(
+    () => Object.fromEntries(multipleTasks.map((m) => [m.id, m.name])),
+    [multipleTasks],
+  );
 
   const touchStartX = useRef<number | null>(null);
   const onTouchStart = (e: React.TouchEvent) => {
@@ -190,6 +194,7 @@ export function WeekRotation({
         multipleTaskItems={multipleTaskItems}
         completions={completions}
         catMap={catMap}
+        projMap={projMap}
         onToggle={onToggleOccurrence}
         onEdit={onEditTask}
         onOpenMultiple={onOpenMultiple}
@@ -272,6 +277,7 @@ function DayCard({
   multipleTaskItems,
   completions,
   catMap,
+  projMap,
   onToggle,
   onEdit,
   onOpenMultiple,
@@ -291,6 +297,7 @@ function DayCard({
   multipleTaskItems: MultipleTaskItem[];
   completions: TaskCompletion[];
   catMap: Record<string, Category>;
+  projMap: Record<string, string>;
   onToggle: (task: Task, date: string) => void;
   onEdit: (t: Task) => void;
   onOpenMultiple: (id: string) => void;
@@ -333,7 +340,7 @@ function DayCard({
             </div>
           ))}
           {dayMultiples.map((m) => {
-            const children = multipleTaskItems.filter((i) => i.parent_id === m.id);
+            const children = multipleTaskItems.filter((i) => i.multiple_task_id === m.id);
             const done = children.filter((i) => i.completed).length;
             const total = children.length;
             return (
@@ -358,6 +365,7 @@ function DayCard({
             date={dateKey}
             completions={completions}
             catMap={catMap}
+            projMap={projMap}
             onToggle={onToggle}
             onEdit={onEdit}
           />
@@ -374,6 +382,7 @@ function DayCard({
           timed={timed}
           completions={completions}
           catMap={catMap}
+          projMap={projMap}
           onToggle={onToggle}
           onEdit={onEdit}
           isDragging={isDragging}
@@ -388,6 +397,7 @@ function TimelineGrid({
   timed,
   completions,
   catMap,
+  projMap,
   onToggle,
   onEdit,
   isDragging,
@@ -396,6 +406,7 @@ function TimelineGrid({
   timed: EffectiveOccurrence[];
   completions: TaskCompletion[];
   catMap: Record<string, Category>;
+  projMap: Record<string, string>;
   onToggle: (task: Task, date: string) => void;
   onEdit: (t: Task) => void;
   isDragging: boolean;
@@ -425,6 +436,7 @@ function TimelineGrid({
               occ={o}
               completed={completed}
               cat={cat}
+              project={o.task.multiple_task_id ? projMap[o.task.multiple_task_id] : undefined}
               onToggle={() => onToggle(o.task, o.originalDate)}
               onEdit={() => onEdit(o.task)}
             />
@@ -463,12 +475,14 @@ function DraggableTimedTask({
   occ,
   completed,
   cat,
+  project,
   onToggle,
   onEdit,
 }: {
   occ: EffectiveOccurrence;
   completed: boolean;
   cat: Category | undefined;
+  project?: string;
   onToggle: () => void;
   onEdit: () => void;
 }) {
@@ -509,6 +523,11 @@ function DraggableTimedTask({
         )}
         {occ.isMoved && <span className="ml-1 text-[9px] text-muted-foreground">•</span>}
       </button>
+      {project && (
+        <span className="text-[9px] text-muted-foreground border-b border-border flex-shrink-0 max-w-[70px] truncate">
+          {project}
+        </span>
+      )}
       {cat && (
         <span
           className="text-[9px] px-0.5 border border-border label-caps flex-shrink-0"
@@ -526,6 +545,7 @@ function TaskLines({
   date,
   completions,
   catMap,
+  projMap,
   onToggle,
   onEdit,
 }: {
@@ -533,6 +553,7 @@ function TaskLines({
   date: string;
   completions: TaskCompletion[];
   catMap: Record<string, Category>;
+  projMap: Record<string, string>;
   onToggle: (task: Task, date: string) => void;
   onEdit: (t: Task) => void;
 }) {
@@ -542,6 +563,7 @@ function TaskLines({
 
   const render = (o: EffectiveOccurrence, completed: boolean) => {
     const cat = o.task.category_id ? catMap[o.task.category_id] : undefined;
+    const project = o.task.multiple_task_id ? projMap[o.task.multiple_task_id] : undefined;
     return (
       <div key={`${o.task.id}-${o.originalDate}`} className="flex items-start gap-2 group">
         <button
@@ -558,6 +580,11 @@ function TaskLines({
             <span className="ml-1 text-[10px] text-muted-foreground">↻</span>
           )}
         </button>
+        {project && (
+          <span className="text-[10px] text-muted-foreground border-b border-border max-w-[80px] truncate">
+            {project}
+          </span>
+        )}
         {cat && (
           <span
             className="text-[10px] px-1 border border-border label-caps"
