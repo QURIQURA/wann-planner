@@ -37,9 +37,10 @@ export function MultipleTasksPanel({
   onAdd: (v: MultipleTaskForm) => void;
   onUpdate: (id: string, patch: MultipleTaskForm) => void;
   onDelete: (id: string) => void;
-  onAddItem: (parentId: string, title: string) => void;
-  onUpdateItem: (id: string, title: string) => void;
+  onAddItem: (parentId: string, title: string, date: string | null, time: string | null) => void;
+  onUpdateItem: (id: string, patch: { title?: string; date?: string | null; time?: string | null }) => void;
   onToggleItem: (item: MultipleTaskItem) => void;
+
   onDeleteItem: (id: string) => void;
 }) {
   const [creating, setCreating] = useState(false);
