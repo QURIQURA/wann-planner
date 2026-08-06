@@ -154,12 +154,14 @@ export async function fetchMultipleTasks(_userId: string) {
 
 export async function fetchMultipleTaskItems(_userId: string) {
   const { data, error } = await supabase
-    .from("planner_multiple_task_items")
+    .from("planner_tasks")
     .select("*")
-    .order("sort_order", { ascending: true });
+    .not("multiple_task_id", "is", null)
+    .order("created_at", { ascending: true });
   if (error) throw error;
   return data ?? [];
 }
+
 
 export async function fetchEvents(_userId: string) {
   const { data, error } = await supabase
