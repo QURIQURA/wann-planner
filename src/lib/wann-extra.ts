@@ -300,8 +300,9 @@ export async function fetchDaySummary(date: string): Promise<DaySummary> {
 
   const mtById = new Map((mtRes.data ?? []).map((m) => [m.id, m.name]));
   const multipleItems = (mtItemsRes.data ?? [])
-    .filter((i) => localDateOf(i.updated_at) === date)
-    .map((i) => ({ id: i.id, title: i.title, parent: mtById.get(i.parent_id) ?? null }));
+    .filter((i) => (i.completed_at ? localDateOf(i.completed_at) === date : false))
+    .map((i) => ({ id: i.id, title: i.title, parent: i.multiple_task_id ? mtById.get(i.multiple_task_id) ?? null : null }));
+
 
   return { tasks, habits, events, multipleItems };
 }
