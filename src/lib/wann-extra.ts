@@ -11,6 +11,8 @@ export type KoraSetupItem = Tables<"planner_kora_setup_items">;
 export type Alert = Tables<"planner_alerts">;
 export type DiaryEntry = Tables<"planner_diary_entries">;
 export type Sticker = Tables<"planner_stickers">;
+export type DiaryPhoto = Tables<"planner_diary_photos">;
+
 
 /* ---------- HABITS ---------- */
 export async function fetchHabits() {
