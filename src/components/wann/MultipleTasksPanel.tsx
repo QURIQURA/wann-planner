@@ -155,7 +155,7 @@ export function MultipleTasksPanel({
           const subId = (e as MultipleTask & { subtag_id: string | null }).subtag_id ?? null;
           const sub = subId ? subtags.find((s) => s.id === subId) : null;
           const showSub = sub && sub.name.trim().toLowerCase() !== e.name.trim().toLowerCase();
-          const children = items.filter((i) => i.parent_id === e.id);
+          const children = items.filter((i) => i.multiple_task_id === e.id);
           const done = children.filter((i) => i.completed).length;
           const total = children.length;
           const pct = total > 0 ? Math.round((done / total) * 100) : null;
