@@ -142,6 +142,103 @@ export async function fetchDiaryOnThisDay(mmdd: string) {
   return data ?? [];
 }
 
+/* ---------- DIARY PHOTOS ---------- */
+export const MAX_DIARY_PHOTOS = 6;
+
+export async function fetchDiaryPhotos(date: string) {
+  const { data, error } = await supabase
+    .from("planner_diary_photos")
+    .select("*")
+    .eq("date", date)
+    .order("sort_order", { ascending: true });
+  if (error) throw error;
+  return data ?? [];
+}
+
+export async function fetchDiaryPhotosRange(start: string, end: string) {
+  const { data, error } = await supabase
+    .from("planner_diary_photos")
+    .select("*")
+    .gte("date", start)
+    .lte("date", end)
+    .order("sort_order", { ascending: true });
+  if (error) throw error;
+  return data ?? [];
+}
+
+export async function signDiaryPhotoUrl(path: string): Promise<string> {
+  const { data, error } = await supabase.storage
+    .from("diary-photos")
+    .createSignedUrl(path, 60 * 60 * 24 * 7);
+  if (error) throw error;
+  return data.signedUrl;
+}
+
+export async function uploadDiaryPhoto(
+  userId: string,
+  date: string,
+  file: File,
+  sortOrder: number,
+  makeCover: boolean,
+): Promise<DiaryPhoto> {
+  const blob = await compressToWebp(file, 1600);
+  const path = `${userId}/${date}/${crypto.randomUUID()}.webp`;
+  const { error: upErr } = await supabase.storage.from("diary-photos").upload(path, blob, {
+    contentType: "image/webp",
+    upsert: false,
+  });
+  if (upErr) throw upErr;
+  if (makeCover) {
+    await supabase.from("planner_diary_photos").update({ is_cover: false }).eq("date", date);
+  }
+  const { data, error } = await supabase
+    .from("planner_diary_photos")
+    .insert({ user_id: userId, date, storage_path: path, sort_order: sortOrder, is_cover: makeCover })
+    .select()
+    .single();
+  if (error) throw error;
+  return data as DiaryPhoto;
+}
+
+export async function setDiaryCoverPhoto(date: string, photoId: string) {
+  const { error: clearErr } = await supabase
+    .from("planner_diary_photos")
+    .update({ is_cover: false })
+    .eq("date", date);
+  if (clearErr) throw clearErr;
+  const { error } = await supabase
+    .from("planner_diary_photos")
+    .update({ is_cover: true })
+    .eq("id", photoId);
+  if (error) throw error;
+}
+
+export async function deleteDiaryPhoto(photo: DiaryPhoto) {
+  const { error } = await supabase.from("planner_diary_photos").delete().eq("id", photo.id);
+  if (error) throw error;
+  await supabase.storage.from("diary-photos").remove([photo.storage_path]);
+  if (photo.is_cover) {
+    const rest = await fetchDiaryPhotos(photo.date);
+    if (rest[0]) await setDiaryCoverPhoto(photo.date, rest[0].id);
+  }
+}
+
+/** Downscale to max edge px and encode as webp. */
+async function compressToWebp(file: File, maxEdge: number): Promise<Blob> {
+  const img = await loadImage(file);
+  const scale = Math.min(1, maxEdge / Math.max(img.width, img.height));
+  const w = Math.max(1, Math.round(img.width * scale));
+  const h = Math.max(1, Math.round(img.height * scale));
+  const canvas = document.createElement("canvas");
+  canvas.width = w;
+  canvas.height = h;
+  const ctx = canvas.getContext("2d")!;
+  ctx.drawImage(img, 0, 0, w, h);
+  return await new Promise<Blob>((resolve, reject) => {
+    canvas.toBlob((b) => (b ? resolve(b) : reject(new Error("toBlob failed"))), "image/webp", 0.82);
+  });
+}
+
 /* ---------- STICKERS ---------- */
 export async function fetchStickers() {
   const { data, error } = await supabase
