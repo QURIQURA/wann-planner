@@ -255,7 +255,7 @@ export function MultipleTasksPanel({
                           onChange={(ev) => setEditingItemTitle(ev.target.value)}
                           onBlur={() => {
                             const v = editingItemTitle.trim();
-                            if (v && v !== it.title) onUpdateItem(it.id, v);
+                            if (v && v !== it.title) onUpdateItem(it.id, { title: v });
                             setEditingItemId(null);
                           }}
                           onKeyDown={(ev) => {
@@ -272,6 +272,20 @@ export function MultipleTasksPanel({
                           {it.title}
                         </button>
                       )}
+                      <input
+                        type="date"
+                        value={it.due_date ?? ""}
+                        onChange={(ev) => onUpdateItem(it.id, { date: ev.target.value || null })}
+                        aria-label="Item date"
+                        className="bg-transparent border-b border-border text-[10px] text-muted-foreground w-[92px]"
+                      />
+                      <input
+                        type="time"
+                        value={it.due_time ? it.due_time.slice(0, 5) : ""}
+                        onChange={(ev) => onUpdateItem(it.id, { time: ev.target.value || null })}
+                        aria-label="Item time"
+                        className="bg-transparent border-b border-border text-[10px] text-muted-foreground w-[64px]"
+                      />
                       <button
                         onClick={() => onDeleteItem(it.id)}
                         aria-label="Delete item"
@@ -281,7 +295,7 @@ export function MultipleTasksPanel({
                       </button>
                     </div>
                   ))}
-                  <div className="flex gap-1 pt-1">
+                  <div className="flex gap-1 pt-1 items-center">
                     <input
                       type="text"
                       placeholder="+ Add item"
@@ -291,14 +305,31 @@ export function MultipleTasksPanel({
                         if (ev.key === "Enter") {
                           const v = (childInput[e.id] ?? "").trim();
                           if (v) {
-                            onAddItem(e.id, v);
+                            onAddItem(e.id, v, childDate[e.id] || e.date || null, childTime[e.id] || null);
                             setChildInput({ ...childInput, [e.id]: "" });
+                            setChildDate({ ...childDate, [e.id]: "" });
+                            setChildTime({ ...childTime, [e.id]: "" });
                           }
                         }
                       }}
                       className="flex-1 bg-transparent outline-none border-b border-border py-1 text-xs"
                     />
+                    <input
+                      type="date"
+                      value={childDate[e.id] ?? ""}
+                      onChange={(ev) => setChildDate({ ...childDate, [e.id]: ev.target.value })}
+                      aria-label="New item date"
+                      className="bg-transparent border-b border-border text-[10px] text-muted-foreground w-[92px]"
+                    />
+                    <input
+                      type="time"
+                      value={childTime[e.id] ?? ""}
+                      onChange={(ev) => setChildTime({ ...childTime, [e.id]: ev.target.value })}
+                      aria-label="New item time"
+                      className="bg-transparent border-b border-border text-[10px] text-muted-foreground w-[64px]"
+                    />
                   </div>
+
                 </div>
               )}
             </div>
