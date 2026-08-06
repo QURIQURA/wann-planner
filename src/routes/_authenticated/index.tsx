@@ -338,11 +338,12 @@ function Dashboard() {
       date,
       time,
     }: { id: string; title?: string; date?: string | null; time?: string | null }) => {
-      const patch: Record<string, unknown> = {};
+      const patch: { title?: string; due_date?: string | null; due_time?: string | null } = {};
       if (title !== undefined) patch.title = title;
       if (date !== undefined) patch.due_date = date;
       if (time !== undefined) patch.due_time = time;
       const { error } = await supabase.from("planner_tasks").update(patch).eq("id", id);
+
       if (error) throw error;
     },
     onSuccess: invalidateItems,
