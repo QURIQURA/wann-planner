@@ -305,45 +305,71 @@ function Dashboard() {
     onSuccess: () => { invalidate("multiple_tasks"); invalidate("multiple_task_items"); },
   });
 
+  const invalidateItems = () => { invalidate("multiple_task_items"); invalidate("tasks"); };
+
   const addMultipleItem = useMutation({
-    mutationFn: async ({ parentId, title }: { parentId: string; title: string }) => {
-      const siblings = (multipleItemsQ.data ?? []).filter((i) => i.parent_id === parentId);
-      const { error } = await supabase.from("planner_multiple_task_items").insert({
-        parent_id: parentId,
+    mutationFn: async ({
+      parentId,
+      title,
+      date,
+      time,
+    }: { parentId: string; title: string; date?: string | null; time?: string | null }) => {
+      const parent = (multipleQ.data ?? []).find((m) => m.id === parentId);
+      const { error } = await supabase.from("planner_tasks").insert({
+        user_id: user.id,
         title,
-        sort_order: siblings.length,
+        multiple_task_id: parentId,
+        category_id: parent?.category_id ?? null,
+        subtag_id: parent?.subtag_id ?? null,
+        due_date: date ?? null,
+        due_time: time ?? null,
+        recurrence: "none",
+        completed: false,
       });
       if (error) throw error;
     },
-    onSuccess: () => invalidate("multiple_task_items"),
+    onSuccess: invalidateItems,
   });
 
   const updateMultipleItem = useMutation({
-    mutationFn: async ({ id, title }: { id: string; title: string }) => {
-      const { error } = await supabase.from("planner_multiple_task_items").update({ title }).eq("id", id);
+    mutationFn: async ({
+      id,
+      title,
+      date,
+      time,
+    }: { id: string; title?: string; date?: string | null; time?: string | null }) => {
+      const patch: Record<string, unknown> = {};
+      if (title !== undefined) patch.title = title;
+      if (date !== undefined) patch.due_date = date;
+      if (time !== undefined) patch.due_time = time;
+      const { error } = await supabase.from("planner_tasks").update(patch).eq("id", id);
       if (error) throw error;
     },
-    onSuccess: () => invalidate("multiple_task_items"),
+    onSuccess: invalidateItems,
   });
 
   const toggleMultipleItem = useMutation({
     mutationFn: async (item: MultipleTaskItem) => {
       const { error } = await supabase
-        .from("planner_multiple_task_items")
-        .update({ completed: !item.completed })
+        .from("planner_tasks")
+        .update({
+          completed: !item.completed,
+          completed_at: !item.completed ? new Date().toISOString() : null,
+        })
         .eq("id", item.id);
       if (error) throw error;
     },
-    onSuccess: () => invalidate("multiple_task_items"),
+    onSuccess: invalidateItems,
   });
 
   const deleteMultipleItem = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.from("planner_multiple_task_items").delete().eq("id", id);
+      const { error } = await supabase.from("planner_tasks").delete().eq("id", id);
       if (error) throw error;
     },
-    onSuccess: () => invalidate("multiple_task_items"),
+    onSuccess: invalidateItems,
   });
+
 
   // --- Events ---
   const addEvent = useMutation({
