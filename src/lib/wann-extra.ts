@@ -256,9 +256,11 @@ export async function fetchDaySummary(date: string): Promise<DaySummary> {
     supabase.from("planner_habit_completions").select("habit_id,count").eq("date", date),
     supabase.from("planner_events").select("id,name,type,date,is_recurring"),
     supabase
-      .from("planner_multiple_task_items")
-      .select("id,title,parent_id,completed,updated_at")
+      .from("planner_tasks")
+      .select("id,title,multiple_task_id,completed,completed_at")
+      .not("multiple_task_id", "is", null)
       .eq("completed", true),
+
     supabase.from("planner_multiple_tasks").select("id,name"),
   ]);
 
