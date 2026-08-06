@@ -10,10 +10,13 @@ import {
   fetchDiaryOnThisDay,
   upsertDiaryEntry,
   signStickerUrl,
+  fetchDiaryPhotosRange,
+  signDiaryPhotoUrl,
 } from "@/lib/wann-extra";
 import { formatLocalDate, todayLocalStr, parseLocalDate } from "@/lib/wann-data";
 import { StickerPicker } from "@/components/wann/StickerPicker";
 import { DaySummaryPanel } from "@/components/wann/DaySummaryPanel";
+import { DiaryPhotos } from "@/components/wann/DiaryPhotos";
 
 
 export const Route = createFileRoute("/_authenticated/diary")({
@@ -264,6 +267,8 @@ function DayView({ userId, date, onNavigate }: { userId: string; date: string; o
 
       <DaySummaryPanel date={date} />
 
+      <DiaryPhotos userId={userId} date={date} />
+
       <div
         ref={editorRef}
         contentEditable
@@ -347,6 +352,32 @@ function MonthView({
     queryKey: ["diary-month", start, end],
     queryFn: () => fetchDiaryMonthPreviews(start, end),
   });
+  const coversQ = useQuery({
+    queryKey: ["diary-month-photos", start, end],
+    queryFn: () => fetchDiaryPhotosRange(start, end),
+  });
+  const coverByDate = useMemo(() => {
+    const m: Record<string, string> = {};
+    for (const p of coversQ.data ?? []) {
+      if (p.is_cover || !m[p.date]) m[p.date] = p.storage_path;
+    }
+    return m;
+  }, [coversQ.data]);
+  const [coverUrls, setCoverUrls] = useState<Record<string, string>>({});
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const paths = Object.values(coverByDate).filter((p) => !coverUrls[p]);
+      if (paths.length === 0) return;
+      const next: Record<string, string> = {};
+      for (const path of paths) {
+        try { next[path] = await signDiaryPhotoUrl(path); } catch { /* ignore */ }
+      }
+      if (!cancelled && Object.keys(next).length) setCoverUrls((u) => ({ ...u, ...next }));
+    })();
+    return () => { cancelled = true; };
+  }, [coverByDate]);
+
   const [stickerUrls, setStickerUrls] = useState<Record<string, string>>({});
   useEffect(() => {
     let cancelled = false;
@@ -393,20 +424,37 @@ function MonthView({
           if (!c.date) return <div key={c.key} />;
           const entry = byDate[c.date];
           const stickerUrl = entry?.thumbnail_sticker_path ? stickerUrls[entry.thumbnail_sticker_path] : null;
+          const coverPath = coverByDate[c.date];
+          const coverUrl = coverPath ? coverUrls[coverPath] : null;
           return (
             <button
               key={c.key}
               onClick={() => onSelectDate(c.date!)}
-              className="aspect-square border border-border p-1 text-left hover:bg-muted flex flex-col"
+              className="relative aspect-square border border-border p-1 text-left hover:bg-muted flex flex-col overflow-hidden"
             >
-              <div className="flex items-start justify-between">
-                <span className="text-xs">{Number(c.date.slice(-2))}</span>
-                {entry && !stickerUrl && <span className="h-1.5 w-1.5 rounded-full bg-foreground" />}
+              {coverUrl && (
+                <>
+                  <img
+                    src={coverUrl}
+                    alt=""
+                    loading="lazy"
+                    className="absolute inset-0 h-full w-full object-cover"
+                  />
+                  <span className="absolute inset-0 bg-foreground/25" />
+                </>
+              )}
+              <div className="relative flex items-start justify-between">
+                <span
+                  className={`text-xs ${coverUrl ? "text-background font-medium drop-shadow-[0_1px_2px_rgba(0,0,0,0.6)]" : ""}`}
+                >
+                  {Number(c.date.slice(-2))}
+                </span>
+                {entry && !stickerUrl && !coverUrl && <span className="h-1.5 w-1.5 rounded-full bg-foreground" />}
                 {stickerUrl && (
                   <img src={stickerUrl} alt="" className="h-4 w-4 rounded-full object-cover" />
                 )}
               </div>
-              {entry?.preview && (
+              {entry?.preview && !coverUrl && (
                 <p className="text-[10px] text-muted-foreground line-clamp-2 mt-1">{entry.preview}</p>
               )}
             </button>
