@@ -19,7 +19,9 @@ export type Category = Tables<"planner_task_categories">;
 export type Subtag = Tables<"planner_task_subtags">;
 export type Task = Tables<"planner_tasks">;
 export type MultipleTask = Tables<"planner_multiple_tasks">;
-export type MultipleTaskItem = Tables<"planner_multiple_task_items">;
+/** Sub-items of a Multiple Task are now regular tasks tagged with multiple_task_id. */
+export type MultipleTaskItem = Task;
+
 export type EventEntry = Tables<"planner_events">;
 export type RecurringException = Tables<"planner_recurring_task_exceptions">;
 
