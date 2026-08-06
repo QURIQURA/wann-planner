@@ -542,8 +542,9 @@ function Dashboard() {
               onAdd={(v) => addMultiple.mutate(v)}
               onUpdate={(id, patch) => updateMultiple.mutate({ id, patch })}
               onDelete={(id) => deleteMultiple.mutate(id)}
-              onAddItem={(parentId, title) => addMultipleItem.mutate({ parentId, title })}
-              onUpdateItem={(id, title) => updateMultipleItem.mutate({ id, title })}
+              onAddItem={(parentId, title, date, time) => addMultipleItem.mutate({ parentId, title, date, time })}
+              onUpdateItem={(id, patch) => updateMultipleItem.mutate({ id, ...patch })}
+
               onToggleItem={(item) => toggleMultipleItem.mutate(item)}
               onDeleteItem={(id) => deleteMultipleItem.mutate(id)}
             />
