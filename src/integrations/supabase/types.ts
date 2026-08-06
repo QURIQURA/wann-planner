@@ -713,6 +713,39 @@ export type Database = {
         }
         Relationships: []
       }
+      planner_diary_photos: {
+        Row: {
+          created_at: string
+          date: string
+          id: string
+          is_cover: boolean
+          sort_order: number
+          storage_path: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          date: string
+          id?: string
+          is_cover?: boolean
+          sort_order?: number
+          storage_path: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          date?: string
+          id?: string
+          is_cover?: boolean
+          sort_order?: number
+          storage_path?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       planner_events: {
         Row: {
           birth_year: number | null
@@ -927,44 +960,6 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
-      }
-      planner_multiple_task_items: {
-        Row: {
-          completed: boolean
-          created_at: string
-          id: string
-          parent_id: string
-          sort_order: number
-          title: string
-          updated_at: string
-        }
-        Insert: {
-          completed?: boolean
-          created_at?: string
-          id?: string
-          parent_id: string
-          sort_order?: number
-          title: string
-          updated_at?: string
-        }
-        Update: {
-          completed?: boolean
-          created_at?: string
-          id?: string
-          parent_id?: string
-          sort_order?: number
-          title?: string
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "planner_multiple_task_items_parent_id_fkey"
-            columns: ["parent_id"]
-            isOneToOne: false
-            referencedRelation: "planner_multiple_tasks"
-            referencedColumns: ["id"]
-          },
-        ]
       }
       planner_multiple_tasks: {
         Row: {
@@ -1267,6 +1262,7 @@ export type Database = {
           due_date: string | null
           due_time: string | null
           id: string
+          multiple_task_id: string | null
           notes: string | null
           recurrence: string
           subtag_id: string | null
@@ -1282,6 +1278,7 @@ export type Database = {
           due_date?: string | null
           due_time?: string | null
           id?: string
+          multiple_task_id?: string | null
           notes?: string | null
           recurrence?: string
           subtag_id?: string | null
@@ -1297,6 +1294,7 @@ export type Database = {
           due_date?: string | null
           due_time?: string | null
           id?: string
+          multiple_task_id?: string | null
           notes?: string | null
           recurrence?: string
           subtag_id?: string | null
@@ -1310,6 +1308,13 @@ export type Database = {
             columns: ["category_id"]
             isOneToOne: false
             referencedRelation: "planner_task_categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "planner_tasks_multiple_task_id_fkey"
+            columns: ["multiple_task_id"]
+            isOneToOne: false
+            referencedRelation: "planner_multiple_tasks"
             referencedColumns: ["id"]
           },
           {
