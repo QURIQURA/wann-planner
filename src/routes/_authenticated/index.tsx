@@ -17,7 +17,7 @@ import {
   fetchCompletions,
   fetchExceptions,
   daysUntilAnnual,
-  todayLocalStr,
+  currentOccurrenceDate,
   type UserSettings,
   type Task,
   type MultipleTaskItem,
@@ -32,7 +32,6 @@ import { SettingsPanel } from "@/components/wann/SettingsPanel";
 import { HabitTrackerPanel } from "@/components/wann/HabitTrackerPanel";
 import { RoutinesPanel } from "@/components/wann/RoutinesPanel";
 import { MonthlySummaryPanel } from "@/components/wann/MonthlySummaryPanel";
-import { AlertsPanel } from "@/components/wann/AlertsPanel";
 
 export const Route = createFileRoute("/_authenticated/")({
   component: Dashboard,
@@ -524,7 +523,7 @@ function Dashboard() {
               onAddSubtag={(categoryId, name) => addSubtag.mutate({ categoryId, name })}
               onAddTask={(v) => addTask.mutate(v)}
               onUpdateTask={(id, v) => updateTask.mutate({ id, input: v })}
-              onToggleTask={(t) => toggleOccurrence.mutate({ task: t, date: todayLocalStr() })}
+              onToggleTask={(t, date) => toggleOccurrence.mutate({ task: t, date })}
               onEditTask={(t) => setEditingTask(t)}
               onDeleteTask={(id) => { if (editingTask?.id === id) setEditingTask(null); deleteTask.mutate(id); }}
               onDeleteCategory={(id) => deleteCategory.mutate(id)}
@@ -560,10 +559,7 @@ function Dashboard() {
 
         <HabitTrackerPanel userId={user.id} anchorDate={anchor} />
 
-        <div className="grid md:grid-cols-2 gap-6">
-          <RoutinesPanel userId={user.id} />
-          <AlertsPanel userId={user.id} />
-        </div>
+        <RoutinesPanel userId={user.id} />
 
         <MonthlySummaryPanel userId={user.id} />
       </main>
