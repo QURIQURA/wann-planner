@@ -8,7 +8,6 @@ export type RoutineItem = Tables<"planner_routine_items">;
 export type RoutineCompletion = Tables<"planner_routine_completions">;
 export type HyattHours = Tables<"planner_monthly_hyatt_hours">;
 export type KoraSetupItem = Tables<"planner_kora_setup_items">;
-export type Alert = Tables<"planner_alerts">;
 export type DiaryEntry = Tables<"planner_diary_entries">;
 export type Sticker = Tables<"planner_stickers">;
 export type DiaryPhoto = Tables<"planner_diary_photos">;
@@ -72,17 +71,6 @@ export async function fetchKoraSetup() {
     .select("*")
     .order("category")
     .order("sort_order");
-  if (error) throw error;
-  return data ?? [];
-}
-
-/* ---------- ALERTS ---------- */
-export async function fetchAlerts() {
-  const { data, error } = await supabase
-    .from("planner_alerts")
-    .select("*")
-    .eq("resolved", false)
-    .order("date", { ascending: false });
   if (error) throw error;
   return data ?? [];
 }

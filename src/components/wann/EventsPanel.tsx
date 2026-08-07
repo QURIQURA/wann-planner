@@ -1,6 +1,6 @@
 import { useState } from "react";
 import type { EventEntry } from "@/lib/wann-data";
-import { daysUntilAnnual, ageOn, todayLocalStr, EVENT_COLORS } from "@/lib/wann-data";
+import { daysUntilAnnual, ageOn, todayLocalStr, EVENT_COLORS, formatDateKo } from "@/lib/wann-data";
 import { Plus, Trash2, X, Pencil } from "lucide-react";
 
 export type EventForm = {
@@ -190,6 +190,9 @@ function EventEditor({
           onChange={(e) => onChange({ ...value, date: e.target.value })}
           className="bg-transparent outline-none border-b border-border py-1 text-sm"
         />
+        {value.date && (
+          <span className="text-[10px] text-muted-foreground tabular-nums">{formatDateKo(value.date)}</span>
+        )}
         <select
           value={value.type}
           onChange={(e) => onChange({ ...value, type: e.target.value })}

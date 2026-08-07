@@ -11,6 +11,7 @@ import type {
 } from "@/lib/wann-data";
 import {
   formatLocalDate,
+  todayLocalStr,
   shortTime,
   effectiveOccurrencesOnDate,
   isOccurrenceCompleted,
@@ -161,8 +162,16 @@ export function WeekRotation({
     }
   };
 
-  const renderDayCard = (d: Date, isToday: boolean, extraClass = "") => {
+  const todayStr = todayLocalStr();
+  const dayKeys = days.map((d) => formatLocalDate(d));
+  const anchorKey = formatLocalDate(anchorDate);
+  // TODAY is "active" only when the real today is inside what we're looking at.
+  const todayInRange = dayKeys.includes(todayStr);
+  const todayInMobileView = anchorKey === todayStr;
+
+  const renderDayCard = (d: Date, _unused: boolean, extraClass = "") => {
     const key = formatLocalDate(d);
+    const isToday = key === todayStr;
     const occurrences = effectiveOccurrencesOnDate(tasks, exceptions, key);
     const allDay = occurrences
       .filter((o) => !o.effectiveTime)
@@ -228,7 +237,10 @@ export function WeekRotation({
                 d.setHours(0, 0, 0, 0);
                 onAnchorChange(d);
               }}
-              className="border border-border px-3 py-1 label-caps hover:bg-muted"
+              aria-pressed={todayInRange}
+              className={`border border-border px-3 py-1 label-caps ${
+                todayInRange ? "bg-foreground text-background" : "hover:bg-muted"
+              }`}
             >
               Today
             </button>
@@ -243,11 +255,11 @@ export function WeekRotation({
         </div>
 
         <div className="md:hidden" onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
-          {renderDayCard(anchorDate, true, "")}
+          {renderDayCard(anchorDate, todayInMobileView, "")}
         </div>
 
         <div className="hidden md:grid md:grid-cols-7 gap-2 auto-rows-fr">
-          {days.map((d, i) => renderDayCard(d, i === 0, i === 0 ? "md:col-span-3" : ""))}
+          {days.map((d, i) => renderDayCard(d, false, i === 0 ? "md:col-span-3" : ""))}
         </div>
       </div>
 

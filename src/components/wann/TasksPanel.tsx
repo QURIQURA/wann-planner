@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import type { Category, MultipleTask, Subtag, Task, TaskCompletion } from "@/lib/wann-data";
-import { todayLocalStr, shortTime, isOccurrenceCompleted } from "@/lib/wann-data";
+import { todayLocalStr, shortTime, isOccurrenceCompleted, currentOccurrenceDate, formatDateKo, koDow } from "@/lib/wann-data";
 import { Plus, Trash2, X, ChevronDown, ChevronUp, Pencil } from "lucide-react";
 
 
@@ -44,7 +44,7 @@ export function TasksPanel({
   onAddSubtag: (categoryId: string, name: string) => void;
   onAddTask: (v: TaskFormValues) => void;
   onUpdateTask: (id: string, v: TaskFormValues) => void;
-  onToggleTask: (t: Task) => void;
+  onToggleTask: (t: Task, occurrenceDate: string) => void;
   onEditTask: (t: Task) => void;
   onDeleteTask: (id: string) => void;
   onDeleteCategory: (id: string) => void;
@@ -325,6 +325,11 @@ export function TasksPanel({
             onChange={(e) => setForm({ ...form, dueDate: e.target.value || null })}
             className="bg-transparent outline-none text-sm border-b border-border py-1"
           />
+          {form.dueDate && (
+            <span className="text-[10px] text-muted-foreground tabular-nums">
+              {formatDateKo(form.dueDate)}
+            </span>
+          )}
           <label className="text-[10px] label-caps text-muted-foreground">Time</label>
           <input
             type="time"
@@ -374,7 +379,7 @@ export function TasksPanel({
       </div>
 
       <TaskList
-        items={filtered.filter((t) => !isOccurrenceCompleted(t, today, completions))}
+        items={filtered.filter((t) => !isOccurrenceCompleted(t, currentOccurrenceDate(t, today), completions))}
         categories={categories}
         projects={projects}
         editingId={editingTask?.id ?? null}
@@ -384,7 +389,7 @@ export function TasksPanel({
       />
 
       {(() => {
-        const done = filtered.filter((t) => isOccurrenceCompleted(t, today, completions));
+        const done = filtered.filter((t) => isOccurrenceCompleted(t, currentOccurrenceDate(t, today), completions));
         if (done.length === 0) return null;
         return (
           <div className="mt-3 border-t border-border pt-2">
@@ -429,7 +434,7 @@ function TaskList({
   items: Task[];
   categories: Category[];
   editingId: string | null;
-  onToggle: (t: Task) => void;
+  onToggle: (t: Task, occurrenceDate: string) => void;
   onEdit: (t: Task) => void;
   onDelete: (id: string) => void;
   completed?: boolean;
@@ -449,7 +454,7 @@ function TaskList({
             className={`flex items-center gap-2 py-1 border-b border-border/50 group ${editingId === t.id ? "bg-muted" : ""}`}
           >
             <button
-              onClick={() => onToggle(t)}
+              onClick={() => onToggle(t, currentOccurrenceDate(t))}
               aria-label="Toggle"
               className={`h-3 w-3 border border-border flex-shrink-0 ${completed ? "bg-foreground" : ""}`}
             />
@@ -473,7 +478,9 @@ function TaskList({
               </span>
             )}
             {t.due_date && (
-              <span className="text-[10px] text-muted-foreground">{t.due_date.slice(5)}</span>
+              <span className="text-[10px] text-muted-foreground">
+                {t.due_date.slice(5)} ({koDow(t.due_date)})
+              </span>
             )}
             {t.due_time && (
               <span className="text-[10px] text-muted-foreground tabular-nums">

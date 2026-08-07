@@ -11,7 +11,6 @@ export type UserSettings = {
     habit_tracker?: boolean;
     weekly_review?: boolean;
     monthly_summary?: boolean;
-    cross_app_alerts?: boolean;
   };
 };
 
@@ -266,4 +265,53 @@ export function ageOn(dateStr: string, today = new Date()): number {
 export function shortTime(t: string | null | undefined): string {
   if (!t) return "";
   return t.slice(0, 5);
+}
+
+/* ---------- Korean weekday helpers ---------- */
+export const KO_DOW = ["일", "월", "화", "수", "목", "금", "토"] as const;
+
+/** "2026-08-17" -> "17/08/2026 (월)" */
+export function formatDateKo(dateStr: string | null | undefined): string {
+  if (!dateStr) return "";
+  const d = parseLocalDate(dateStr);
+  if (Number.isNaN(d.getTime())) return "";
+  const dd = String(d.getDate()).padStart(2, "0");
+  const mm = String(d.getMonth() + 1).padStart(2, "0");
+  return `${dd}/${mm}/${d.getFullYear()} (${KO_DOW[d.getDay()]})`;
+}
+
+/** "2026-08-17" -> "월" */
+export function koDow(dateStr: string | null | undefined): string {
+  if (!dateStr) return "";
+  const d = parseLocalDate(dateStr);
+  if (Number.isNaN(d.getTime())) return "";
+  return KO_DOW[d.getDay()];
+}
+
+/**
+ * The occurrence date a task should be evaluated against "right now".
+ * For one-off tasks this is the due date. For recurring tasks this is the most
+ * recent occurrence on or before today (so checking off an occurrence sticks
+ * until the next one comes around), all in LOCAL YYYY-MM-DD form.
+ */
+export function currentOccurrenceDate(task: Task, todayStr: string = todayLocalStr()): string {
+  const rec = task.recurrence ?? "none";
+  if (!task.due_date) return todayStr;
+  if (rec === "none") return task.due_date;
+  const anchor = parseLocalDate(task.due_date);
+  const today = parseLocalDate(todayStr);
+  if (anchor > today) return task.due_date;
+  for (let i = 0; i < 400; i++) {
+    const d = new Date(today);
+    d.setDate(d.getDate() - i);
+    const s = formatLocalDate(d);
+    if (taskOccursOn(task, s)) return s;
+  }
+  return task.due_date;
+}
+
+/** Sort key for list ordering: dated+timed first (chronological), then dated, then undated. */
+export function taskSortKey(t: { due_date?: string | null; due_time?: string | null }): string {
+  if (!t.due_date) return "9999-99-99 99:99";
+  return `${t.due_date} ${t.due_time ? t.due_time.slice(0, 5) : "99:99"}`;
 }
