@@ -237,7 +237,10 @@ export function WeekRotation({
                 d.setHours(0, 0, 0, 0);
                 onAnchorChange(d);
               }}
-              className="border border-border px-3 py-1 label-caps hover:bg-muted"
+              aria-pressed={todayInRange}
+              className={`border border-border px-3 py-1 label-caps ${
+                todayInRange ? "bg-foreground text-background" : "hover:bg-muted"
+              }`}
             >
               Today
             </button>
@@ -252,11 +255,11 @@ export function WeekRotation({
         </div>
 
         <div className="md:hidden" onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
-          {renderDayCard(anchorDate, true, "")}
+          {renderDayCard(anchorDate, todayInMobileView, "")}
         </div>
 
         <div className="hidden md:grid md:grid-cols-7 gap-2 auto-rows-fr">
-          {days.map((d, i) => renderDayCard(d, i === 0, i === 0 ? "md:col-span-3" : ""))}
+          {days.map((d, i) => renderDayCard(d, false, i === 0 ? "md:col-span-3" : ""))}
         </div>
       </div>
 
