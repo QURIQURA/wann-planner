@@ -11,7 +11,6 @@ export type UserSettings = {
     habit_tracker?: boolean;
     weekly_review?: boolean;
     monthly_summary?: boolean;
-    cross_app_alerts?: boolean;
   };
 };
 

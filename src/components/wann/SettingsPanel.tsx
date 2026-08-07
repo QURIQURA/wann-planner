@@ -20,7 +20,6 @@ const WIDGETS = [
   { id: "habit_tracker", label: "Habit Tracker" },
   { id: "weekly_review", label: "Weekly Review" },
   { id: "monthly_summary", label: "Monthly Summary" },
-  { id: "cross_app_alerts", label: "Cross-App Alerts" },
 ] as const;
 
 export function SettingsPanel({
