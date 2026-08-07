@@ -1,6 +1,6 @@
 import { useState } from "react";
 import type { EventEntry } from "@/lib/wann-data";
-import { daysUntilAnnual, ageOn, todayLocalStr, EVENT_COLORS } from "@/lib/wann-data";
+import { daysUntilAnnual, ageOn, todayLocalStr, EVENT_COLORS, formatDateKo } from "@/lib/wann-data";
 import { Plus, Trash2, X, Pencil } from "lucide-react";
 
 export type EventForm = {
