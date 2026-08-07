@@ -190,6 +190,9 @@ function EventEditor({
           onChange={(e) => onChange({ ...value, date: e.target.value })}
           className="bg-transparent outline-none border-b border-border py-1 text-sm"
         />
+        {value.date && (
+          <span className="text-[10px] text-muted-foreground tabular-nums">{formatDateKo(value.date)}</span>
+        )}
         <select
           value={value.type}
           onChange={(e) => onChange({ ...value, type: e.target.value })}
