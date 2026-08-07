@@ -1,6 +1,6 @@
 import { useState } from "react";
 import type { Category, MultipleTask, MultipleTaskItem, Subtag } from "@/lib/wann-data";
-import { todayLocalStr } from "@/lib/wann-data";
+import { todayLocalStr, taskSortKey, formatDateKo, koDow } from "@/lib/wann-data";
 import { Plus, Trash2, X, Pencil, ChevronDown, ChevronRight } from "lucide-react";
 
 export type MultipleTaskForm = {
@@ -158,7 +158,13 @@ export function MultipleTasksPanel({
           const subId = (e as MultipleTask & { subtag_id: string | null }).subtag_id ?? null;
           const sub = subId ? subtags.find((s) => s.id === subId) : null;
           const showSub = sub && sub.name.trim().toLowerCase() !== e.name.trim().toLowerCase();
-          const children = items.filter((i) => i.multiple_task_id === e.id);
+          const children = items
+            .filter((i) => i.multiple_task_id === e.id)
+            .slice()
+            .sort((a, b) => {
+              const k = taskSortKey(a).localeCompare(taskSortKey(b));
+              return k !== 0 ? k : a.title.localeCompare(b.title);
+            });
           const done = children.filter((i) => i.completed).length;
           const total = children.length;
           const pct = total > 0 ? Math.round((done / total) * 100) : null;
@@ -176,7 +182,7 @@ export function MultipleTasksPanel({
                   {expanded ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
                 </button>
                 {e.date && (
-                  <span className="text-xs text-muted-foreground w-12">{e.date.slice(5)}</span>
+                  <span className="text-xs text-muted-foreground whitespace-nowrap">{e.date.slice(5)} ({koDow(e.date)})</span>
                 )}
                 <button
                   onClick={() => setExpandedId(expanded ? null : e.id)}
@@ -282,6 +288,9 @@ export function MultipleTasksPanel({
                         aria-label="Item date"
                         className="bg-transparent border-b border-border text-[10px] text-muted-foreground w-[92px]"
                       />
+                      {it.due_date && (
+                        <span className="text-[10px] text-muted-foreground w-4">({koDow(it.due_date)})</span>
+                      )}
                       <input
                         type="time"
                         value={it.due_time ? it.due_time.slice(0, 5) : ""}
@@ -324,6 +333,9 @@ export function MultipleTasksPanel({
                       aria-label="New item date"
                       className="bg-transparent border-b border-border text-[10px] text-muted-foreground w-[92px]"
                     />
+                    {childDate[e.id] && (
+                      <span className="text-[10px] text-muted-foreground w-4">({koDow(childDate[e.id])})</span>
+                    )}
                     <input
                       type="time"
                       value={childTime[e.id] ?? ""}
@@ -381,6 +393,9 @@ function MultipleTaskEditor({
           onChange={(e) => onChange({ ...value, date: e.target.value || null })}
           className="bg-transparent outline-none border-b border-border py-1 text-sm"
         />
+        {value.date && (
+          <span className="text-[10px] text-muted-foreground tabular-nums">{formatDateKo(value.date)}</span>
+        )}
         <select
           value={value.categoryId ?? ""}
           onChange={(e) => onChange({ ...value, categoryId: e.target.value || null, subtagId: null })}

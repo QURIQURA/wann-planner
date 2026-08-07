@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import type { Category, MultipleTask, Subtag, Task, TaskCompletion } from "@/lib/wann-data";
-import { todayLocalStr, shortTime, isOccurrenceCompleted, currentOccurrenceDate, formatDateKo } from "@/lib/wann-data";
+import { todayLocalStr, shortTime, isOccurrenceCompleted, currentOccurrenceDate, formatDateKo, koDow } from "@/lib/wann-data";
 import { Plus, Trash2, X, ChevronDown, ChevronUp, Pencil } from "lucide-react";
 
 
@@ -478,7 +478,9 @@ function TaskList({
               </span>
             )}
             {t.due_date && (
-              <span className="text-[10px] text-muted-foreground">{t.due_date.slice(5)}</span>
+              <span className="text-[10px] text-muted-foreground">
+                {t.due_date.slice(5)} ({koDow(t.due_date)})
+              </span>
             )}
             {t.due_time && (
               <span className="text-[10px] text-muted-foreground tabular-nums">
