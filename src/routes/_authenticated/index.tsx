@@ -17,7 +17,6 @@ import {
   fetchCompletions,
   fetchExceptions,
   daysUntilAnnual,
-  currentOccurrenceDate,
   type UserSettings,
   type Task,
   type MultipleTaskItem,
@@ -345,7 +344,30 @@ function Dashboard() {
 
       if (error) throw error;
     },
-    onSuccess: invalidateItems,
+    onMutate: async ({ id, title, date, time }) => {
+      await qc.cancelQueries({ queryKey: ["multiple_task_items", user.id] });
+      await qc.cancelQueries({ queryKey: ["tasks", user.id] });
+      const prevItems = qc.getQueryData<Task[]>(["multiple_task_items", user.id]);
+      const prevTasks = qc.getQueryData<Task[]>(["tasks", user.id]);
+      const apply = (t: Task): Task =>
+        t.id === id
+          ? {
+              ...t,
+              ...(title !== undefined ? { title } : {}),
+              ...(date !== undefined ? { due_date: date } : {}),
+              ...(time !== undefined ? { due_time: time } : {}),
+            }
+          : t;
+      if (prevItems) qc.setQueryData<Task[]>(["multiple_task_items", user.id], prevItems.map(apply));
+      if (prevTasks) qc.setQueryData<Task[]>(["tasks", user.id], prevTasks.map(apply));
+      return { prevItems, prevTasks };
+    },
+    onError: (_e, _v, ctx) => {
+      if (ctx?.prevItems) qc.setQueryData(["multiple_task_items", user.id], ctx.prevItems);
+      if (ctx?.prevTasks) qc.setQueryData(["tasks", user.id], ctx.prevTasks);
+      toast.error("Could not update item");
+    },
+    onSettled: invalidateItems,
   });
 
   const toggleMultipleItem = useMutation({
