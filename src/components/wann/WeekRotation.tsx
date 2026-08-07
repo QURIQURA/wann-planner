@@ -11,6 +11,7 @@ import type {
 } from "@/lib/wann-data";
 import {
   formatLocalDate,
+  todayLocalStr,
   shortTime,
   effectiveOccurrencesOnDate,
   isOccurrenceCompleted,
@@ -161,8 +162,16 @@ export function WeekRotation({
     }
   };
 
-  const renderDayCard = (d: Date, isToday: boolean, extraClass = "") => {
+  const todayStr = todayLocalStr();
+  const dayKeys = days.map((d) => formatLocalDate(d));
+  const anchorKey = formatLocalDate(anchorDate);
+  // TODAY is "active" only when the real today is inside what we're looking at.
+  const todayInRange = dayKeys.includes(todayStr);
+  const todayInMobileView = anchorKey === todayStr;
+
+  const renderDayCard = (d: Date, _unused: boolean, extraClass = "") => {
     const key = formatLocalDate(d);
+    const isToday = key === todayStr;
     const occurrences = effectiveOccurrencesOnDate(tasks, exceptions, key);
     const allDay = occurrences
       .filter((o) => !o.effectiveTime)
