@@ -497,6 +497,7 @@ function TaskList({
             {t.due_time && (
               <span className="text-[10px] text-muted-foreground tabular-nums">
                 {shortTime(t.due_time)}
+                {t.end_time ? `–${shortTime(t.end_time)}` : ""}
               </span>
             )}
             <button
