@@ -17,6 +17,9 @@ import {
   fetchCompletions,
   fetchExceptions,
   daysUntilAnnual,
+  taskDurationMin,
+  timeToMinutes,
+  minutesToTime,
   type UserSettings,
   type Task,
   type MultipleTaskItem,
@@ -133,6 +136,7 @@ function Dashboard() {
         subtag_id: input.subtagId,
         due_date: input.dueDate,
         due_time: input.dueTime,
+        end_time: input.dueTime ? input.endTime : null,
         recurrence: input.recurrence,
       });
       if (error) throw error;
@@ -148,6 +152,7 @@ function Dashboard() {
         subtag_id: input.subtagId,
         due_date: input.dueDate,
         due_time: input.dueTime,
+        end_time: input.dueTime ? input.endTime : null,
         recurrence: input.recurrence,
       }).eq("id", id);
       if (error) throw error;
@@ -200,8 +205,18 @@ function Dashboard() {
     }) => {
       const rec = task.recurrence ?? "none";
       if (rec === "none") {
-        const patch: { due_date: string; due_time?: string | null } = { due_date: newDate };
-        if (newTime !== null) patch.due_time = newTime;
+        const patch: { due_date: string; due_time?: string | null; end_time?: string | null } = {
+          due_date: newDate,
+        };
+        if (newTime !== null) {
+          patch.due_time = newTime;
+          // keep the start–end duration intact when the task is dragged
+          const dur = taskDurationMin(task);
+          if (dur != null) {
+            const start = timeToMinutes(newTime);
+            patch.end_time = start != null ? minutesToTime(start + dur) : task.end_time;
+          }
+        }
         const { error } = await supabase.from("planner_tasks").update(patch).eq("id", task.id);
         if (error) throw error;
         return;
@@ -227,7 +242,18 @@ function Dashboard() {
           ["tasks", user.id],
           prevTasks.map((t) =>
             t.id === vars.task.id
-              ? { ...t, due_date: vars.newDate, due_time: vars.newTime ?? t.due_time }
+              ? {
+                  ...t,
+                  due_date: vars.newDate,
+                  due_time: vars.newTime ?? t.due_time,
+                  end_time: (() => {
+                    const dur = taskDurationMin(t);
+                    const start = timeToMinutes(vars.newTime ?? t.due_time);
+                    return vars.newTime && dur != null && start != null
+                      ? minutesToTime(start + dur)
+                      : t.end_time;
+                  })(),
+                }
               : t,
           ),
         );

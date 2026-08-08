@@ -18,6 +18,11 @@ import {
   eventsOnDate,
   EVENT_COLORS,
   EVENT_PRIORITY,
+  occurrenceEndTime,
+  hexToRgba,
+  taskDurationMin,
+  timeToMinutes,
+  minutesToTime,
 } from "@/lib/wann-data";
 import {
   DndContext,
@@ -98,8 +103,9 @@ export function WeekRotation({
   onEditTask: (t: Task) => void;
   onMoveTask: (args: MoveTaskArgs) => void;
 }) {
+  // Yesterday / Today / Tomorrow — anchorDate is always the centre card.
   const days = useMemo(
-    () => Array.from({ length: 5 }, (_, i) => addDays(anchorDate, i)),
+    () => [-1, 0, 1].map((i) => addDays(anchorDate, i)),
     [anchorDate],
   );
   const catMap = useMemo(
@@ -258,9 +264,10 @@ export function WeekRotation({
           {renderDayCard(anchorDate, todayInMobileView, "")}
         </div>
 
-        <div className="hidden md:grid md:grid-cols-7 gap-2 auto-rows-fr">
-          {days.map((d, i) => renderDayCard(d, false, i === 0 ? "md:col-span-3" : ""))}
+        <div className="hidden md:grid md:grid-cols-3 gap-2 auto-rows-fr items-stretch">
+          {days.map((d) => renderDayCard(d, false, "h-full"))}
         </div>
+
       </div>
 
       <DragOverlay dropAnimation={null}>
@@ -423,6 +430,33 @@ function TimelineGrid({
   onEdit: (t: Task) => void;
   isDragging: boolean;
 }) {
+  // Lay out timed occurrences: tasks with an end time span their duration,
+  // tasks without one occupy a single 30-min slot. Overlaps share the width.
+  const blocks = timed.map((o) => {
+    const startMin = timeToMinutes(o.effectiveTime) ?? START_HOUR * 60;
+    const endStr = occurrenceEndTime(o.task, o.effectiveTime);
+    const endMin = timeToMinutes(endStr);
+    const spans = endMin != null && endMin > startMin;
+    const top = ((startMin - START_HOUR * 60) / SLOT_MIN) * SLOT_HEIGHT;
+    const height = spans
+      ? Math.max(SLOT_HEIGHT, ((endMin! - startMin) / SLOT_MIN) * SLOT_HEIGHT)
+      : SLOT_HEIGHT;
+    return { o, startMin, endMin: spans ? endMin! : startMin + SLOT_MIN, top, height, spans, endStr };
+  });
+
+  // simple lane packing for overlapping blocks
+  const laneEnds: number[] = [];
+  const placed = blocks
+    .slice()
+    .sort((a, b) => a.startMin - b.startMin)
+    .map((b) => {
+      let lane = laneEnds.findIndex((e) => e <= b.startMin);
+      if (lane === -1) { lane = laneEnds.length; laneEnds.push(b.endMin); }
+      else laneEnds[lane] = b.endMin;
+      return { ...b, lane };
+    });
+  const laneCount = Math.max(1, laneEnds.length);
+
   return (
     <div
       className="relative"
@@ -434,18 +468,25 @@ function TimelineGrid({
       ))}
 
       {/* Timed tasks positioned absolutely */}
-      {timed.map((o) => {
-        const idx = slotIndexFromTime(o.effectiveTime);
+      {placed.map((b) => {
+        const o = b.o;
         const completed = isOccurrenceCompleted(o.task, o.originalDate, completions);
         const cat = o.task.category_id ? catMap[o.task.category_id] : undefined;
         return (
           <div
             key={`${o.task.id}-${o.originalDate}`}
-            className="absolute left-0 right-0 px-0.5"
-            style={{ top: idx * SLOT_HEIGHT, height: SLOT_HEIGHT }}
+            className="absolute px-0.5"
+            style={{
+              top: Math.max(0, b.top),
+              height: b.height,
+              left: `${(b.lane / laneCount) * 100}%`,
+              width: `${100 / laneCount}%`,
+            }}
           >
             <DraggableTimedTask
               occ={o}
+              endTime={b.spans ? b.endStr : null}
+              tall={b.height > SLOT_HEIGHT * 1.5}
               completed={completed}
               cat={cat}
               project={o.task.multiple_task_id ? projMap[o.task.multiple_task_id] : undefined}
@@ -485,6 +526,8 @@ function SlotCell({ dateKey, idx, isDragging }: { dateKey: string; idx: number; 
 
 function DraggableTimedTask({
   occ,
+  endTime,
+  tall,
   completed,
   cat,
   project,
@@ -492,6 +535,8 @@ function DraggableTimedTask({
   onEdit,
 }: {
   occ: EffectiveOccurrence;
+  endTime?: string | null;
+  tall?: boolean;
   completed: boolean;
   cat: Category | undefined;
   project?: string;
@@ -502,53 +547,55 @@ function DraggableTimedTask({
     id: `task|${occ.task.id}|${occ.originalDate}`,
     data: { taskId: occ.task.id, originalDate: occ.originalDate, title: occ.task.title },
   });
+  // Timeline boxes are tinted with the category colour at 50% opacity.
+  const bg = hexToRgba(cat?.color, 0.5) ?? "var(--background)";
   return (
     <div
       ref={setNodeRef}
-      className={`flex items-center gap-1 border border-border bg-background px-1 text-[11px] leading-tight h-full ${
-        isDragging ? "opacity-30" : ""
-      }`}
+      className={`flex gap-1 border border-border px-1 text-[11px] leading-tight h-full overflow-hidden text-foreground ${
+        tall ? "items-start pt-0.5 flex-wrap content-start" : "items-center"
+      } ${isDragging ? "opacity-30" : ""}`}
+      style={{ background: bg }}
     >
       <button
         {...attributes}
         {...listeners}
-        className="cursor-grab active:cursor-grabbing text-muted-foreground touch-none"
+        className="cursor-grab active:cursor-grabbing text-foreground/60 touch-none flex-shrink-0"
         aria-label="Drag"
       >
         <GripVertical size={10} />
       </button>
-      <span className="text-[9px] text-muted-foreground w-8 tabular-nums flex-shrink-0">
+      <span className="text-[9px] text-foreground/70 tabular-nums flex-shrink-0">
         {shortTime(occ.effectiveTime)}
+        {endTime ? `–${shortTime(endTime)}` : ""}
       </span>
       <button
         onClick={onToggle}
         aria-label="Toggle"
-        className={`inline-block h-2.5 w-2.5 border border-border flex-shrink-0 ${completed ? "bg-foreground" : ""}`}
+        className={`inline-block h-2.5 w-2.5 border border-foreground/50 flex-shrink-0 ${completed ? "bg-foreground" : ""}`}
       />
       <button
         onClick={onEdit}
-        className={`flex-1 text-left truncate hover:underline ${completed ? "line-through text-muted-foreground" : ""}`}
+        className={`flex-1 min-w-0 text-left truncate hover:underline text-foreground ${completed ? "line-through" : ""}`}
       >
         {occ.task.title}
         {(occ.task.recurrence ?? "none") !== "none" && (
-          <span className="ml-1 text-[9px] text-muted-foreground">↻</span>
+          <span className="ml-1 text-[9px] text-foreground/60">↻</span>
         )}
-        {occ.isMoved && <span className="ml-1 text-[9px] text-muted-foreground">•</span>}
+        {occ.isMoved && <span className="ml-1 text-[9px] text-foreground/60">•</span>}
       </button>
       {project && (
-        <span className="text-[9px] text-muted-foreground border-b border-border flex-shrink-0 max-w-[70px] truncate">
+        <span className="text-[9px] text-foreground/70 border-b border-foreground/30 flex-shrink-0 max-w-[70px] truncate">
           {project}
         </span>
       )}
       {cat && (
-        <span
-          className="text-[9px] px-0.5 border border-border label-caps flex-shrink-0"
-          style={{ color: cat.color }}
-        >
+        <span className="text-[9px] px-1 label-caps flex-shrink-0 bg-foreground text-background">
           {cat.name}
         </span>
       )}
     </div>
+
   );
 }
 
@@ -585,7 +632,7 @@ function TaskLines({
         />
         <button
           onClick={() => onEdit(o.task)}
-          className={`text-sm flex-1 text-left truncate hover:underline ${completed ? "line-through text-muted-foreground" : ""}`}
+          className={`text-sm flex-1 text-left truncate hover:underline text-foreground ${completed ? "line-through" : ""}`}
         >
           {o.task.title}
           {(o.task.recurrence ?? "none") !== "none" && (
@@ -598,10 +645,7 @@ function TaskLines({
           </span>
         )}
         {cat && (
-          <span
-            className="text-[10px] px-1 border border-border label-caps"
-            style={{ color: cat.color }}
-          >
+          <span className="text-[10px] px-1 label-caps bg-foreground text-background flex-shrink-0">
             {cat.name}
           </span>
         )}

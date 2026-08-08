@@ -1228,6 +1228,7 @@ export type Database = {
           created_at: string
           due_date: string | null
           due_time: string | null
+          end_time: string | null
           id: string
           multiple_task_id: string | null
           notes: string | null
@@ -1244,6 +1245,7 @@ export type Database = {
           created_at?: string
           due_date?: string | null
           due_time?: string | null
+          end_time?: string | null
           id?: string
           multiple_task_id?: string | null
           notes?: string | null
@@ -1260,6 +1262,7 @@ export type Database = {
           created_at?: string
           due_date?: string | null
           due_time?: string | null
+          end_time?: string | null
           id?: string
           multiple_task_id?: string | null
           notes?: string | null

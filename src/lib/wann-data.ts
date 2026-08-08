@@ -315,3 +315,50 @@ export function taskSortKey(t: { due_date?: string | null; due_time?: string | n
   if (!t.due_date) return "9999-99-99 99:99";
   return `${t.due_date} ${t.due_time ? t.due_time.slice(0, 5) : "99:99"}`;
 }
+
+/* ---------- time span helpers (start ~ end time tasks) ---------- */
+
+export function timeToMinutes(t: string | null | undefined): number | null {
+  if (!t) return null;
+  const [h, m] = t.split(":").map(Number);
+  if (Number.isNaN(h)) return null;
+  return h * 60 + (m || 0);
+}
+
+export function minutesToTime(min: number): string {
+  const clamped = Math.max(0, Math.min(24 * 60, Math.round(min)));
+  const h = Math.floor(clamped / 60);
+  const m = clamped % 60;
+  return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
+}
+
+/** Duration in minutes between due_time and end_time, or null when no end time. */
+export function taskDurationMin(task: { due_time?: string | null; end_time?: string | null }): number | null {
+  const s = timeToMinutes(task.due_time);
+  const e = timeToMinutes(task.end_time);
+  if (s == null || e == null) return null;
+  const d = e - s;
+  return d > 0 ? d : null;
+}
+
+/** End time for a specific occurrence, keeping the task's original duration. */
+export function occurrenceEndTime(
+  task: { due_time?: string | null; end_time?: string | null },
+  effectiveTime: string | null | undefined,
+): string | null {
+  const dur = taskDurationMin(task);
+  const start = timeToMinutes(effectiveTime);
+  if (dur == null || start == null) return null;
+  return minutesToTime(start + dur);
+}
+
+/** Hex (#rgb / #rrggbb) → rgba() string at the given alpha. */
+export function hexToRgba(hex: string | null | undefined, alpha: number): string | undefined {
+  if (!hex) return undefined;
+  let h = hex.replace("#", "").trim();
+  if (h.length === 3) h = h.split("").map((c) => c + c).join("");
+  if (h.length !== 6) return undefined;
+  const n = parseInt(h, 16);
+  if (Number.isNaN(n)) return undefined;
+  return `rgba(${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255}, ${alpha})`;
+}

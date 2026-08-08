@@ -10,6 +10,7 @@ export type TaskFormValues = {
   subtagId: string | null;
   dueDate: string | null;
   dueTime: string | null;
+  endTime: string | null;
   recurrence: string;
 };
 
@@ -70,6 +71,7 @@ export function TasksPanel({
     subtagId: filter.subtagId,
     dueDate: todayLocalStr(),
     dueTime: null,
+    endTime: null,
     recurrence: "none",
   });
 
@@ -83,6 +85,7 @@ export function TasksPanel({
         subtagId: editingTask.subtag_id,
         dueDate: editingTask.due_date ?? todayLocalStr(),
         dueTime: shortTime(editingTask.due_time) || null,
+        endTime: shortTime(editingTask.end_time) || null,
         recurrence: editingTask.recurrence ?? "none",
       });
     }
@@ -337,6 +340,15 @@ export function TasksPanel({
             onChange={(e) => setForm({ ...form, dueTime: e.target.value || null })}
             className="bg-transparent outline-none text-sm border-b border-border py-1"
           />
+          <label className="text-[10px] label-caps text-muted-foreground">End</label>
+          <input
+            type="time"
+            value={form.endTime ?? ""}
+            onChange={(e) => setForm({ ...form, endTime: e.target.value || null })}
+            disabled={!form.dueTime}
+            title={form.dueTime ? "Optional end time" : "Set a start time first"}
+            className="bg-transparent outline-none text-sm border-b border-border py-1 disabled:opacity-40"
+          />
           <select
             value={form.categoryId ?? ""}
             onChange={(e) => setForm({ ...form, categoryId: e.target.value || null, subtagId: null })}
@@ -485,6 +497,7 @@ function TaskList({
             {t.due_time && (
               <span className="text-[10px] text-muted-foreground tabular-nums">
                 {shortTime(t.due_time)}
+                {t.end_time ? `–${shortTime(t.end_time)}` : ""}
               </span>
             )}
             <button

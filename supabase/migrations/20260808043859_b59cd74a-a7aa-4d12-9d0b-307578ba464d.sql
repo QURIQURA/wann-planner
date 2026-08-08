@@ -1,0 +1,1 @@
+ALTER TABLE public.planner_tasks ADD COLUMN IF NOT EXISTS end_time time without time zone;
