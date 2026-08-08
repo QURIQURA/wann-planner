@@ -103,8 +103,9 @@ export function WeekRotation({
   onEditTask: (t: Task) => void;
   onMoveTask: (args: MoveTaskArgs) => void;
 }) {
+  // Yesterday / Today / Tomorrow — anchorDate is always the centre card.
   const days = useMemo(
-    () => Array.from({ length: 5 }, (_, i) => addDays(anchorDate, i)),
+    () => [-1, 0, 1].map((i) => addDays(anchorDate, i)),
     [anchorDate],
   );
   const catMap = useMemo(
