@@ -645,10 +645,7 @@ function TaskLines({
           </span>
         )}
         {cat && (
-          <span
-            className="text-[10px] px-1 border border-border label-caps"
-            style={{ color: cat.color }}
-          >
+          <span className="text-[10px] px-1 label-caps bg-foreground text-background flex-shrink-0">
             {cat.name}
           </span>
         )}
