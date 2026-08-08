@@ -526,6 +526,8 @@ function SlotCell({ dateKey, idx, isDragging }: { dateKey: string; idx: number; 
 
 function DraggableTimedTask({
   occ,
+  endTime,
+  tall,
   completed,
   cat,
   project,
@@ -533,6 +535,8 @@ function DraggableTimedTask({
   onEdit,
 }: {
   occ: EffectiveOccurrence;
+  endTime?: string | null;
+  tall?: boolean;
   completed: boolean;
   cat: Category | undefined;
   project?: string;
@@ -543,53 +547,55 @@ function DraggableTimedTask({
     id: `task|${occ.task.id}|${occ.originalDate}`,
     data: { taskId: occ.task.id, originalDate: occ.originalDate, title: occ.task.title },
   });
+  // Timeline boxes are tinted with the category colour at 50% opacity.
+  const bg = hexToRgba(cat?.color, 0.5) ?? "var(--background)";
   return (
     <div
       ref={setNodeRef}
-      className={`flex items-center gap-1 border border-border bg-background px-1 text-[11px] leading-tight h-full ${
-        isDragging ? "opacity-30" : ""
-      }`}
+      className={`flex gap-1 border border-border px-1 text-[11px] leading-tight h-full overflow-hidden text-foreground ${
+        tall ? "items-start pt-0.5 flex-wrap content-start" : "items-center"
+      } ${isDragging ? "opacity-30" : ""}`}
+      style={{ background: bg }}
     >
       <button
         {...attributes}
         {...listeners}
-        className="cursor-grab active:cursor-grabbing text-muted-foreground touch-none"
+        className="cursor-grab active:cursor-grabbing text-foreground/60 touch-none flex-shrink-0"
         aria-label="Drag"
       >
         <GripVertical size={10} />
       </button>
-      <span className="text-[9px] text-muted-foreground w-8 tabular-nums flex-shrink-0">
+      <span className="text-[9px] text-foreground/70 tabular-nums flex-shrink-0">
         {shortTime(occ.effectiveTime)}
+        {endTime ? `–${shortTime(endTime)}` : ""}
       </span>
       <button
         onClick={onToggle}
         aria-label="Toggle"
-        className={`inline-block h-2.5 w-2.5 border border-border flex-shrink-0 ${completed ? "bg-foreground" : ""}`}
+        className={`inline-block h-2.5 w-2.5 border border-foreground/50 flex-shrink-0 ${completed ? "bg-foreground" : ""}`}
       />
       <button
         onClick={onEdit}
-        className={`flex-1 text-left truncate hover:underline ${completed ? "line-through text-muted-foreground" : ""}`}
+        className={`flex-1 min-w-0 text-left truncate hover:underline text-foreground ${completed ? "line-through" : ""}`}
       >
         {occ.task.title}
         {(occ.task.recurrence ?? "none") !== "none" && (
-          <span className="ml-1 text-[9px] text-muted-foreground">↻</span>
+          <span className="ml-1 text-[9px] text-foreground/60">↻</span>
         )}
-        {occ.isMoved && <span className="ml-1 text-[9px] text-muted-foreground">•</span>}
+        {occ.isMoved && <span className="ml-1 text-[9px] text-foreground/60">•</span>}
       </button>
       {project && (
-        <span className="text-[9px] text-muted-foreground border-b border-border flex-shrink-0 max-w-[70px] truncate">
+        <span className="text-[9px] text-foreground/70 border-b border-foreground/30 flex-shrink-0 max-w-[70px] truncate">
           {project}
         </span>
       )}
       {cat && (
-        <span
-          className="text-[9px] px-0.5 border border-border label-caps flex-shrink-0"
-          style={{ color: cat.color }}
-        >
+        <span className="text-[9px] px-1 label-caps flex-shrink-0 bg-foreground text-background">
           {cat.name}
         </span>
       )}
     </div>
+
   );
 }
 
