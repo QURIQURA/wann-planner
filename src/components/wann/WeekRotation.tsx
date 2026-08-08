@@ -632,7 +632,7 @@ function TaskLines({
         />
         <button
           onClick={() => onEdit(o.task)}
-          className={`text-sm flex-1 text-left truncate hover:underline ${completed ? "line-through text-muted-foreground" : ""}`}
+          className={`text-sm flex-1 text-left truncate hover:underline text-foreground ${completed ? "line-through" : ""}`}
         >
           {o.task.title}
           {(o.task.recurrence ?? "none") !== "none" && (
