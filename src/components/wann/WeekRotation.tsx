@@ -430,6 +430,33 @@ function TimelineGrid({
   onEdit: (t: Task) => void;
   isDragging: boolean;
 }) {
+  // Lay out timed occurrences: tasks with an end time span their duration,
+  // tasks without one occupy a single 30-min slot. Overlaps share the width.
+  const blocks = timed.map((o) => {
+    const startMin = timeToMinutes(o.effectiveTime) ?? START_HOUR * 60;
+    const endStr = occurrenceEndTime(o.task, o.effectiveTime);
+    const endMin = timeToMinutes(endStr);
+    const spans = endMin != null && endMin > startMin;
+    const top = ((startMin - START_HOUR * 60) / SLOT_MIN) * SLOT_HEIGHT;
+    const height = spans
+      ? Math.max(SLOT_HEIGHT, ((endMin! - startMin) / SLOT_MIN) * SLOT_HEIGHT)
+      : SLOT_HEIGHT;
+    return { o, startMin, endMin: spans ? endMin! : startMin + SLOT_MIN, top, height, spans, endStr };
+  });
+
+  // simple lane packing for overlapping blocks
+  const laneEnds: number[] = [];
+  const placed = blocks
+    .slice()
+    .sort((a, b) => a.startMin - b.startMin)
+    .map((b) => {
+      let lane = laneEnds.findIndex((e) => e <= b.startMin);
+      if (lane === -1) { lane = laneEnds.length; laneEnds.push(b.endMin); }
+      else laneEnds[lane] = b.endMin;
+      return { ...b, lane };
+    });
+  const laneCount = Math.max(1, laneEnds.length);
+
   return (
     <div
       className="relative"
@@ -441,18 +468,25 @@ function TimelineGrid({
       ))}
 
       {/* Timed tasks positioned absolutely */}
-      {timed.map((o) => {
-        const idx = slotIndexFromTime(o.effectiveTime);
+      {placed.map((b) => {
+        const o = b.o;
         const completed = isOccurrenceCompleted(o.task, o.originalDate, completions);
         const cat = o.task.category_id ? catMap[o.task.category_id] : undefined;
         return (
           <div
             key={`${o.task.id}-${o.originalDate}`}
-            className="absolute left-0 right-0 px-0.5"
-            style={{ top: idx * SLOT_HEIGHT, height: SLOT_HEIGHT }}
+            className="absolute px-0.5"
+            style={{
+              top: Math.max(0, b.top),
+              height: b.height,
+              left: `${(b.lane / laneCount) * 100}%`,
+              width: `${100 / laneCount}%`,
+            }}
           >
             <DraggableTimedTask
               occ={o}
+              endTime={b.spans ? b.endStr : null}
+              tall={b.height > SLOT_HEIGHT * 1.5}
               completed={completed}
               cat={cat}
               project={o.task.multiple_task_id ? projMap[o.task.multiple_task_id] : undefined}
