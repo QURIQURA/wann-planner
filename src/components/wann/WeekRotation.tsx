@@ -264,9 +264,10 @@ export function WeekRotation({
           {renderDayCard(anchorDate, todayInMobileView, "")}
         </div>
 
-        <div className="hidden md:grid md:grid-cols-7 gap-2 auto-rows-fr">
-          {days.map((d, i) => renderDayCard(d, false, i === 0 ? "md:col-span-3" : ""))}
+        <div className="hidden md:grid md:grid-cols-3 gap-2 auto-rows-fr items-stretch">
+          {days.map((d) => renderDayCard(d, false, "h-full"))}
         </div>
+
       </div>
 
       <DragOverlay dropAnimation={null}>
