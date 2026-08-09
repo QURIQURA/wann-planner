@@ -25,6 +25,13 @@ import {
   type MultipleTaskItem,
 } from "@/lib/wann-data";
 
+import {
+  fetchHabits,
+  fetchHabitCompletionsRange,
+  setHabitCount,
+  cycleHabitCount,
+  type Habit,
+} from "@/lib/wann-extra";
 import { useApplySettings } from "@/lib/use-apply-settings";
 import { WeekRotation } from "@/components/wann/WeekRotation";
 import { TasksPanel } from "@/components/wann/TasksPanel";
@@ -32,7 +39,6 @@ import { MultipleTasksPanel, type MultipleTaskForm } from "@/components/wann/Mul
 import { EventsPanel, type EventForm } from "@/components/wann/EventsPanel";
 import { SettingsPanel } from "@/components/wann/SettingsPanel";
 import { HabitTrackerPanel } from "@/components/wann/HabitTrackerPanel";
-import { RoutinesPanel } from "@/components/wann/RoutinesPanel";
 import { MonthlySummaryPanel } from "@/components/wann/MonthlySummaryPanel";
 
 export const Route = createFileRoute("/_authenticated/")({
@@ -57,6 +63,35 @@ function Dashboard() {
   const multipleItemsQ = useQuery({ queryKey: ["multiple_task_items", user.id], queryFn: () => fetchMultipleTaskItems(user.id) });
   const completionsQ = useQuery({ queryKey: ["completions", user.id], queryFn: () => fetchCompletions(user.id) });
   const exceptionsQ = useQuery({ queryKey: ["exceptions", user.id], queryFn: () => fetchExceptions(user.id) });
+
+  const habitRange = useMemo(() => {
+    const fmt = (d: Date) =>
+      `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+    const start = new Date(anchor); start.setDate(start.getDate() - 8);
+    const end = new Date(anchor); end.setDate(end.getDate() + 8);
+    return { start: fmt(start), end: fmt(end) };
+  }, [anchor]);
+  const habitsQ = useQuery({ queryKey: ["habits"], queryFn: fetchHabits });
+  const habitCompQ = useQuery({
+    queryKey: ["habit_comp", habitRange.start, habitRange.end],
+    queryFn: () => fetchHabitCompletionsRange(habitRange.start, habitRange.end),
+  });
+
+  const tapHabit = useMutation({
+    mutationFn: async ({ habit, date }: { habit: Habit; date: string }) => {
+      const existing = (habitCompQ.data ?? []).find((c) => c.habit_id === habit.id && c.date === date);
+      const target = Math.max(1, habit.target_count ?? 1);
+      await setHabitCount({
+        habitId: habit.id,
+        userId: user.id,
+        date,
+        existingId: existing?.id,
+        count: cycleHabitCount(existing?.count ?? 0, target),
+      });
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["habit_comp"] }),
+    onError: () => toast.error("Could not update habit"),
+  });
 
   useApplySettings(settingsQ.data);
 
@@ -545,6 +580,9 @@ function Dashboard() {
           onMoveTask={(args) => moveTask.mutate(args)}
           multipleTasks={multipleQ.data ?? []}
           multipleTaskItems={multipleItemsQ.data ?? []}
+          habits={habitsQ.data ?? []}
+          habitCompletions={habitCompQ.data ?? []}
+          onTapHabit={(habit, date) => tapHabit.mutate({ habit, date })}
           onOpenMultiple={(id) => {
             const el = document.getElementById(`mt-${id}`);
             if (el) {
@@ -606,8 +644,6 @@ function Dashboard() {
         </div>
 
         <HabitTrackerPanel userId={user.id} anchorDate={anchor} />
-
-        <RoutinesPanel userId={user.id} />
 
         <MonthlySummaryPanel userId={user.id} />
       </main>

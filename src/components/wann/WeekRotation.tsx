@@ -37,7 +37,9 @@ import {
   type DragEndEvent,
   type DragStartEvent,
 } from "@dnd-kit/core";
-import { ChevronLeft, ChevronRight, ChevronDown, ChevronUp, ListChecks, GripVertical } from "lucide-react";
+import { ChevronLeft, ChevronRight, ChevronDown, ChevronUp, ListChecks, GripVertical, CircleDashed } from "lucide-react";
+import type { Habit, HabitCompletion } from "@/lib/wann-extra";
+import { habitAppliesOnDow } from "@/lib/wann-extra";
 
 function addDays(d: Date, n: number) {
   const r = new Date(d);
@@ -84,6 +86,9 @@ export function WeekRotation({
   exceptions,
   multipleTasks,
   multipleTaskItems,
+  habits,
+  habitCompletions,
+  onTapHabit,
   onOpenMultiple,
   onToggleOccurrence,
   onEditTask,
@@ -98,6 +103,9 @@ export function WeekRotation({
   exceptions: RecurringException[];
   multipleTasks: MultipleTask[];
   multipleTaskItems: MultipleTaskItem[];
+  habits: Habit[];
+  habitCompletions: HabitCompletion[];
+  onTapHabit: (habit: Habit, date: string) => void;
   onOpenMultiple: (id: string) => void;
   onToggleOccurrence: (task: Task, date: string) => void;
   onEditTask: (t: Task) => void;
@@ -187,6 +195,7 @@ export function WeekRotation({
       .sort((a, b) => (a.effectiveTime ?? "").localeCompare(b.effectiveTime ?? ""));
     const dayEvents = eventsOnDate(events, key);
     const dayMultiples = multipleTasks.filter((m) => m.date === key);
+    const dayHabits = habits.filter((h) => habitAppliesOnDow(h, d.getDay()));
     const primaryType = EVENT_PRIORITY.find((t) => dayEvents.some((e) => e.type === t));
     const borderColor = primaryType ? EVENT_COLORS[primaryType] : undefined;
 
@@ -206,6 +215,9 @@ export function WeekRotation({
         timed={timed}
         dayEvents={dayEvents}
         dayMultiples={dayMultiples}
+        dayHabits={dayHabits}
+        habitCompletions={habitCompletions}
+        onTapHabit={onTapHabit}
         multipleTaskItems={multipleTaskItems}
         completions={completions}
         catMap={catMap}
@@ -293,6 +305,9 @@ function DayCard({
   timed,
   dayEvents,
   dayMultiples,
+  dayHabits,
+  habitCompletions,
+  onTapHabit,
   multipleTaskItems,
   completions,
   catMap,
@@ -313,6 +328,9 @@ function DayCard({
   timed: EffectiveOccurrence[];
   dayEvents: EventEntry[];
   dayMultiples: MultipleTask[];
+  dayHabits: Habit[];
+  habitCompletions: HabitCompletion[];
+  onTapHabit: (habit: Habit, date: string) => void;
   multipleTaskItems: MultipleTaskItem[];
   completions: TaskCompletion[];
   catMap: Record<string, Category>;
@@ -326,6 +344,11 @@ function DayCard({
     id: `day|${dateKey}`,
     data: { kind: "day", date: dateKey },
   });
+
+  const countFor = (habitId: string) =>
+    habitCompletions.find((c) => c.habit_id === habitId && c.date === dateKey)?.count ?? 0;
+  const timedHabits = dayHabits.filter((h) => !!h.habit_time);
+  const untimedHabits = dayHabits.filter((h) => !h.habit_time);
 
   return (
     <div
@@ -396,9 +419,24 @@ function DayCard({
 
       <div className="border-t border-border pt-2 flex-1">
         <p className="label-caps text-[10px] text-muted-foreground mb-1">Timeline</p>
+        {untimedHabits.length > 0 && (
+          <div className="mb-2 space-y-1">
+            {untimedHabits.map((h) => (
+              <HabitLine
+                key={h.id}
+                habit={h}
+                count={countFor(h.id)}
+                onTap={() => onTapHabit(h, dateKey)}
+              />
+            ))}
+          </div>
+        )}
         <TimelineGrid
           dateKey={dateKey}
           timed={timed}
+          timedHabits={timedHabits}
+          habitCount={countFor}
+          onTapHabit={(h) => onTapHabit(h, dateKey)}
           completions={completions}
           catMap={catMap}
           projMap={projMap}
@@ -414,6 +452,9 @@ function DayCard({
 function TimelineGrid({
   dateKey,
   timed,
+  timedHabits,
+  habitCount,
+  onTapHabit,
   completions,
   catMap,
   projMap,
@@ -423,6 +464,9 @@ function TimelineGrid({
 }: {
   dateKey: string;
   timed: EffectiveOccurrence[];
+  timedHabits: Habit[];
+  habitCount: (habitId: string) => number;
+  onTapHabit: (habit: Habit) => void;
   completions: TaskCompletion[];
   catMap: Record<string, Category>;
   projMap: Record<string, string>;
@@ -431,23 +475,35 @@ function TimelineGrid({
   isDragging: boolean;
 }) {
   // Lay out timed occurrences: tasks with an end time span their duration,
-  // tasks without one occupy a single 30-min slot. Overlaps share the width.
-  const blocks = timed.map((o) => {
+  // tasks without one occupy a single 30-min slot. Timed habits sit in the same
+  // grid so they read alongside tasks. Overlaps share the width.
+  type Block =
+    | { kind: "task"; startMin: number; endMin: number; top: number; height: number; spans: boolean; endStr: string | null; o: EffectiveOccurrence }
+    | { kind: "habit"; startMin: number; endMin: number; top: number; height: number; habit: Habit };
+
+  const posOf = (startMin: number, endMin: number) => ({
+    top: ((startMin - START_HOUR * 60) / SLOT_MIN) * SLOT_HEIGHT,
+    height: Math.max(SLOT_HEIGHT, ((endMin - startMin) / SLOT_MIN) * SLOT_HEIGHT),
+  });
+
+  const taskBlocks: Block[] = timed.map((o) => {
     const startMin = timeToMinutes(o.effectiveTime) ?? START_HOUR * 60;
     const endStr = occurrenceEndTime(o.task, o.effectiveTime);
-    const endMin = timeToMinutes(endStr);
-    const spans = endMin != null && endMin > startMin;
-    const top = ((startMin - START_HOUR * 60) / SLOT_MIN) * SLOT_HEIGHT;
-    const height = spans
-      ? Math.max(SLOT_HEIGHT, ((endMin! - startMin) / SLOT_MIN) * SLOT_HEIGHT)
-      : SLOT_HEIGHT;
-    return { o, startMin, endMin: spans ? endMin! : startMin + SLOT_MIN, top, height, spans, endStr };
+    const rawEnd = timeToMinutes(endStr);
+    const spans = rawEnd != null && rawEnd > startMin;
+    const endMin = spans ? rawEnd! : startMin + SLOT_MIN;
+    return { kind: "task", startMin, endMin, ...posOf(startMin, endMin), spans, endStr, o };
+  });
+
+  const habitBlocks: Block[] = timedHabits.map((h) => {
+    const startMin = timeToMinutes(h.habit_time) ?? START_HOUR * 60;
+    const endMin = startMin + SLOT_MIN;
+    return { kind: "habit", startMin, endMin, ...posOf(startMin, endMin), habit: h };
   });
 
   // simple lane packing for overlapping blocks
   const laneEnds: number[] = [];
-  const placed = blocks
-    .slice()
+  const placed = [...taskBlocks, ...habitBlocks]
     .sort((a, b) => a.startMin - b.startMin)
     .map((b) => {
       let lane = laneEnds.findIndex((e) => e <= b.startMin);
@@ -467,22 +523,33 @@ function TimelineGrid({
         <SlotCell key={i} dateKey={dateKey} idx={i} isDragging={isDragging} />
       ))}
 
-      {/* Timed tasks positioned absolutely */}
+      {/* Timed tasks & habits positioned absolutely */}
       {placed.map((b) => {
+        const style = {
+          top: Math.max(0, b.top),
+          height: b.height,
+          left: `${(b.lane / laneCount) * 100}%`,
+          width: `${100 / laneCount}%`,
+        };
+        if (b.kind === "habit") {
+          const h = b.habit;
+          const target = Math.max(1, h.target_count ?? 1);
+          return (
+            <div key={`habit-${h.id}`} className="absolute px-0.5" style={style}>
+              <TimedHabit
+                habit={h}
+                count={habitCount(h.id)}
+                target={target}
+                onTap={() => onTapHabit(h)}
+              />
+            </div>
+          );
+        }
         const o = b.o;
         const completed = isOccurrenceCompleted(o.task, o.originalDate, completions);
         const cat = o.task.category_id ? catMap[o.task.category_id] : undefined;
         return (
-          <div
-            key={`${o.task.id}-${o.originalDate}`}
-            className="absolute px-0.5"
-            style={{
-              top: Math.max(0, b.top),
-              height: b.height,
-              left: `${(b.lane / laneCount) * 100}%`,
-              width: `${100 / laneCount}%`,
-            }}
-          >
+          <div key={`${o.task.id}-${o.originalDate}`} className="absolute px-0.5" style={style}>
             <DraggableTimedTask
               occ={o}
               endTime={b.spans ? b.endStr : null}
@@ -496,6 +563,76 @@ function TimelineGrid({
           </div>
         );
       })}
+    </div>
+  );
+}
+
+/** A habit with a time — dashed border + dotted-circle icon marks it as a habit. */
+function TimedHabit({
+  habit,
+  count,
+  target,
+  onTap,
+}: {
+  habit: Habit;
+  count: number;
+  target: number;
+  onTap: () => void;
+}) {
+  const done = count >= target;
+  const bg = hexToRgba(habit.color, 0.5) ?? "var(--background)";
+  return (
+    <div
+      className="flex items-center gap-1 border border-dashed border-foreground/60 px-1 text-[11px] leading-tight h-full overflow-hidden text-foreground"
+      style={{ background: bg }}
+    >
+      <CircleDashed size={10} className="flex-shrink-0 text-foreground/70" />
+      <span className="text-[9px] text-foreground/70 tabular-nums flex-shrink-0">
+        {shortTime(habit.habit_time)}
+      </span>
+      <button
+        onClick={onTap}
+        aria-label={`Toggle habit ${habit.name}`}
+        className={`inline-block h-2.5 w-2.5 border border-dashed border-foreground/60 flex-shrink-0 ${done ? "bg-foreground" : ""}`}
+      />
+      <button
+        onClick={onTap}
+        className={`flex-1 min-w-0 text-left truncate text-foreground ${done ? "line-through" : ""}`}
+      >
+        {habit.name}
+      </button>
+      {target > 1 && (
+        <span className="text-[9px] tabular-nums flex-shrink-0 px-1 bg-foreground text-background">
+          {count}/{target}
+        </span>
+      )}
+    </div>
+  );
+}
+
+/** A habit without a time — listed above the timeline grid. */
+function HabitLine({ habit, count, onTap }: { habit: Habit; count: number; onTap: () => void }) {
+  const target = Math.max(1, habit.target_count ?? 1);
+  const done = count >= target;
+  return (
+    <div className="flex items-center gap-1.5 border border-dashed border-border px-1 py-0.5 text-[11px]">
+      <CircleDashed size={10} className="flex-shrink-0 text-muted-foreground" />
+      <button
+        onClick={onTap}
+        aria-label={`Toggle habit ${habit.name}`}
+        className={`inline-block h-2.5 w-2.5 border border-dashed border-foreground/60 flex-shrink-0 ${done ? "bg-foreground" : ""}`}
+      />
+      <button
+        onClick={onTap}
+        className={`flex-1 min-w-0 text-left truncate text-foreground ${done ? "line-through" : ""}`}
+      >
+        {habit.name}
+      </button>
+      {target > 1 && (
+        <span className="text-[9px] tabular-nums flex-shrink-0 px-1 bg-foreground text-background">
+          {count}/{target}
+        </span>
+      )}
     </div>
   );
 }

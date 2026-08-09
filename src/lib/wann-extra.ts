@@ -4,8 +4,6 @@ import type { Tables } from "@/integrations/supabase/types";
 export type Habit = Tables<"planner_habits">;
 export type HabitCompletion = Tables<"planner_habit_completions">;
 export type RoutineGroup = Tables<"planner_routine_groups">;
-export type RoutineItem = Tables<"planner_routine_items">;
-export type RoutineCompletion = Tables<"planner_routine_completions">;
 export type HyattHours = Tables<"planner_monthly_hyatt_hours">;
 export type KoraSetupItem = Tables<"planner_kora_setup_items">;
 export type DiaryEntry = Tables<"planner_diary_entries">;
@@ -29,24 +27,52 @@ export async function fetchHabitCompletionsRange(start: string, end: string) {
   return data ?? [];
 }
 
-/* ---------- ROUTINES ---------- */
+/* ---------- ROUTINE GROUPS (containers for habits) ---------- */
+export const ALL_DAYS = [0, 1, 2, 3, 4, 5, 6];
+
 export async function fetchRoutineGroups() {
   const { data, error } = await supabase.from("planner_routine_groups").select("*").order("sort_order");
   if (error) throw error;
   return data ?? [];
 }
-export async function fetchRoutineItems() {
-  const { data, error } = await supabase.from("planner_routine_items").select("*").order("sort_order");
-  if (error) throw error;
-  return data ?? [];
+
+/** Does this habit apply on the given weekday (0=Sun)? */
+export function habitAppliesOnDow(h: Pick<Habit, "days_of_week">, dow: number) {
+  const days = h.days_of_week ?? ALL_DAYS;
+  return days.length === 0 || days.includes(dow);
 }
-export async function fetchRoutineCompletionsForDate(date: string) {
-  const { data, error } = await supabase
-    .from("planner_routine_completions")
-    .select("*")
-    .eq("date", date);
-  if (error) throw error;
-  return data ?? [];
+
+/** Next count in the 0..target cycle (tap repeatedly to wrap back to 0). */
+export function cycleHabitCount(current: number, target: number) {
+  const t = Math.max(1, target);
+  return current >= t ? 0 : current + 1;
+}
+
+/** Write a habit's count for a date (deletes the row at 0). */
+export async function setHabitCount(args: {
+  habitId: string;
+  userId: string;
+  date: string;
+  existingId?: string;
+  count: number;
+}) {
+  const { habitId, userId, date, existingId, count } = args;
+  if (count <= 0) {
+    if (existingId) {
+      const { error } = await supabase.from("planner_habit_completions").delete().eq("id", existingId);
+      if (error) throw error;
+    }
+    return;
+  }
+  if (existingId) {
+    const { error } = await supabase.from("planner_habit_completions").update({ count }).eq("id", existingId);
+    if (error) throw error;
+  } else {
+    const { error } = await supabase
+      .from("planner_habit_completions")
+      .insert({ habit_id: habitId, user_id: userId, date, count });
+    if (error) throw error;
+  }
 }
 
 /* ---------- MONTHLY ---------- */
