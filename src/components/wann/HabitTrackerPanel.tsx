@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { Fragment, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Check, Pencil, Plus, Trash2, X, CircleDashed } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -454,8 +454,8 @@ export function HabitTrackerPanel({ userId, anchorDate }: { userId: string; anch
                 );
                 const pct = totals.active ? Math.round((totals.done / totals.active) * 100) : 0;
                 return (
-                  <>
-                    <tr key={group.id} className="border-t border-border group/g">
+                  <Fragment key={group.id}>
+                    <tr className="border-t border-border group/g">
                       <td colSpan={9} className="py-1">
                         <div className="flex items-center gap-2">
                           <span className="label-caps text-[10px]">{group.name}</span>
@@ -476,7 +476,7 @@ export function HabitTrackerPanel({ userId, anchorDate }: { userId: string; anch
                       </td>
                     </tr>
                     {items.map((h) => renderHabitRow(h, true))}
-                  </>
+                  </Fragment>
                 );
               })}
               {ungrouped.map((h) => renderHabitRow(h, false))}
