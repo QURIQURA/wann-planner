@@ -4,8 +4,6 @@ import type { Tables } from "@/integrations/supabase/types";
 export type Habit = Tables<"planner_habits">;
 export type HabitCompletion = Tables<"planner_habit_completions">;
 export type RoutineGroup = Tables<"planner_routine_groups">;
-export type RoutineItem = Tables<"planner_routine_items">;
-export type RoutineCompletion = Tables<"planner_routine_completions">;
 export type HyattHours = Tables<"planner_monthly_hyatt_hours">;
 export type KoraSetupItem = Tables<"planner_kora_setup_items">;
 export type DiaryEntry = Tables<"planner_diary_entries">;
