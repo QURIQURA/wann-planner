@@ -37,7 +37,9 @@ import {
   type DragEndEvent,
   type DragStartEvent,
 } from "@dnd-kit/core";
-import { ChevronLeft, ChevronRight, ChevronDown, ChevronUp, ListChecks, GripVertical } from "lucide-react";
+import { ChevronLeft, ChevronRight, ChevronDown, ChevronUp, ListChecks, GripVertical, CircleDashed } from "lucide-react";
+import type { Habit, HabitCompletion } from "@/lib/wann-extra";
+import { habitAppliesOnDow } from "@/lib/wann-extra";
 
 function addDays(d: Date, n: number) {
   const r = new Date(d);
@@ -84,6 +86,9 @@ export function WeekRotation({
   exceptions,
   multipleTasks,
   multipleTaskItems,
+  habits,
+  habitCompletions,
+  onTapHabit,
   onOpenMultiple,
   onToggleOccurrence,
   onEditTask,
@@ -98,6 +103,9 @@ export function WeekRotation({
   exceptions: RecurringException[];
   multipleTasks: MultipleTask[];
   multipleTaskItems: MultipleTaskItem[];
+  habits: Habit[];
+  habitCompletions: HabitCompletion[];
+  onTapHabit: (habit: Habit, date: string) => void;
   onOpenMultiple: (id: string) => void;
   onToggleOccurrence: (task: Task, date: string) => void;
   onEditTask: (t: Task) => void;
@@ -187,6 +195,7 @@ export function WeekRotation({
       .sort((a, b) => (a.effectiveTime ?? "").localeCompare(b.effectiveTime ?? ""));
     const dayEvents = eventsOnDate(events, key);
     const dayMultiples = multipleTasks.filter((m) => m.date === key);
+    const dayHabits = habits.filter((h) => habitAppliesOnDow(h, d.getDay()));
     const primaryType = EVENT_PRIORITY.find((t) => dayEvents.some((e) => e.type === t));
     const borderColor = primaryType ? EVENT_COLORS[primaryType] : undefined;
 
@@ -206,6 +215,9 @@ export function WeekRotation({
         timed={timed}
         dayEvents={dayEvents}
         dayMultiples={dayMultiples}
+        dayHabits={dayHabits}
+        habitCompletions={habitCompletions}
+        onTapHabit={onTapHabit}
         multipleTaskItems={multipleTaskItems}
         completions={completions}
         catMap={catMap}
@@ -293,6 +305,9 @@ function DayCard({
   timed,
   dayEvents,
   dayMultiples,
+  dayHabits,
+  habitCompletions,
+  onTapHabit,
   multipleTaskItems,
   completions,
   catMap,
@@ -313,6 +328,9 @@ function DayCard({
   timed: EffectiveOccurrence[];
   dayEvents: EventEntry[];
   dayMultiples: MultipleTask[];
+  dayHabits: Habit[];
+  habitCompletions: HabitCompletion[];
+  onTapHabit: (habit: Habit, date: string) => void;
   multipleTaskItems: MultipleTaskItem[];
   completions: TaskCompletion[];
   catMap: Record<string, Category>;
@@ -326,6 +344,11 @@ function DayCard({
     id: `day|${dateKey}`,
     data: { kind: "day", date: dateKey },
   });
+
+  const countFor = (habitId: string) =>
+    habitCompletions.find((c) => c.habit_id === habitId && c.date === dateKey)?.count ?? 0;
+  const timedHabits = dayHabits.filter((h) => !!h.habit_time);
+  const untimedHabits = dayHabits.filter((h) => !h.habit_time);
 
   return (
     <div
@@ -396,9 +419,24 @@ function DayCard({
 
       <div className="border-t border-border pt-2 flex-1">
         <p className="label-caps text-[10px] text-muted-foreground mb-1">Timeline</p>
+        {untimedHabits.length > 0 && (
+          <div className="mb-2 space-y-1">
+            {untimedHabits.map((h) => (
+              <HabitLine
+                key={h.id}
+                habit={h}
+                count={countFor(h.id)}
+                onTap={() => onTapHabit(h, dateKey)}
+              />
+            ))}
+          </div>
+        )}
         <TimelineGrid
           dateKey={dateKey}
           timed={timed}
+          timedHabits={timedHabits}
+          habitCount={countFor}
+          onTapHabit={(h) => onTapHabit(h, dateKey)}
           completions={completions}
           catMap={catMap}
           projMap={projMap}
@@ -414,6 +452,9 @@ function DayCard({
 function TimelineGrid({
   dateKey,
   timed,
+  timedHabits,
+  habitCount,
+  onTapHabit,
   completions,
   catMap,
   projMap,
@@ -423,6 +464,9 @@ function TimelineGrid({
 }: {
   dateKey: string;
   timed: EffectiveOccurrence[];
+  timedHabits: Habit[];
+  habitCount: (habitId: string) => number;
+  onTapHabit: (habit: Habit) => void;
   completions: TaskCompletion[];
   catMap: Record<string, Category>;
   projMap: Record<string, string>;
