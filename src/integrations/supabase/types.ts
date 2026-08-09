@@ -792,8 +792,10 @@ export type Database = {
           color: string | null
           created_at: string
           days_of_week: number[]
+          habit_time: string | null
           id: string
           name: string
+          routine_group_id: string | null
           sort_order: number
           target_count: number
           updated_at: string
@@ -803,8 +805,10 @@ export type Database = {
           color?: string | null
           created_at?: string
           days_of_week?: number[]
+          habit_time?: string | null
           id?: string
           name: string
+          routine_group_id?: string | null
           sort_order?: number
           target_count?: number
           updated_at?: string
@@ -814,14 +818,24 @@ export type Database = {
           color?: string | null
           created_at?: string
           days_of_week?: number[]
+          habit_time?: string | null
           id?: string
           name?: string
+          routine_group_id?: string | null
           sort_order?: number
           target_count?: number
           updated_at?: string
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "planner_habits_routine_group_id_fkey"
+            columns: ["routine_group_id"]
+            isOneToOne: false
+            referencedRelation: "planner_routine_groups"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       planner_kora_orders: {
         Row: {
@@ -1014,38 +1028,6 @@ export type Database = {
           },
         ]
       }
-      planner_routine_completions: {
-        Row: {
-          created_at: string
-          date: string
-          id: string
-          item_id: string
-          user_id: string
-        }
-        Insert: {
-          created_at?: string
-          date: string
-          id?: string
-          item_id: string
-          user_id: string
-        }
-        Update: {
-          created_at?: string
-          date?: string
-          id?: string
-          item_id?: string
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "planner_routine_completions_item_id_fkey"
-            columns: ["item_id"]
-            isOneToOne: false
-            referencedRelation: "planner_routine_items"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       planner_routine_groups: {
         Row: {
           created_at: string
@@ -1075,38 +1057,6 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
-      }
-      planner_routine_items: {
-        Row: {
-          created_at: string
-          group_id: string
-          id: string
-          sort_order: number
-          title: string
-        }
-        Insert: {
-          created_at?: string
-          group_id: string
-          id?: string
-          sort_order?: number
-          title: string
-        }
-        Update: {
-          created_at?: string
-          group_id?: string
-          id?: string
-          sort_order?: number
-          title?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "planner_routine_items_group_id_fkey"
-            columns: ["group_id"]
-            isOneToOne: false
-            referencedRelation: "planner_routine_groups"
-            referencedColumns: ["id"]
-          },
-        ]
       }
       planner_stickers: {
         Row: {
