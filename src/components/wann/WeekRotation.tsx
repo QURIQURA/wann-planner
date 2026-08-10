@@ -825,7 +825,7 @@ function DraggableTimedTask({
 }) {
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id: `task|${occ.task.id}|${occ.originalDate}`,
-    data: { taskId: occ.task.id, originalDate: occ.originalDate, title: occ.task.title },
+    data: { kind: "task", taskId: occ.task.id, originalDate: occ.originalDate, title: occ.task.title } satisfies DragData,
   });
   // Timeline boxes are tinted with the category colour at 50% opacity.
   const bg = hexToRgba(cat?.color, 0.5) ?? "var(--background)";
