@@ -669,6 +669,14 @@ function Dashboard() {
           completions={completionsQ.data ?? []}
           exceptions={exceptionsQ.data ?? []}
           onMoveTask={(args) => moveTask.mutate(args)}
+          onMoveProject={(args) => moveProject.mutate(args)}
+          onMoveEvent={(ev, newDate) => {
+            // recurring events keep their original year (birth year etc.)
+            const date = ev.is_recurring ? `${ev.date.slice(0, 4)}${newDate.slice(4)}` : newDate;
+            if (date === ev.date) return;
+            moveEvent.mutate({ id: ev.id, date });
+          }}
+
           multipleTasks={multipleQ.data ?? []}
           multipleTaskItems={multipleItemsQ.data ?? []}
           habits={habitsQ.data ?? []}
