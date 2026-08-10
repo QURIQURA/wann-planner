@@ -76,6 +76,20 @@ export type MoveTaskArgs = {
   newTime: string | null; // null = keep original time
 };
 
+export type MoveProjectArgs = {
+  id: string;
+  date: string;
+  endDate: string;
+};
+
+type DragData =
+  | { kind: "task"; taskId: string; originalDate: string; title: string }
+  | { kind: "bar"; projectId: string; mode: "move" | "start" | "end"; grabbedDate: string; title: string }
+  | { kind: "event"; eventId: string; title: string };
+
+const BAR_ROW_H = 22;
+
+
 export function WeekRotation({
   anchorDate,
   onAnchorChange,
