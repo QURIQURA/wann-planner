@@ -904,34 +904,18 @@ function TaskLines({
     const cat = o.task.category_id ? catMap[o.task.category_id] : undefined;
     const project = o.task.multiple_task_id ? projMap[o.task.multiple_task_id] : undefined;
     return (
-      <div key={`${o.task.id}-${o.originalDate}`} className="flex items-start gap-2 group">
-        <button
-          onClick={() => onToggle(o.task, o.originalDate)}
-          aria-label="Toggle"
-          className={`mt-1 inline-block h-3 w-3 border border-border flex-shrink-0 ${completed ? "bg-foreground" : ""}`}
-        />
-        <button
-          onClick={() => onEdit(o.task)}
-          className={`text-sm flex-1 text-left truncate hover:underline text-foreground ${completed ? "line-through" : ""}`}
-        >
-          {o.task.title}
-          {(o.task.recurrence ?? "none") !== "none" && (
-            <span className="ml-1 text-[10px] text-muted-foreground">↻</span>
-          )}
-        </button>
-        {project && (
-          <span className="text-[10px] text-muted-foreground border-b border-border max-w-[80px] truncate">
-            {project}
-          </span>
-        )}
-        {cat && (
-          <span className="text-[10px] px-1 label-caps bg-foreground text-background flex-shrink-0">
-            {cat.name}
-          </span>
-        )}
-      </div>
+      <DraggableAllDayTask
+        key={`${o.task.id}-${o.originalDate}`}
+        occ={o}
+        completed={completed}
+        cat={cat}
+        project={project}
+        onToggle={() => onToggle(o.task, o.originalDate)}
+        onEdit={() => onEdit(o.task)}
+      />
     );
   };
+
 
   // silence unused var warning for date param (kept for API compat)
   void date;
