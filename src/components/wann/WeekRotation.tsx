@@ -557,7 +557,8 @@ function DayCard({
             <p className="text-xs text-muted-foreground italic">—</p>
           )}
         </div>
-      </div>
+      </AllDayZone>
+
 
       <div className="border-t border-border pt-2 flex-1">
         <p className="label-caps text-[10px] text-muted-foreground mb-1">Timeline</p>
