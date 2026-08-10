@@ -7,7 +7,10 @@ export type MultipleTaskForm = {
   name: string;
   categoryId: string | null;
   subtagId: string | null;
+  /** start date */
   date: string | null;
+  /** end date (optional — same as start / null means single day) */
+  endDate: string | null;
 };
 
 const emptyForm = (): MultipleTaskForm => ({
@@ -15,7 +18,9 @@ const emptyForm = (): MultipleTaskForm => ({
   categoryId: null,
   subtagId: null,
   date: todayLocalStr(),
+  endDate: null,
 });
+
 
 export function MultipleTasksPanel({
   entries,
