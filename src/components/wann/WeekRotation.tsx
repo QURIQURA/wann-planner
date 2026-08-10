@@ -250,7 +250,9 @@ export function WeekRotation({
       .filter((o) => !!o.effectiveTime)
       .sort((a, b) => (a.effectiveTime ?? "").localeCompare(b.effectiveTime ?? ""));
     const dayEvents = eventsOnDate(events, key);
-    const dayMultiples = multipleTasks.filter((m) => m.date === key);
+    // Multi-day projects are drawn as bars above the cards, not inside them.
+    const dayMultiples = multipleTasks.filter((m) => m.date === key && !isMultiDayProject(m));
+
     const dayHabits = habits.filter((h) => habitAppliesOnDow(h, d.getDay()));
     const primaryType = EVENT_PRIORITY.find((t) => dayEvents.some((e) => e.type === t));
     const borderColor = primaryType ? EVENT_COLORS[primaryType] : undefined;
