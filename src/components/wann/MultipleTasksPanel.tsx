@@ -372,15 +372,32 @@ function MultipleTaskEditor({
         </button>
       </div>
       <div className="flex gap-2 flex-wrap items-center">
-        <input
-          type="date"
-          value={value.date ?? ""}
-          onChange={(e) => onChange({ ...value, date: e.target.value || null })}
-          className="bg-transparent outline-none border-b border-border py-1 text-sm"
-        />
+        <label className="flex items-center gap-1 text-[10px] text-muted-foreground label-caps">
+          시작
+          <input
+            type="date"
+            value={value.date ?? ""}
+            onChange={(e) => onChange({ ...value, date: e.target.value || null })}
+            className="bg-transparent outline-none border-b border-border py-1 text-sm"
+          />
+        </label>
+        <label className="flex items-center gap-1 text-[10px] text-muted-foreground label-caps">
+          종료
+          <input
+            type="date"
+            value={value.endDate ?? ""}
+            min={value.date ?? undefined}
+            onChange={(e) => onChange({ ...value, endDate: e.target.value || null })}
+            className="bg-transparent outline-none border-b border-border py-1 text-sm"
+          />
+        </label>
         {value.date && (
-          <span className="text-[10px] text-muted-foreground tabular-nums">{formatDateKo(value.date)}</span>
+          <span className="text-[10px] text-muted-foreground tabular-nums">
+            {formatDateKo(value.date)}
+            {value.endDate ? ` → ${formatDateKo(value.endDate)}` : ""}
+          </span>
         )}
+
         <select
           value={value.categoryId ?? ""}
           onChange={(e) => onChange({ ...value, categoryId: e.target.value || null, subtagId: null })}
