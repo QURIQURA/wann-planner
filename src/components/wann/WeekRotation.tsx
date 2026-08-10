@@ -961,3 +961,145 @@ function TaskLines({
     </>
   );
 }
+
+/* ---------- multi-day project bars ---------- */
+
+type BarItem = {
+  m: MultipleTask;
+  span: { start: string; end: string };
+  startIdx: number;
+  endIdx: number;
+  row: number;
+  pct: number | null;
+  continuesLeft: boolean;
+  continuesRight: boolean;
+};
+
+/** Droppable column behind the bar row — one per visible day. */
+function BarColumn({ dateKey, isDragging }: { dateKey: string; isDragging: boolean }) {
+  const { isOver, setNodeRef } = useDroppable({
+    id: `barcol|${dateKey}`,
+    data: { kind: "barcol", date: dateKey },
+  });
+  return (
+    <div
+      ref={setNodeRef}
+      className={`h-full ${isDragging ? "border border-dashed border-border" : ""} ${
+        isOver ? "bg-muted" : ""
+      }`}
+    />
+  );
+}
+
+function ProjectBar({
+  bar,
+  cat,
+  draggableId,
+  grabbedDate,
+  onOpen,
+  showHandles,
+}: {
+  bar: BarItem;
+  cat?: Category;
+  draggableId: string;
+  grabbedDate: string;
+  onOpen: () => void;
+  showHandles: boolean;
+}) {
+  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
+    id: draggableId,
+    data: {
+      kind: "bar",
+      projectId: bar.m.id,
+      mode: "move",
+      grabbedDate,
+      title: bar.m.name,
+    } satisfies DragData,
+  });
+  const bg = hexToRgba(cat?.color, 0.5) ?? "var(--muted)";
+  return (
+    <div
+      className={`relative flex items-center gap-1 h-[20px] px-1 border border-border text-[11px] overflow-hidden ${
+        isDragging ? "opacity-30" : ""
+      }`}
+      style={{
+        background: bg,
+        borderLeftStyle: bar.continuesLeft ? "dashed" : "solid",
+        borderRightStyle: bar.continuesRight ? "dashed" : "solid",
+      }}
+    >
+      {showHandles && !bar.continuesLeft && (
+        <BarResizeHandle
+          id={`${draggableId}|start`}
+          projectId={bar.m.id}
+          mode="start"
+          title={bar.m.name}
+          grabbedDate={bar.span.start}
+          side="left"
+        />
+      )}
+      {bar.continuesLeft && <span className="text-foreground/60 flex-shrink-0">‹</span>}
+      <button
+        ref={setNodeRef}
+        {...attributes}
+        {...listeners}
+        onClick={onOpen}
+        className="cursor-grab active:cursor-grabbing touch-none flex items-center gap-1 min-w-0 flex-1 text-left"
+        title={`${bar.span.start} → ${bar.span.end}`}
+      >
+        <GripVertical size={10} className="flex-shrink-0 text-foreground/60" />
+        <ListChecks size={10} className="flex-shrink-0 text-foreground/60" />
+        <span className="truncate">{bar.m.name}</span>
+        {bar.pct !== null && (
+          <span className="text-[9px] tabular-nums text-foreground/70 flex-shrink-0">{bar.pct}%</span>
+        )}
+      </button>
+      {cat && (
+        <span className="text-[9px] px-1 label-caps flex-shrink-0 bg-foreground text-background">
+          {cat.name}
+        </span>
+      )}
+      {bar.continuesRight && <span className="text-foreground/60 flex-shrink-0">›</span>}
+      {showHandles && !bar.continuesRight && (
+        <BarResizeHandle
+          id={`${draggableId}|end`}
+          projectId={bar.m.id}
+          mode="end"
+          title={bar.m.name}
+          grabbedDate={bar.span.end}
+          side="right"
+        />
+      )}
+    </div>
+  );
+}
+
+function BarResizeHandle({
+  id,
+  projectId,
+  mode,
+  title,
+  grabbedDate,
+  side,
+}: {
+  id: string;
+  projectId: string;
+  mode: "start" | "end";
+  title: string;
+  grabbedDate: string;
+  side: "left" | "right";
+}) {
+  const { attributes, listeners, setNodeRef } = useDraggable({
+    id,
+    data: { kind: "bar", projectId, mode, grabbedDate, title } satisfies DragData,
+  });
+  return (
+    <button
+      ref={setNodeRef}
+      {...attributes}
+      {...listeners}
+      aria-label={mode === "start" ? "Resize start" : "Resize end"}
+      className={`absolute top-0 ${side === "left" ? "left-0" : "right-0"} h-full w-2 cursor-ew-resize touch-none bg-foreground/20 hover:bg-foreground/40`}
+    />
+  );
+}
