@@ -1096,3 +1096,123 @@ function BarResizeHandle({
     />
   );
 }
+
+/* ---------- all-day drop zone & draggable rows ---------- */
+
+function AllDayZone({
+  dateKey,
+  isDragging,
+  children,
+}: {
+  dateKey: string;
+  isDragging: boolean;
+  children: React.ReactNode;
+}) {
+  const { isOver, setNodeRef } = useDroppable({
+    id: `allday|${dateKey}`,
+    data: { kind: "allday", date: dateKey },
+  });
+  return (
+    <div
+      ref={setNodeRef}
+      className={`mb-2 ${isDragging ? "border border-dashed border-border p-1" : ""} ${
+        isOver ? "bg-muted" : ""
+      }`}
+    >
+      {children}
+    </div>
+  );
+}
+
+/** Events can be dragged onto another day card to change their date. */
+function DraggableEventLine({ ev }: { ev: EventEntry }) {
+  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
+    id: `event|${ev.id}`,
+    data: { kind: "event", eventId: ev.id, title: ev.name } satisfies DragData,
+  });
+  return (
+    <div className={`flex items-center gap-1.5 text-sm ${isDragging ? "opacity-30" : ""}`}>
+      <button
+        ref={setNodeRef}
+        {...attributes}
+        {...listeners}
+        className="cursor-grab active:cursor-grabbing text-muted-foreground touch-none flex-shrink-0"
+        aria-label="Drag event"
+      >
+        <GripVertical size={10} />
+      </button>
+      <span
+        className="inline-block h-3 w-3 flex-shrink-0"
+        style={{ background: EVENT_COLORS[ev.type] ?? "transparent" }}
+      />
+      <span className="flex-1 truncate">
+        {ev.name}
+        <span className="text-muted-foreground"> · {ev.type}</span>
+      </span>
+    </div>
+  );
+}
+
+/** All-day task row — draggable to another day card. */
+function DraggableAllDayTask({
+  occ,
+  completed,
+  cat,
+  project,
+  onToggle,
+  onEdit,
+}: {
+  occ: EffectiveOccurrence;
+  completed: boolean;
+  cat?: Category;
+  project?: string;
+  onToggle: () => void;
+  onEdit: () => void;
+}) {
+  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
+    id: `allday-task|${occ.task.id}|${occ.originalDate}`,
+    data: {
+      kind: "task",
+      taskId: occ.task.id,
+      originalDate: occ.originalDate,
+      title: occ.task.title,
+    } satisfies DragData,
+  });
+  return (
+    <div className={`flex items-start gap-1.5 group ${isDragging ? "opacity-30" : ""}`}>
+      <button
+        ref={setNodeRef}
+        {...attributes}
+        {...listeners}
+        className="mt-1 cursor-grab active:cursor-grabbing text-muted-foreground touch-none flex-shrink-0"
+        aria-label="Drag task"
+      >
+        <GripVertical size={10} />
+      </button>
+      <button
+        onClick={onToggle}
+        aria-label="Toggle"
+        className={`mt-1 inline-block h-3 w-3 border border-border flex-shrink-0 ${completed ? "bg-foreground" : ""}`}
+      />
+      <button
+        onClick={onEdit}
+        className={`text-sm flex-1 text-left truncate hover:underline text-foreground ${completed ? "line-through" : ""}`}
+      >
+        {occ.task.title}
+        {(occ.task.recurrence ?? "none") !== "none" && (
+          <span className="ml-1 text-[10px] text-muted-foreground">↻</span>
+        )}
+      </button>
+      {project && (
+        <span className="text-[10px] text-muted-foreground border-b border-border max-w-[80px] truncate">
+          {project}
+        </span>
+      )}
+      {cat && (
+        <span className="text-[10px] px-1 label-caps bg-foreground text-background flex-shrink-0">
+          {cat.name}
+        </span>
+      )}
+    </div>
+  );
+}
