@@ -1,0 +1,1 @@
+ALTER TABLE public.planner_multiple_tasks ADD COLUMN IF NOT EXISTS end_date date;
