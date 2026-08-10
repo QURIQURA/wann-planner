@@ -4,6 +4,12 @@ import { todayLocalStr, shortTime, isOccurrenceCompleted, currentOccurrenceDate,
 import { Plus, Trash2, X, ChevronDown, ChevronUp, Pencil } from "lucide-react";
 
 
+export type NewProjectValues = {
+  name: string;
+  startDate: string | null;
+  endDate: string | null;
+};
+
 export type TaskFormValues = {
   title: string;
   categoryId: string | null;
@@ -12,7 +18,10 @@ export type TaskFormValues = {
   dueTime: string | null;
   endTime: string | null;
   recurrence: string;
+  projectId: string | null;
+  newProject: NewProjectValues | null;
 };
+
 
 export function TasksPanel({
   categories,
