@@ -82,6 +82,8 @@ export function TasksPanel({
     dueTime: null,
     endTime: null,
     recurrence: "none",
+    projectId: null,
+    newProject: null,
   });
 
   const [form, setForm] = useState<TaskFormValues>(emptyForm);
@@ -96,9 +98,12 @@ export function TasksPanel({
         dueTime: shortTime(editingTask.due_time) || null,
         endTime: shortTime(editingTask.end_time) || null,
         recurrence: editingTask.recurrence ?? "none",
+        projectId: editingTask.multiple_task_id ?? null,
+        newProject: null,
       });
     }
   }, [editingTask]);
+
 
   const resetForm = () => setForm(emptyForm());
 
