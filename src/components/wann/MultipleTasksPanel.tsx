@@ -131,23 +131,6 @@ export function MultipleTasksPanel({
         </div>
       )}
 
-      {creating && (
-        <MultipleTaskEditor
-          value={form}
-          onChange={setForm}
-          categories={categories}
-          subtags={subtags}
-          submitLabel="Add"
-          onSubmit={() => {
-            if (form.name.trim()) {
-              onAdd({ ...form, name: form.name.trim() });
-              setForm(emptyForm());
-              setCreating(false);
-            }
-          }}
-          onCancel={() => { setCreating(false); setForm(emptyForm()); }}
-        />
-      )}
 
       <div className="space-y-1">
         {visible.length === 0 && (
