@@ -288,6 +288,46 @@ export function WeekRotation({
     );
   };
 
+  // ---- multi-day project bars (Google-Calendar style) ----
+  const viewStart = dayKeys[0];
+  const viewEnd = dayKeys[dayKeys.length - 1];
+  const rowEnds: string[] = [];
+  const bars = multipleTasks
+    .filter((m) => isMultiDayProject(m))
+    .map((m) => ({ m, span: projectSpan(m)! }))
+    .filter(({ span }) => span.start <= viewEnd && span.end >= viewStart)
+    .sort((a, b) => a.span.start.localeCompare(b.span.start) || a.m.name.localeCompare(b.m.name))
+    .map(({ m, span }) => {
+      const startIdx = Math.max(0, diffDays(viewStart, span.start));
+      const endIdx = Math.min(dayKeys.length - 1, diffDays(viewStart, span.end));
+      let row = rowEnds.findIndex((e) => e < span.start);
+      if (row === -1) {
+        row = rowEnds.length;
+        rowEnds.push(span.end);
+      } else {
+        rowEnds[row] = span.end;
+      }
+      const children = multipleTaskItems.filter((i) => i.multiple_task_id === m.id);
+      const done = children.filter((i) => i.completed).length;
+      const pct = children.length > 0 ? Math.round((done / children.length) * 100) : null;
+      return {
+        m,
+        span,
+        startIdx,
+        endIdx,
+        row,
+        pct,
+        continuesLeft: span.start < viewStart,
+        continuesRight: span.end > viewEnd,
+      };
+    });
+  const barRows = bars.reduce((n, b) => Math.max(n, b.row + 1), 0);
+  const mobileBars = bars.filter(
+    (b) => b.span.start <= anchorKey && b.span.end >= anchorKey,
+  );
+
+
+
   return (
     <DndContext
       sensors={sensors}
