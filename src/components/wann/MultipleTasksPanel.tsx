@@ -167,8 +167,14 @@ export function MultipleTasksPanel({
                   {expanded ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
                 </button>
                 {e.date && (
-                  <span className="text-xs text-muted-foreground whitespace-nowrap">{e.date.slice(5)} ({koDow(e.date)})</span>
+                  <span className="text-xs text-muted-foreground whitespace-nowrap">
+                    {e.date.slice(5)} ({koDow(e.date)})
+                    {e.end_date && e.end_date !== e.date
+                      ? ` → ${e.end_date.slice(5)} (${koDow(e.end_date)})`
+                      : ""}
+                  </span>
                 )}
+
                 <button
                   onClick={() => setExpandedId(expanded ? null : e.id)}
                   className="text-sm flex-1 text-left hover:underline"
