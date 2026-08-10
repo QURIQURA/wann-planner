@@ -71,8 +71,10 @@ export function MultipleTasksPanel({
       categoryId: e.category_id,
       subtagId: (e as MultipleTask & { subtag_id: string | null }).subtag_id ?? null,
       date: e.date,
+      endDate: (e as MultipleTask & { end_date: string | null }).end_date ?? null,
     });
   };
+
 
   const filterSubtags = filter.categoryId
     ? subtags.filter((s) => s.category_id === filter.categoryId)
