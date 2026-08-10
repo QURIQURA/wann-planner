@@ -947,6 +947,7 @@ export type Database = {
           category_id: string | null
           created_at: string
           date: string | null
+          end_date: string | null
           id: string
           name: string
           subtag_id: string | null
@@ -957,6 +958,7 @@ export type Database = {
           category_id?: string | null
           created_at?: string
           date?: string | null
+          end_date?: string | null
           id?: string
           name: string
           subtag_id?: string | null
@@ -967,6 +969,7 @@ export type Database = {
           category_id?: string | null
           created_at?: string
           date?: string | null
+          end_date?: string | null
           id?: string
           name?: string
           subtag_id?: string | null
