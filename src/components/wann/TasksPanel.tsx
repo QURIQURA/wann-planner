@@ -118,7 +118,14 @@ export function TasksPanel({
 
   const submit = () => {
     if (!form.title.trim()) return;
-    const payload = { ...form, title: form.title.trim() };
+    if (form.newProject && !form.newProject.name.trim()) return;
+    const payload: TaskFormValues = {
+      ...form,
+      title: form.title.trim(),
+      newProject: form.newProject
+        ? { ...form.newProject, name: form.newProject.name.trim() }
+        : null,
+    };
     if (editingTask) {
       onUpdateTask(editingTask.id, payload);
       onCancelEdit();
@@ -127,6 +134,7 @@ export function TasksPanel({
     }
     resetForm();
   };
+
 
   return (
     <div>
