@@ -403,6 +403,24 @@ export function TasksPanel({
             <option value="biweekly">biweekly</option>
             <option value="monthly">monthly</option>
           </select>
+          <select
+            value={form.newProject ? "__new__" : (form.projectId ?? "")}
+            onChange={(e) => {
+              const v = e.target.value;
+              if (v === "__new__") {
+                setForm({ ...form, projectId: null, newProject: { name: "", startDate: null, endDate: null } });
+              } else {
+                setForm({ ...form, projectId: v || null, newProject: null });
+              }
+            }}
+            className="bg-transparent outline-none text-sm border-b border-border py-1"
+          >
+            <option value="">소속 프로젝트 없음</option>
+            {projects.map((p) => (
+              <option key={p.id} value={p.id}>{p.name}</option>
+            ))}
+            <option value="__new__">+ 새 프로젝트</option>
+          </select>
           <button
             onClick={submit}
             className="ml-auto border border-border px-3 py-1 label-caps hover:bg-muted flex items-center gap-1"
@@ -410,7 +428,46 @@ export function TasksPanel({
             <Plus size={12} /> {editingTask ? "Save" : "Add"}
           </button>
         </div>
+        {form.newProject && (
+          <div className="border-t border-border pt-2 flex flex-wrap gap-2 items-center">
+            <input
+              type="text"
+              placeholder="새 프로젝트 이름"
+              value={form.newProject.name}
+              onChange={(e) =>
+                setForm({ ...form, newProject: { ...form.newProject!, name: e.target.value } })
+              }
+              className="flex-1 min-w-[140px] bg-transparent outline-none text-sm border-b border-border py-1"
+            />
+            <label className="text-[10px] label-caps text-muted-foreground">Start</label>
+            <input
+              type="date"
+              value={form.newProject.startDate ?? ""}
+              onChange={(e) =>
+                setForm({ ...form, newProject: { ...form.newProject!, startDate: e.target.value || null } })
+              }
+              className="bg-transparent outline-none text-sm border-b border-border py-1"
+            />
+            <label className="text-[10px] label-caps text-muted-foreground">End</label>
+            <input
+              type="date"
+              value={form.newProject.endDate ?? ""}
+              onChange={(e) =>
+                setForm({ ...form, newProject: { ...form.newProject!, endDate: e.target.value || null } })
+              }
+              className="bg-transparent outline-none text-sm border-b border-border py-1"
+            />
+            <button
+              onClick={() => setForm({ ...form, newProject: null })}
+              aria-label="Cancel new project"
+              className="hover:text-destructive"
+            >
+              <X size={12} />
+            </button>
+          </div>
+        )}
       </div>
+
 
       <TaskList
         items={filtered.filter((t) => !isOccurrenceCompleted(t, currentOccurrenceDate(t, today), completions))}
