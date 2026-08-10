@@ -516,21 +516,13 @@ function DayCard({
         </span>
       </div>
 
-      <div className="mb-2">
+      <AllDayZone dateKey={dateKey} isDragging={isDragging}>
         <p className="label-caps text-[10px] text-muted-foreground mb-1">All-day</p>
         <div className="space-y-1">
           {dayEvents.map((ev) => (
-            <div key={ev.id} className="flex items-center gap-2 text-sm">
-              <span
-                className="inline-block h-3 w-3 flex-shrink-0"
-                style={{ background: EVENT_COLORS[ev.type] ?? "transparent" }}
-              />
-              <span className="flex-1 truncate">
-                {ev.name}
-                <span className="text-muted-foreground"> · {ev.type}</span>
-              </span>
-            </div>
+            <DraggableEventLine key={ev.id} ev={ev} />
           ))}
+
           {dayMultiples.map((m) => {
             const children = multipleTaskItems.filter((i) => i.multiple_task_id === m.id);
             const done = children.filter((i) => i.completed).length;
