@@ -7,7 +7,10 @@ export type MultipleTaskForm = {
   name: string;
   categoryId: string | null;
   subtagId: string | null;
+  /** start date */
   date: string | null;
+  /** end date (optional — same as start / null means single day) */
+  endDate: string | null;
 };
 
 const emptyForm = (): MultipleTaskForm => ({
@@ -15,7 +18,9 @@ const emptyForm = (): MultipleTaskForm => ({
   categoryId: null,
   subtagId: null,
   date: todayLocalStr(),
+  endDate: null,
 });
+
 
 export function MultipleTasksPanel({
   entries,
@@ -66,8 +71,10 @@ export function MultipleTasksPanel({
       categoryId: e.category_id,
       subtagId: (e as MultipleTask & { subtag_id: string | null }).subtag_id ?? null,
       date: e.date,
+      endDate: (e as MultipleTask & { end_date: string | null }).end_date ?? null,
     });
   };
+
 
   const filterSubtags = filter.categoryId
     ? subtags.filter((s) => s.category_id === filter.categoryId)
@@ -160,8 +167,14 @@ export function MultipleTasksPanel({
                   {expanded ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
                 </button>
                 {e.date && (
-                  <span className="text-xs text-muted-foreground whitespace-nowrap">{e.date.slice(5)} ({koDow(e.date)})</span>
+                  <span className="text-xs text-muted-foreground whitespace-nowrap">
+                    {e.date.slice(5)} ({koDow(e.date)})
+                    {e.end_date && e.end_date !== e.date
+                      ? ` → ${e.end_date.slice(5)} (${koDow(e.end_date)})`
+                      : ""}
+                  </span>
                 )}
+
                 <button
                   onClick={() => setExpandedId(expanded ? null : e.id)}
                   className="text-sm flex-1 text-left hover:underline"
@@ -365,15 +378,32 @@ function MultipleTaskEditor({
         </button>
       </div>
       <div className="flex gap-2 flex-wrap items-center">
-        <input
-          type="date"
-          value={value.date ?? ""}
-          onChange={(e) => onChange({ ...value, date: e.target.value || null })}
-          className="bg-transparent outline-none border-b border-border py-1 text-sm"
-        />
+        <label className="flex items-center gap-1 text-[10px] text-muted-foreground label-caps">
+          시작
+          <input
+            type="date"
+            value={value.date ?? ""}
+            onChange={(e) => onChange({ ...value, date: e.target.value || null })}
+            className="bg-transparent outline-none border-b border-border py-1 text-sm"
+          />
+        </label>
+        <label className="flex items-center gap-1 text-[10px] text-muted-foreground label-caps">
+          종료
+          <input
+            type="date"
+            value={value.endDate ?? ""}
+            min={value.date ?? undefined}
+            onChange={(e) => onChange({ ...value, endDate: e.target.value || null })}
+            className="bg-transparent outline-none border-b border-border py-1 text-sm"
+          />
+        </label>
         {value.date && (
-          <span className="text-[10px] text-muted-foreground tabular-nums">{formatDateKo(value.date)}</span>
+          <span className="text-[10px] text-muted-foreground tabular-nums">
+            {formatDateKo(value.date)}
+            {value.endDate ? ` → ${formatDateKo(value.endDate)}` : ""}
+          </span>
         )}
+
         <select
           value={value.categoryId ?? ""}
           onChange={(e) => onChange({ ...value, categoryId: e.target.value || null, subtagId: null })}

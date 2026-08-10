@@ -362,3 +362,33 @@ export function hexToRgba(hex: string | null | undefined, alpha: number): string
   if (Number.isNaN(n)) return undefined;
   return `rgba(${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255}, ${alpha})`;
 }
+
+/* ---------- multi-day project (Multiple Task) span helpers ---------- */
+
+/** Start/end of a project's date range. `date` is the start date, `end_date` the end. */
+export function projectSpan(
+  m: { date?: string | null; end_date?: string | null },
+): { start: string; end: string } | null {
+  const start = m.date ?? m.end_date ?? null;
+  const end = m.end_date ?? m.date ?? null;
+  if (!start || !end) return null;
+  return start <= end ? { start, end } : { start: end, end: start };
+}
+
+/** True when the project covers more than one day. */
+export function isMultiDayProject(m: { date?: string | null; end_date?: string | null }): boolean {
+  const s = projectSpan(m);
+  return !!s && s.start !== s.end;
+}
+
+/** Shift a YYYY-MM-DD date by n days (local). */
+export function shiftDate(dateStr: string, n: number): string {
+  const d = parseLocalDate(dateStr);
+  d.setDate(d.getDate() + n);
+  return formatLocalDate(d);
+}
+
+/** Whole-day difference b - a. */
+export function diffDays(a: string, b: string): number {
+  return Math.round((parseLocalDate(b).getTime() - parseLocalDate(a).getTime()) / 86400000);
+}

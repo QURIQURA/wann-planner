@@ -374,6 +374,7 @@ function Dashboard() {
         category_id: v.categoryId,
         subtag_id: v.subtagId,
         date: v.date,
+        end_date: v.endDate,
       });
       if (error) throw error;
     },
@@ -387,11 +388,64 @@ function Dashboard() {
         category_id: patch.categoryId,
         subtag_id: patch.subtagId,
         date: patch.date,
+        end_date: patch.endDate,
       }).eq("id", id);
       if (error) throw error;
     },
     onSuccess: () => invalidate("multiple_tasks"),
   });
+
+  /** Drag/resize of a multi-day project bar in This Week. */
+  const moveProject = useMutation({
+    mutationFn: async ({ id, date, endDate }: { id: string; date: string; endDate: string }) => {
+      const { error } = await supabase
+        .from("planner_multiple_tasks")
+        .update({ date, end_date: endDate })
+        .eq("id", id);
+      if (error) throw error;
+    },
+    onMutate: async ({ id, date, endDate }) => {
+      await qc.cancelQueries({ queryKey: ["multiple_tasks", user.id] });
+      const prev = qc.getQueryData<Array<Record<string, unknown>>>(["multiple_tasks", user.id]);
+      if (prev) {
+        qc.setQueryData(
+          ["multiple_tasks", user.id],
+          prev.map((m) => (m.id === id ? { ...m, date, end_date: endDate } : m)),
+        );
+      }
+      return { prev };
+    },
+    onError: (_e, _v, ctx) => {
+      if (ctx?.prev) qc.setQueryData(["multiple_tasks", user.id], ctx.prev);
+      toast.error("Could not move project");
+    },
+    onSettled: () => invalidate("multiple_tasks"),
+  });
+
+  /** Drag of an all-day event onto another day card. */
+  const moveEvent = useMutation({
+    mutationFn: async ({ id, date }: { id: string; date: string }) => {
+      const { error } = await supabase.from("planner_events").update({ date }).eq("id", id);
+      if (error) throw error;
+    },
+    onMutate: async ({ id, date }) => {
+      await qc.cancelQueries({ queryKey: ["events", user.id] });
+      const prev = qc.getQueryData<Array<Record<string, unknown>>>(["events", user.id]);
+      if (prev) {
+        qc.setQueryData(
+          ["events", user.id],
+          prev.map((e) => (e.id === id ? { ...e, date } : e)),
+        );
+      }
+      return { prev };
+    },
+    onError: (_e, _v, ctx) => {
+      if (ctx?.prev) qc.setQueryData(["events", user.id], ctx.prev);
+      toast.error("Could not move event");
+    },
+    onSettled: () => invalidate("events"),
+  });
+
 
   const deleteMultiple = useMutation({
     mutationFn: async (id: string) => {
@@ -615,6 +669,14 @@ function Dashboard() {
           completions={completionsQ.data ?? []}
           exceptions={exceptionsQ.data ?? []}
           onMoveTask={(args) => moveTask.mutate(args)}
+          onMoveProject={(args) => moveProject.mutate(args)}
+          onMoveEvent={(ev, newDate) => {
+            // recurring events keep their original year (birth year etc.)
+            const date = ev.is_recurring ? `${ev.date.slice(0, 4)}${newDate.slice(4)}` : newDate;
+            if (date === ev.date) return;
+            moveEvent.mutate({ id: ev.id, date });
+          }}
+
           multipleTasks={multipleQ.data ?? []}
           multipleTaskItems={multipleItemsQ.data ?? []}
           habits={habitsQ.data ?? []}

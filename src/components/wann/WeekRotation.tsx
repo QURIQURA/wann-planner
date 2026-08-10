@@ -23,7 +23,12 @@ import {
   taskDurationMin,
   timeToMinutes,
   minutesToTime,
+  projectSpan,
+  isMultiDayProject,
+  shiftDate,
+  diffDays,
 } from "@/lib/wann-data";
+
 import {
   DndContext,
   PointerSensor,
@@ -76,6 +81,20 @@ export type MoveTaskArgs = {
   newTime: string | null; // null = keep original time
 };
 
+export type MoveProjectArgs = {
+  id: string;
+  date: string;
+  endDate: string;
+};
+
+type DragData =
+  | { kind: "task"; taskId: string; originalDate: string; title: string }
+  | { kind: "bar"; projectId: string; mode: "move" | "start" | "end"; grabbedDate: string; title: string }
+  | { kind: "event"; eventId: string; title: string };
+
+const BAR_ROW_H = 22;
+
+
 export function WeekRotation({
   anchorDate,
   onAnchorChange,
@@ -93,6 +112,8 @@ export function WeekRotation({
   onToggleOccurrence,
   onEditTask,
   onMoveTask,
+  onMoveProject,
+  onMoveEvent,
 }: {
   anchorDate: Date;
   onAnchorChange: (d: Date) => void;
@@ -110,7 +131,10 @@ export function WeekRotation({
   onToggleOccurrence: (task: Task, date: string) => void;
   onEditTask: (t: Task) => void;
   onMoveTask: (args: MoveTaskArgs) => void;
+  onMoveProject: (args: MoveProjectArgs) => void;
+  onMoveEvent: (event: EventEntry, newDate: string) => void;
 }) {
+
   // Yesterday / Today / Tomorrow — anchorDate is always the centre card.
   const days = useMemo(
     () => [-1, 0, 1].map((i) => addDays(anchorDate, i)),
@@ -143,38 +167,70 @@ export function WeekRotation({
     useSensor(TouchSensor, { activationConstraint: { delay: 200, tolerance: 6 } }),
   );
 
-  const [dragging, setDragging] = useState<null | {
-    taskId: string;
-    originalDate: string;
-    title: string;
-  }>(null);
+  const [dragging, setDragging] = useState<DragData | null>(null);
 
   const handleDragStart = (e: DragStartEvent) => {
-    const d = e.active.data.current as { taskId: string; originalDate: string; title: string } | undefined;
+    const d = e.active.data.current as DragData | undefined;
     if (d) setDragging(d);
+  };
+
+  /** Every droppable encodes its date as the second "|" segment. */
+  const dateFromOver = (overStr: string): string | null => {
+    const [prefix, date] = overStr.split("|");
+    if (!date) return null;
+    if (prefix === "slot" || prefix === "day" || prefix === "allday" || prefix === "barcol") return date;
+    return null;
   };
 
   const handleDragEnd = (e: DragEndEvent) => {
     setDragging(null);
-    const src = e.active.data.current as
-      | { taskId: string; originalDate: string; title: string }
-      | undefined;
+    const src = e.active.data.current as DragData | undefined;
     const overId = e.over?.id;
     if (!src || !overId) return;
+    const overStr = String(overId);
+    const dropDate = dateFromOver(overStr);
+    if (!dropDate) return;
+
+    if (src.kind === "bar") {
+      const proj = multipleTasks.find((m) => m.id === src.projectId);
+      const span = proj ? projectSpan(proj) : null;
+      if (!proj || !span) return;
+      if (src.mode === "move") {
+        const delta = diffDays(src.grabbedDate, dropDate);
+        if (delta === 0) return;
+        onMoveProject({ id: proj.id, date: shiftDate(span.start, delta), endDate: shiftDate(span.end, delta) });
+      } else if (src.mode === "start") {
+        const next = dropDate <= span.end ? dropDate : span.end;
+        if (next === span.start) return;
+        onMoveProject({ id: proj.id, date: next, endDate: span.end });
+      } else {
+        const next = dropDate >= span.start ? dropDate : span.start;
+        if (next === span.end) return;
+        onMoveProject({ id: proj.id, date: span.start, endDate: next });
+      }
+      return;
+    }
+
+    if (src.kind === "event") {
+      const ev = events.find((x) => x.id === src.eventId);
+      if (!ev) return;
+      onMoveEvent(ev, dropDate);
+      return;
+    }
+
     const task = tasks.find((t) => t.id === src.taskId);
     if (!task) return;
-    const overStr = String(overId);
     if (overStr.startsWith("slot|")) {
       const [, date, slotStr] = overStr.split("|");
       const newTime = timeFromSlotIndex(Number(slotStr));
       if (date === src.originalDate && newTime === (task.due_time?.slice(0, 5) ?? "")) return;
       onMoveTask({ task, originalDate: src.originalDate, newDate: date, newTime });
-    } else if (overStr.startsWith("day|")) {
-      const [, date] = overStr.split("|");
-      if (date === src.originalDate) return;
-      onMoveTask({ task, originalDate: src.originalDate, newDate: date, newTime: null });
+    } else {
+      if (dropDate === src.originalDate) return;
+      onMoveTask({ task, originalDate: src.originalDate, newDate: dropDate, newTime: null });
     }
   };
+
 
   const todayStr = todayLocalStr();
   const dayKeys = days.map((d) => formatLocalDate(d));
@@ -194,7 +250,9 @@ export function WeekRotation({
       .filter((o) => !!o.effectiveTime)
       .sort((a, b) => (a.effectiveTime ?? "").localeCompare(b.effectiveTime ?? ""));
     const dayEvents = eventsOnDate(events, key);
-    const dayMultiples = multipleTasks.filter((m) => m.date === key);
+    // Multi-day projects are drawn as bars above the cards, not inside them.
+    const dayMultiples = multipleTasks.filter((m) => m.date === key && !isMultiDayProject(m));
+
     const dayHabits = habits.filter((h) => habitAppliesOnDow(h, d.getDay()));
     const primaryType = EVENT_PRIORITY.find((t) => dayEvents.some((e) => e.type === t));
     const borderColor = primaryType ? EVENT_COLORS[primaryType] : undefined;
@@ -229,6 +287,46 @@ export function WeekRotation({
       />
     );
   };
+
+  // ---- multi-day project bars (Google-Calendar style) ----
+  const viewStart = dayKeys[0];
+  const viewEnd = dayKeys[dayKeys.length - 1];
+  const rowEnds: string[] = [];
+  const bars = multipleTasks
+    .filter((m) => isMultiDayProject(m))
+    .map((m) => ({ m, span: projectSpan(m)! }))
+    .filter(({ span }) => span.start <= viewEnd && span.end >= viewStart)
+    .sort((a, b) => a.span.start.localeCompare(b.span.start) || a.m.name.localeCompare(b.m.name))
+    .map(({ m, span }) => {
+      const startIdx = Math.max(0, diffDays(viewStart, span.start));
+      const endIdx = Math.min(dayKeys.length - 1, diffDays(viewStart, span.end));
+      let row = rowEnds.findIndex((e) => e < span.start);
+      if (row === -1) {
+        row = rowEnds.length;
+        rowEnds.push(span.end);
+      } else {
+        rowEnds[row] = span.end;
+      }
+      const children = multipleTaskItems.filter((i) => i.multiple_task_id === m.id);
+      const done = children.filter((i) => i.completed).length;
+      const pct = children.length > 0 ? Math.round((done / children.length) * 100) : null;
+      return {
+        m,
+        span,
+        startIdx,
+        endIdx,
+        row,
+        pct,
+        continuesLeft: span.start < viewStart,
+        continuesRight: span.end > viewEnd,
+      };
+    });
+  const barRows = bars.reduce((n, b) => Math.max(n, b.row + 1), 0);
+  const mobileBars = bars.filter(
+    (b) => b.span.start <= anchorKey && b.span.end >= anchorKey,
+  );
+
+
 
   return (
     <DndContext
@@ -272,13 +370,65 @@ export function WeekRotation({
           </div>
         </div>
 
+        {/* multi-day project bars — mobile */}
+        {mobileBars.length > 0 && (
+          <div className="md:hidden mb-2 space-y-1">
+            {mobileBars.map((b) => (
+              <ProjectBar
+                key={b.m.id}
+                bar={b}
+                cat={b.m.category_id ? catMap[b.m.category_id] : undefined}
+                draggableId={`bar|${b.m.id}|mobile`}
+                grabbedDate={anchorKey}
+                onOpen={() => onOpenMultiple(b.m.id)}
+                showHandles={false}
+              />
+            ))}
+          </div>
+        )}
+
         <div className="md:hidden" onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
           {renderDayCard(anchorDate, todayInMobileView, "")}
         </div>
 
+        {/* multi-day project bars — desktop, spanning the 3 day columns */}
+        {barRows > 0 && (
+          <div className="hidden md:block relative mb-2">
+            <div className="absolute inset-0 grid grid-cols-3 gap-2">
+              {dayKeys.map((k) => (
+                <BarColumn key={k} dateKey={k} isDragging={!!dragging} />
+              ))}
+            </div>
+            <div
+              className="relative grid grid-cols-3 gap-2"
+              style={{ gridTemplateRows: `repeat(${barRows}, ${BAR_ROW_H}px)`, rowGap: 2 }}
+            >
+              {bars.map((b) => (
+                <div
+                  key={b.m.id}
+                  style={{
+                    gridColumn: `${b.startIdx + 1} / span ${b.endIdx - b.startIdx + 1}`,
+                    gridRow: b.row + 1,
+                  }}
+                >
+                  <ProjectBar
+                    bar={b}
+                    cat={b.m.category_id ? catMap[b.m.category_id] : undefined}
+                    draggableId={`bar|${b.m.id}`}
+                    grabbedDate={dayKeys[b.startIdx]}
+                    onOpen={() => onOpenMultiple(b.m.id)}
+                    showHandles
+                  />
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         <div className="hidden md:grid md:grid-cols-3 gap-2 auto-rows-fr items-stretch">
           {days.map((d) => renderDayCard(d, false, "h-full"))}
         </div>
+
 
       </div>
 
@@ -366,21 +516,13 @@ function DayCard({
         </span>
       </div>
 
-      <div className="mb-2">
+      <AllDayZone dateKey={dateKey} isDragging={isDragging}>
         <p className="label-caps text-[10px] text-muted-foreground mb-1">All-day</p>
         <div className="space-y-1">
           {dayEvents.map((ev) => (
-            <div key={ev.id} className="flex items-center gap-2 text-sm">
-              <span
-                className="inline-block h-3 w-3 flex-shrink-0"
-                style={{ background: EVENT_COLORS[ev.type] ?? "transparent" }}
-              />
-              <span className="flex-1 truncate">
-                {ev.name}
-                <span className="text-muted-foreground"> · {ev.type}</span>
-              </span>
-            </div>
+            <DraggableEventLine key={ev.id} ev={ev} />
           ))}
+
           {dayMultiples.map((m) => {
             const children = multipleTaskItems.filter((i) => i.multiple_task_id === m.id);
             const done = children.filter((i) => i.completed).length;
@@ -415,7 +557,8 @@ function DayCard({
             <p className="text-xs text-muted-foreground italic">—</p>
           )}
         </div>
-      </div>
+      </AllDayZone>
+
 
       <div className="border-t border-border pt-2 flex-1">
         <p className="label-caps text-[10px] text-muted-foreground mb-1">Timeline</p>
@@ -682,7 +825,7 @@ function DraggableTimedTask({
 }) {
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id: `task|${occ.task.id}|${occ.originalDate}`,
-    data: { taskId: occ.task.id, originalDate: occ.originalDate, title: occ.task.title },
+    data: { kind: "task", taskId: occ.task.id, originalDate: occ.originalDate, title: occ.task.title } satisfies DragData,
   });
   // Timeline boxes are tinted with the category colour at 50% opacity.
   const bg = hexToRgba(cat?.color, 0.5) ?? "var(--background)";
@@ -761,34 +904,18 @@ function TaskLines({
     const cat = o.task.category_id ? catMap[o.task.category_id] : undefined;
     const project = o.task.multiple_task_id ? projMap[o.task.multiple_task_id] : undefined;
     return (
-      <div key={`${o.task.id}-${o.originalDate}`} className="flex items-start gap-2 group">
-        <button
-          onClick={() => onToggle(o.task, o.originalDate)}
-          aria-label="Toggle"
-          className={`mt-1 inline-block h-3 w-3 border border-border flex-shrink-0 ${completed ? "bg-foreground" : ""}`}
-        />
-        <button
-          onClick={() => onEdit(o.task)}
-          className={`text-sm flex-1 text-left truncate hover:underline text-foreground ${completed ? "line-through" : ""}`}
-        >
-          {o.task.title}
-          {(o.task.recurrence ?? "none") !== "none" && (
-            <span className="ml-1 text-[10px] text-muted-foreground">↻</span>
-          )}
-        </button>
-        {project && (
-          <span className="text-[10px] text-muted-foreground border-b border-border max-w-[80px] truncate">
-            {project}
-          </span>
-        )}
-        {cat && (
-          <span className="text-[10px] px-1 label-caps bg-foreground text-background flex-shrink-0">
-            {cat.name}
-          </span>
-        )}
-      </div>
+      <DraggableAllDayTask
+        key={`${o.task.id}-${o.originalDate}`}
+        occ={o}
+        completed={completed}
+        cat={cat}
+        project={project}
+        onToggle={() => onToggle(o.task, o.originalDate)}
+        onEdit={() => onEdit(o.task)}
+      />
     );
   };
+
 
   // silence unused var warning for date param (kept for API compat)
   void date;
@@ -809,5 +936,267 @@ function TaskLines({
         </div>
       )}
     </>
+  );
+}
+
+/* ---------- multi-day project bars ---------- */
+
+type BarItem = {
+  m: MultipleTask;
+  span: { start: string; end: string };
+  startIdx: number;
+  endIdx: number;
+  row: number;
+  pct: number | null;
+  continuesLeft: boolean;
+  continuesRight: boolean;
+};
+
+/** Droppable column behind the bar row — one per visible day. */
+function BarColumn({ dateKey, isDragging }: { dateKey: string; isDragging: boolean }) {
+  const { isOver, setNodeRef } = useDroppable({
+    id: `barcol|${dateKey}`,
+    data: { kind: "barcol", date: dateKey },
+  });
+  return (
+    <div
+      ref={setNodeRef}
+      className={`h-full ${isDragging ? "border border-dashed border-border" : ""} ${
+        isOver ? "bg-muted" : ""
+      }`}
+    />
+  );
+}
+
+function ProjectBar({
+  bar,
+  cat,
+  draggableId,
+  grabbedDate,
+  onOpen,
+  showHandles,
+}: {
+  bar: BarItem;
+  cat?: Category;
+  draggableId: string;
+  grabbedDate: string;
+  onOpen: () => void;
+  showHandles: boolean;
+}) {
+  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
+    id: draggableId,
+    data: {
+      kind: "bar",
+      projectId: bar.m.id,
+      mode: "move",
+      grabbedDate,
+      title: bar.m.name,
+    } satisfies DragData,
+  });
+  const bg = hexToRgba(cat?.color, 0.5) ?? "var(--muted)";
+  return (
+    <div
+      className={`relative flex items-center gap-1 h-[20px] px-1 border border-border text-[11px] overflow-hidden ${
+        isDragging ? "opacity-30" : ""
+      }`}
+      style={{
+        background: bg,
+        borderLeftStyle: bar.continuesLeft ? "dashed" : "solid",
+        borderRightStyle: bar.continuesRight ? "dashed" : "solid",
+      }}
+    >
+      {showHandles && !bar.continuesLeft && (
+        <BarResizeHandle
+          id={`${draggableId}|start`}
+          projectId={bar.m.id}
+          mode="start"
+          title={bar.m.name}
+          grabbedDate={bar.span.start}
+          side="left"
+        />
+      )}
+      {bar.continuesLeft && <span className="text-foreground/60 flex-shrink-0">‹</span>}
+      <button
+        ref={setNodeRef}
+        {...attributes}
+        {...listeners}
+        onClick={onOpen}
+        className="cursor-grab active:cursor-grabbing touch-none flex items-center gap-1 min-w-0 flex-1 text-left"
+        title={`${bar.span.start} → ${bar.span.end}`}
+      >
+        <GripVertical size={10} className="flex-shrink-0 text-foreground/60" />
+        <ListChecks size={10} className="flex-shrink-0 text-foreground/60" />
+        <span className="truncate">{bar.m.name}</span>
+        {bar.pct !== null && (
+          <span className="text-[9px] tabular-nums text-foreground/70 flex-shrink-0">{bar.pct}%</span>
+        )}
+      </button>
+      {cat && (
+        <span className="text-[9px] px-1 label-caps flex-shrink-0 bg-foreground text-background">
+          {cat.name}
+        </span>
+      )}
+      {bar.continuesRight && <span className="text-foreground/60 flex-shrink-0">›</span>}
+      {showHandles && !bar.continuesRight && (
+        <BarResizeHandle
+          id={`${draggableId}|end`}
+          projectId={bar.m.id}
+          mode="end"
+          title={bar.m.name}
+          grabbedDate={bar.span.end}
+          side="right"
+        />
+      )}
+    </div>
+  );
+}
+
+function BarResizeHandle({
+  id,
+  projectId,
+  mode,
+  title,
+  grabbedDate,
+  side,
+}: {
+  id: string;
+  projectId: string;
+  mode: "start" | "end";
+  title: string;
+  grabbedDate: string;
+  side: "left" | "right";
+}) {
+  const { attributes, listeners, setNodeRef } = useDraggable({
+    id,
+    data: { kind: "bar", projectId, mode, grabbedDate, title } satisfies DragData,
+  });
+  return (
+    <button
+      ref={setNodeRef}
+      {...attributes}
+      {...listeners}
+      aria-label={mode === "start" ? "Resize start" : "Resize end"}
+      className={`absolute top-0 ${side === "left" ? "left-0" : "right-0"} h-full w-2 cursor-ew-resize touch-none bg-foreground/20 hover:bg-foreground/40`}
+    />
+  );
+}
+
+/* ---------- all-day drop zone & draggable rows ---------- */
+
+function AllDayZone({
+  dateKey,
+  isDragging,
+  children,
+}: {
+  dateKey: string;
+  isDragging: boolean;
+  children: React.ReactNode;
+}) {
+  const { isOver, setNodeRef } = useDroppable({
+    id: `allday|${dateKey}`,
+    data: { kind: "allday", date: dateKey },
+  });
+  return (
+    <div
+      ref={setNodeRef}
+      className={`mb-2 ${isDragging ? "border border-dashed border-border p-1" : ""} ${
+        isOver ? "bg-muted" : ""
+      }`}
+    >
+      {children}
+    </div>
+  );
+}
+
+/** Events can be dragged onto another day card to change their date. */
+function DraggableEventLine({ ev }: { ev: EventEntry }) {
+  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
+    id: `event|${ev.id}`,
+    data: { kind: "event", eventId: ev.id, title: ev.name } satisfies DragData,
+  });
+  return (
+    <div className={`flex items-center gap-1.5 text-sm ${isDragging ? "opacity-30" : ""}`}>
+      <button
+        ref={setNodeRef}
+        {...attributes}
+        {...listeners}
+        className="cursor-grab active:cursor-grabbing text-muted-foreground touch-none flex-shrink-0"
+        aria-label="Drag event"
+      >
+        <GripVertical size={10} />
+      </button>
+      <span
+        className="inline-block h-3 w-3 flex-shrink-0"
+        style={{ background: EVENT_COLORS[ev.type] ?? "transparent" }}
+      />
+      <span className="flex-1 truncate">
+        {ev.name}
+        <span className="text-muted-foreground"> · {ev.type}</span>
+      </span>
+    </div>
+  );
+}
+
+/** All-day task row — draggable to another day card. */
+function DraggableAllDayTask({
+  occ,
+  completed,
+  cat,
+  project,
+  onToggle,
+  onEdit,
+}: {
+  occ: EffectiveOccurrence;
+  completed: boolean;
+  cat?: Category;
+  project?: string;
+  onToggle: () => void;
+  onEdit: () => void;
+}) {
+  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
+    id: `allday-task|${occ.task.id}|${occ.originalDate}`,
+    data: {
+      kind: "task",
+      taskId: occ.task.id,
+      originalDate: occ.originalDate,
+      title: occ.task.title,
+    } satisfies DragData,
+  });
+  return (
+    <div className={`flex items-start gap-1.5 group ${isDragging ? "opacity-30" : ""}`}>
+      <button
+        ref={setNodeRef}
+        {...attributes}
+        {...listeners}
+        className="mt-1 cursor-grab active:cursor-grabbing text-muted-foreground touch-none flex-shrink-0"
+        aria-label="Drag task"
+      >
+        <GripVertical size={10} />
+      </button>
+      <button
+        onClick={onToggle}
+        aria-label="Toggle"
+        className={`mt-1 inline-block h-3 w-3 border border-border flex-shrink-0 ${completed ? "bg-foreground" : ""}`}
+      />
+      <button
+        onClick={onEdit}
+        className={`text-sm flex-1 text-left truncate hover:underline text-foreground ${completed ? "line-through" : ""}`}
+      >
+        {occ.task.title}
+        {(occ.task.recurrence ?? "none") !== "none" && (
+          <span className="ml-1 text-[10px] text-muted-foreground">↻</span>
+        )}
+      </button>
+      {project && (
+        <span className="text-[10px] text-muted-foreground border-b border-border max-w-[80px] truncate">
+          {project}
+        </span>
+      )}
+      {cat && (
+        <span className="text-[10px] px-1 label-caps bg-foreground text-background flex-shrink-0">
+          {cat.name}
+        </span>
+      )}
+    </div>
   );
 }
