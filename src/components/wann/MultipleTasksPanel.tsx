@@ -83,14 +83,9 @@ export function MultipleTasksPanel({
     <div>
       <div className="flex items-center justify-between mb-4">
         <p className="label-caps">Multiple Task</p>
-        <button
-          onClick={() => setCreating(!creating)}
-          className="border border-border p-1 hover:bg-muted"
-          aria-label="Add"
-        >
-          <Plus size={14} />
-        </button>
+        <span className="text-[10px] text-muted-foreground">Tasks 폼에서 생성</span>
       </div>
+
 
       {/* filters */}
       <div className="flex flex-wrap gap-1 mb-2">
