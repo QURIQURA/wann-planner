@@ -370,13 +370,65 @@ export function WeekRotation({
           </div>
         </div>
 
+        {/* multi-day project bars — mobile */}
+        {mobileBars.length > 0 && (
+          <div className="md:hidden mb-2 space-y-1">
+            {mobileBars.map((b) => (
+              <ProjectBar
+                key={b.m.id}
+                bar={b}
+                cat={b.m.category_id ? catMap[b.m.category_id] : undefined}
+                draggableId={`bar|${b.m.id}|mobile`}
+                grabbedDate={anchorKey}
+                onOpen={() => onOpenMultiple(b.m.id)}
+                showHandles={false}
+              />
+            ))}
+          </div>
+        )}
+
         <div className="md:hidden" onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
           {renderDayCard(anchorDate, todayInMobileView, "")}
         </div>
 
+        {/* multi-day project bars — desktop, spanning the 3 day columns */}
+        {barRows > 0 && (
+          <div className="hidden md:block relative mb-2">
+            <div className="absolute inset-0 grid grid-cols-3 gap-2">
+              {dayKeys.map((k) => (
+                <BarColumn key={k} dateKey={k} isDragging={!!dragging} />
+              ))}
+            </div>
+            <div
+              className="relative grid grid-cols-3 gap-2"
+              style={{ gridTemplateRows: `repeat(${barRows}, ${BAR_ROW_H}px)`, rowGap: 2 }}
+            >
+              {bars.map((b) => (
+                <div
+                  key={b.m.id}
+                  style={{
+                    gridColumn: `${b.startIdx + 1} / span ${b.endIdx - b.startIdx + 1}`,
+                    gridRow: b.row + 1,
+                  }}
+                >
+                  <ProjectBar
+                    bar={b}
+                    cat={b.m.category_id ? catMap[b.m.category_id] : undefined}
+                    draggableId={`bar|${b.m.id}`}
+                    grabbedDate={dayKeys[b.startIdx]}
+                    onOpen={() => onOpenMultiple(b.m.id)}
+                    showHandles
+                  />
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         <div className="hidden md:grid md:grid-cols-3 gap-2 auto-rows-fr items-stretch">
           {days.map((d) => renderDayCard(d, false, "h-full"))}
         </div>
+
 
       </div>
 
