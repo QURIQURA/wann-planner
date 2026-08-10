@@ -162,38 +162,70 @@ export function WeekRotation({
     useSensor(TouchSensor, { activationConstraint: { delay: 200, tolerance: 6 } }),
   );
 
-  const [dragging, setDragging] = useState<null | {
-    taskId: string;
-    originalDate: string;
-    title: string;
-  }>(null);
+  const [dragging, setDragging] = useState<DragData | null>(null);
 
   const handleDragStart = (e: DragStartEvent) => {
-    const d = e.active.data.current as { taskId: string; originalDate: string; title: string } | undefined;
+    const d = e.active.data.current as DragData | undefined;
     if (d) setDragging(d);
+  };
+
+  /** Every droppable encodes its date as the second "|" segment. */
+  const dateFromOver = (overStr: string): string | null => {
+    const [prefix, date] = overStr.split("|");
+    if (!date) return null;
+    if (prefix === "slot" || prefix === "day" || prefix === "allday" || prefix === "barcol") return date;
+    return null;
   };
 
   const handleDragEnd = (e: DragEndEvent) => {
     setDragging(null);
-    const src = e.active.data.current as
-      | { taskId: string; originalDate: string; title: string }
-      | undefined;
+    const src = e.active.data.current as DragData | undefined;
     const overId = e.over?.id;
     if (!src || !overId) return;
+    const overStr = String(overId);
+    const dropDate = dateFromOver(overStr);
+    if (!dropDate) return;
+
+    if (src.kind === "bar") {
+      const proj = multipleTasks.find((m) => m.id === src.projectId);
+      const span = proj ? projectSpan(proj) : null;
+      if (!proj || !span) return;
+      if (src.mode === "move") {
+        const delta = diffDays(src.grabbedDate, dropDate);
+        if (delta === 0) return;
+        onMoveProject({ id: proj.id, date: shiftDate(span.start, delta), endDate: shiftDate(span.end, delta) });
+      } else if (src.mode === "start") {
+        const next = dropDate <= span.end ? dropDate : span.end;
+        if (next === span.start) return;
+        onMoveProject({ id: proj.id, date: next, endDate: span.end });
+      } else {
+        const next = dropDate >= span.start ? dropDate : span.start;
+        if (next === span.end) return;
+        onMoveProject({ id: proj.id, date: span.start, endDate: next });
+      }
+      return;
+    }
+
+    if (src.kind === "event") {
+      const ev = events.find((x) => x.id === src.eventId);
+      if (!ev) return;
+      onMoveEvent(ev, dropDate);
+      return;
+    }
+
     const task = tasks.find((t) => t.id === src.taskId);
     if (!task) return;
-    const overStr = String(overId);
     if (overStr.startsWith("slot|")) {
       const [, date, slotStr] = overStr.split("|");
       const newTime = timeFromSlotIndex(Number(slotStr));
       if (date === src.originalDate && newTime === (task.due_time?.slice(0, 5) ?? "")) return;
       onMoveTask({ task, originalDate: src.originalDate, newDate: date, newTime });
-    } else if (overStr.startsWith("day|")) {
-      const [, date] = overStr.split("|");
-      if (date === src.originalDate) return;
-      onMoveTask({ task, originalDate: src.originalDate, newDate: date, newTime: null });
+    } else {
+      if (dropDate === src.originalDate) return;
+      onMoveTask({ task, originalDate: src.originalDate, newDate: dropDate, newTime: null });
     }
   };
+
 
   const todayStr = todayLocalStr();
   const dayKeys = days.map((d) => formatLocalDate(d));
