@@ -164,6 +164,23 @@ function Dashboard() {
 
   const addTask = useMutation({
     mutationFn: async (input: import("@/components/wann/TasksPanel").TaskFormValues) => {
+      let projectId = input.projectId;
+      if (input.newProject && input.newProject.name) {
+        const { data, error: pErr } = await supabase
+          .from("planner_multiple_tasks")
+          .insert({
+            user_id: user.id,
+            name: input.newProject.name,
+            category_id: input.categoryId,
+            subtag_id: input.subtagId,
+            date: input.newProject.startDate,
+            end_date: input.newProject.endDate,
+          })
+          .select("id")
+          .single();
+        if (pErr) throw pErr;
+        projectId = data.id;
+      }
       const { error } = await supabase.from("planner_tasks").insert({
         user_id: user.id,
         title: input.title,
@@ -173,14 +190,32 @@ function Dashboard() {
         due_time: input.dueTime,
         end_time: input.dueTime ? input.endTime : null,
         recurrence: input.recurrence,
+        multiple_task_id: projectId,
       });
       if (error) throw error;
     },
-    onSuccess: () => invalidate("tasks"),
+    onSuccess: () => { invalidate("tasks"); invalidate("multiple_tasks"); invalidate("multiple_task_items"); },
   });
 
   const updateTask = useMutation({
     mutationFn: async ({ id, input }: { id: string; input: import("@/components/wann/TasksPanel").TaskFormValues }) => {
+      let projectId = input.projectId;
+      if (input.newProject && input.newProject.name) {
+        const { data, error: pErr } = await supabase
+          .from("planner_multiple_tasks")
+          .insert({
+            user_id: user.id,
+            name: input.newProject.name,
+            category_id: input.categoryId,
+            subtag_id: input.subtagId,
+            date: input.newProject.startDate,
+            end_date: input.newProject.endDate,
+          })
+          .select("id")
+          .single();
+        if (pErr) throw pErr;
+        projectId = data.id;
+      }
       const { error } = await supabase.from("planner_tasks").update({
         title: input.title,
         category_id: input.categoryId,
@@ -189,11 +224,13 @@ function Dashboard() {
         due_time: input.dueTime,
         end_time: input.dueTime ? input.endTime : null,
         recurrence: input.recurrence,
+        multiple_task_id: projectId,
       }).eq("id", id);
       if (error) throw error;
     },
-    onSuccess: () => invalidate("tasks"),
+    onSuccess: () => { invalidate("tasks"); invalidate("multiple_tasks"); invalidate("multiple_task_items"); },
   });
+
 
   const toggleOccurrence = useMutation({
     mutationFn: async ({ task, date }: { task: Task; date: string }) => {
