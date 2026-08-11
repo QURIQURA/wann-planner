@@ -7,12 +7,10 @@ export type UserSettings = {
   border_color: string;
   text_color: string;
   font: string;
-  widget_visibility: {
-    habit_tracker?: boolean;
-    weekly_review?: boolean;
-    monthly_summary?: boolean;
-  };
+  widget_visibility: Record<string, boolean>;
+  widget_order: string[];
 };
+
 
 export type Category = Tables<"planner_task_categories">;
 export type Subtag = Tables<"planner_task_subtags">;
