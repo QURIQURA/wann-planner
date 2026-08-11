@@ -694,57 +694,10 @@ function Dashboard() {
           onEditTask={(t) => setEditingTask(t)}
         />
 
-        <div className="grid md:grid-cols-2 gap-6">
-          <section className="card-flat p-4">
-            <TasksPanel
-              categories={categoriesQ.data ?? []}
-              subtags={subtagsQ.data ?? []}
-              projects={multipleQ.data ?? []}
-              tasks={tasksQ.data ?? []}
-              completions={completionsQ.data ?? []}
-              editingTask={editingTask}
-              onCancelEdit={() => setEditingTask(null)}
-              onAddCategory={(name, color) => addCategory.mutate({ name, color })}
-              onAddSubtag={(categoryId, name) => addSubtag.mutate({ categoryId, name })}
-              onAddTask={(v) => addTask.mutate(v)}
-              onUpdateTask={(id, v) => updateTask.mutate({ id, input: v })}
-              onToggleTask={(t, date) => toggleOccurrence.mutate({ task: t, date })}
-              onEditTask={(t) => setEditingTask(t)}
-              onDeleteTask={(id) => { if (editingTask?.id === id) setEditingTask(null); deleteTask.mutate(id); }}
-              onDeleteCategory={(id) => deleteCategory.mutate(id)}
-              onUpdateCategory={(id, name, color) => updateCategory.mutate({ id, name, color })}
-              onUpdateSubtag={(id, name) => updateSubtag.mutate({ id, name })}
-              onDeleteSubtag={(id) => deleteSubtag.mutate(id)}
-            />
-          </section>
+        {visibleWidgets.map((w) => (
+          <div key={w.id}>{w.render(widgetCtx)}</div>
+        ))}
 
-          <section className="card-flat p-4 space-y-8">
-            <MultipleTasksPanel
-              entries={multipleQ.data ?? []}
-              items={multipleItemsQ.data ?? []}
-              categories={categoriesQ.data ?? []}
-              subtags={subtagsQ.data ?? []}
-              onAdd={(v) => addMultiple.mutate(v)}
-              onUpdate={(id, patch) => updateMultiple.mutate({ id, patch })}
-              onDelete={(id) => deleteMultiple.mutate(id)}
-              onAddItem={(parentId, title, date, time) => addMultipleItem.mutate({ parentId, title, date, time })}
-              onUpdateItem={(id, patch) => updateMultipleItem.mutate({ id, ...patch })}
-
-              onToggleItem={(item) => toggleMultipleItem.mutate(item)}
-              onDeleteItem={(id) => deleteMultipleItem.mutate(id)}
-            />
-            <EventsPanel
-              entries={eventsQ.data ?? []}
-              onAdd={(v) => addEvent.mutate(v)}
-              onUpdate={(id, patch) => updateEvent.mutate({ id, patch })}
-              onDelete={(id) => deleteEvent.mutate(id)}
-            />
-          </section>
-        </div>
-
-        <HabitTrackerPanel userId={user.id} anchorDate={anchor} />
-
-        <MonthlySummaryPanel userId={user.id} />
       </main>
 
       {settingsOpen && (
