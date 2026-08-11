@@ -1,3 +1,4 @@
+import { registerWidget } from "@/lib/widget-registry";
 import { useState } from "react";
 import type { Category, MultipleTask, MultipleTaskItem, Subtag } from "@/lib/wann-data";
 import { todayLocalStr, taskSortKey, formatDateKo, koDow } from "@/lib/wann-data";
@@ -435,3 +436,19 @@ function MultipleTaskEditor({
     </div>
   );
 }
+
+registerWidget({
+  id: "multiple_tasks",
+  label: "Multiple Task",
+  render: (ctx) => (
+    <section className="card-flat p-4">
+      <MultipleTasksPanel
+        entries={ctx.projects}
+        items={ctx.projectItems}
+        categories={ctx.categories}
+        subtags={ctx.subtags}
+        {...ctx.projectActions}
+      />
+    </section>
+  ),
+});
