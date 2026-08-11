@@ -1,3 +1,4 @@
+import { registerWidget } from "@/lib/widget-registry";
 import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Plus, Trash2, ChevronLeft, ChevronRight } from "lucide-react";
@@ -295,3 +296,9 @@ export function MonthlySummaryPanel({ userId }: { userId: string }) {
     </section>
   );
 }
+
+registerWidget({
+  id: "monthly_summary",
+  label: "Monthly Summary",
+  render: (ctx) => <MonthlySummaryPanel userId={ctx.userId} />,
+});

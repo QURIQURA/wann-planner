@@ -1,3 +1,4 @@
+import { registerWidget } from "@/lib/widget-registry";
 import { useState } from "react";
 import type { EventEntry } from "@/lib/wann-data";
 import { daysUntilAnnual, ageOn, todayLocalStr, EVENT_COLORS, formatDateKo } from "@/lib/wann-data";
@@ -238,3 +239,13 @@ function EventEditor({
     </div>
   );
 }
+
+registerWidget({
+  id: "events",
+  label: "Events",
+  render: (ctx) => (
+    <section className="card-flat p-4">
+      <EventsPanel entries={ctx.events} {...ctx.eventActions} />
+    </section>
+  ),
+});

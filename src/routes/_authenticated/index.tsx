@@ -34,12 +34,11 @@ import {
 } from "@/lib/wann-extra";
 import { useApplySettings } from "@/lib/use-apply-settings";
 import { WeekRotation } from "@/components/wann/WeekRotation";
-import { TasksPanel } from "@/components/wann/TasksPanel";
-import { MultipleTasksPanel, type MultipleTaskForm } from "@/components/wann/MultipleTasksPanel";
-import { EventsPanel, type EventForm } from "@/components/wann/EventsPanel";
 import { SettingsPanel } from "@/components/wann/SettingsPanel";
-import { HabitTrackerPanel } from "@/components/wann/HabitTrackerPanel";
-import { MonthlySummaryPanel } from "@/components/wann/MonthlySummaryPanel";
+import { orderedWidgets, isWidgetVisible, type WidgetContext } from "@/lib/widgets";
+import type { MultipleTaskForm } from "@/components/wann/MultipleTasksPanel";
+import type { EventForm } from "@/components/wann/EventsPanel";
+
 
 export const Route = createFileRoute("/_authenticated/")({
   component: Dashboard,
@@ -606,6 +605,57 @@ function Dashboard() {
     return <div className="min-h-screen flex items-center justify-center label-caps text-muted-foreground">Loading</div>;
   }
 
+  const settings = settingsQ.data;
+  const visibleWidgets = orderedWidgets(settings.widget_order).filter((w) =>
+    isWidgetVisible(w, settings.widget_visibility),
+  );
+
+  const widgetCtx: WidgetContext = {
+    userId: user.id,
+    anchor,
+    categories: categoriesQ.data ?? [],
+    subtags: subtagsQ.data ?? [],
+    tasks: tasksQ.data ?? [],
+    completions: completionsQ.data ?? [],
+    projects: multipleQ.data ?? [],
+    projectItems: multipleItemsQ.data ?? [],
+    events: eventsQ.data ?? [],
+    editingTask,
+    taskActions: {
+      onCancelEdit: () => setEditingTask(null),
+      onAddCategory: (name, color) => addCategory.mutate({ name, color }),
+      onAddSubtag: (categoryId, name) => addSubtag.mutate({ categoryId, name }),
+      onAddTask: (v) => addTask.mutate(v),
+      onUpdateTask: (id, v) => updateTask.mutate({ id, input: v }),
+      onToggleTask: (t, date) => toggleOccurrence.mutate({ task: t, date }),
+      onEditTask: (t) => setEditingTask(t),
+      onDeleteTask: (id) => {
+        if (editingTask?.id === id) setEditingTask(null);
+        deleteTask.mutate(id);
+      },
+      onDeleteCategory: (id) => deleteCategory.mutate(id),
+      onUpdateCategory: (id, name, color) => updateCategory.mutate({ id, name, color }),
+      onUpdateSubtag: (id, name) => updateSubtag.mutate({ id, name }),
+      onDeleteSubtag: (id) => deleteSubtag.mutate(id),
+    },
+    projectActions: {
+      onAdd: (v) => addMultiple.mutate(v),
+      onUpdate: (id, patch) => updateMultiple.mutate({ id, patch }),
+      onDelete: (id) => deleteMultiple.mutate(id),
+      onAddItem: (parentId, title, date, time) => addMultipleItem.mutate({ parentId, title, date, time }),
+      onUpdateItem: (id, patch) => updateMultipleItem.mutate({ id, ...patch }),
+      onToggleItem: (item) => toggleMultipleItem.mutate(item),
+      onDeleteItem: (id) => deleteMultipleItem.mutate(id),
+    },
+    eventActions: {
+      onAdd: (v) => addEvent.mutate(v),
+      onUpdate: (id, patch) => updateEvent.mutate({ id, patch }),
+      onDelete: (id) => deleteEvent.mutate(id),
+    },
+  };
+
+
+
   return (
     <div className="min-h-screen">
       <header className="border-b border-border">
@@ -694,57 +744,10 @@ function Dashboard() {
           onEditTask={(t) => setEditingTask(t)}
         />
 
-        <div className="grid md:grid-cols-2 gap-6">
-          <section className="card-flat p-4">
-            <TasksPanel
-              categories={categoriesQ.data ?? []}
-              subtags={subtagsQ.data ?? []}
-              projects={multipleQ.data ?? []}
-              tasks={tasksQ.data ?? []}
-              completions={completionsQ.data ?? []}
-              editingTask={editingTask}
-              onCancelEdit={() => setEditingTask(null)}
-              onAddCategory={(name, color) => addCategory.mutate({ name, color })}
-              onAddSubtag={(categoryId, name) => addSubtag.mutate({ categoryId, name })}
-              onAddTask={(v) => addTask.mutate(v)}
-              onUpdateTask={(id, v) => updateTask.mutate({ id, input: v })}
-              onToggleTask={(t, date) => toggleOccurrence.mutate({ task: t, date })}
-              onEditTask={(t) => setEditingTask(t)}
-              onDeleteTask={(id) => { if (editingTask?.id === id) setEditingTask(null); deleteTask.mutate(id); }}
-              onDeleteCategory={(id) => deleteCategory.mutate(id)}
-              onUpdateCategory={(id, name, color) => updateCategory.mutate({ id, name, color })}
-              onUpdateSubtag={(id, name) => updateSubtag.mutate({ id, name })}
-              onDeleteSubtag={(id) => deleteSubtag.mutate(id)}
-            />
-          </section>
+        {visibleWidgets.map((w) => (
+          <div key={w.id}>{w.render(widgetCtx)}</div>
+        ))}
 
-          <section className="card-flat p-4 space-y-8">
-            <MultipleTasksPanel
-              entries={multipleQ.data ?? []}
-              items={multipleItemsQ.data ?? []}
-              categories={categoriesQ.data ?? []}
-              subtags={subtagsQ.data ?? []}
-              onAdd={(v) => addMultiple.mutate(v)}
-              onUpdate={(id, patch) => updateMultiple.mutate({ id, patch })}
-              onDelete={(id) => deleteMultiple.mutate(id)}
-              onAddItem={(parentId, title, date, time) => addMultipleItem.mutate({ parentId, title, date, time })}
-              onUpdateItem={(id, patch) => updateMultipleItem.mutate({ id, ...patch })}
-
-              onToggleItem={(item) => toggleMultipleItem.mutate(item)}
-              onDeleteItem={(id) => deleteMultipleItem.mutate(id)}
-            />
-            <EventsPanel
-              entries={eventsQ.data ?? []}
-              onAdd={(v) => addEvent.mutate(v)}
-              onUpdate={(id, patch) => updateEvent.mutate({ id, patch })}
-              onDelete={(id) => deleteEvent.mutate(id)}
-            />
-          </section>
-        </div>
-
-        <HabitTrackerPanel userId={user.id} anchorDate={anchor} />
-
-        <MonthlySummaryPanel userId={user.id} />
       </main>
 
       {settingsOpen && (

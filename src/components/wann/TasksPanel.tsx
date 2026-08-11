@@ -1,3 +1,4 @@
+import { registerWidget } from "@/lib/widget-registry";
 import { useEffect, useState } from "react";
 import type { Category, MultipleTask, Subtag, Task, TaskCompletion } from "@/lib/wann-data";
 import { todayLocalStr, shortTime, isOccurrenceCompleted, currentOccurrenceDate, formatDateKo, koDow } from "@/lib/wann-data";
@@ -592,3 +593,21 @@ function TaskList({
     </div>
   );
 }
+
+registerWidget({
+  id: "tasks",
+  label: "Tasks",
+  render: (ctx) => (
+    <section className="card-flat p-4">
+      <TasksPanel
+        categories={ctx.categories}
+        subtags={ctx.subtags}
+        projects={ctx.projects}
+        tasks={ctx.tasks}
+        completions={ctx.completions}
+        editingTask={ctx.editingTask}
+        {...ctx.taskActions}
+      />
+    </section>
+  ),
+});

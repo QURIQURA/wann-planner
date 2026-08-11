@@ -1,3 +1,4 @@
+import { registerWidget } from "@/lib/widget-registry";
 import { Fragment, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Check, Pencil, Plus, Trash2, X, CircleDashed } from "lucide-react";
@@ -487,3 +488,9 @@ export function HabitTrackerPanel({ userId, anchorDate }: { userId: string; anch
     </section>
   );
 }
+
+registerWidget({
+  id: "habit_tracker",
+  label: "Habit Tracker",
+  render: (ctx) => <HabitTrackerPanel userId={ctx.userId} anchorDate={ctx.anchor} />,
+});

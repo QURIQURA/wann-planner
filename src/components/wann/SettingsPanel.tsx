@@ -1,6 +1,7 @@
 import { useState } from "react";
-import { X } from "lucide-react";
+import { X, GripVertical } from "lucide-react";
 import type { UserSettings } from "@/lib/wann-data";
+import { orderedWidgets, isWidgetVisible } from "@/lib/widgets";
 
 const PRESETS = [
   { name: "Stone", bg: "#F5F4F1", border: "#D4D3CE", text: "#1A1A18" },
@@ -16,11 +17,6 @@ const FONTS = [
   { id: "system", label: "System" },
 ];
 
-const WIDGETS = [
-  { id: "habit_tracker", label: "Habit Tracker" },
-  { id: "weekly_review", label: "Weekly Review" },
-  { id: "monthly_summary", label: "Monthly Summary" },
-] as const;
 
 export function SettingsPanel({
   settings,
@@ -92,27 +88,8 @@ export function SettingsPanel({
           </div>
         )}
 
-        {tab === "widgets" && (
-          <div className="p-6 space-y-2">
-            {WIDGETS.map((w) => {
-              const on = settings.widget_visibility[w.id] !== false;
-              return (
-                <label key={w.id} className="flex items-center justify-between border border-border p-3 cursor-pointer hover:bg-muted">
-                  <span>{w.label}</span>
-                  <input
-                    type="checkbox"
-                    checked={on}
-                    onChange={(e) =>
-                      onChange({
-                        widget_visibility: { ...settings.widget_visibility, [w.id]: e.target.checked },
-                      })
-                    }
-                  />
-                </label>
-              );
-            })}
-          </div>
-        )}
+        {tab === "widgets" && <WidgetsTab settings={settings} onChange={onChange} />}
+
       </div>
     </div>
   );
@@ -131,6 +108,70 @@ function ColorRow({ label, value, onChange }: { label: string; value: string; on
           className="flex-1 bg-transparent outline-none text-sm"
         />
       </div>
+    </div>
+  );
+}
+
+function WidgetsTab({
+  settings,
+  onChange,
+}: {
+  settings: UserSettings;
+  onChange: (patch: Partial<UserSettings>) => void;
+}) {
+  const widgets = orderedWidgets(settings.widget_order);
+  const [dragId, setDragId] = useState<string | null>(null);
+  const [overId, setOverId] = useState<string | null>(null);
+
+  const commitOrder = (fromId: string, toId: string) => {
+    if (fromId === toId) return;
+    const ids = widgets.map((w) => w.id);
+    const from = ids.indexOf(fromId);
+    const to = ids.indexOf(toId);
+    if (from < 0 || to < 0) return;
+    ids.splice(to, 0, ids.splice(from, 1)[0]);
+    onChange({ widget_order: ids });
+  };
+
+  return (
+    <div className="p-6 space-y-2">
+      <p className="label-caps text-muted-foreground mb-3">Drag to reorder</p>
+      {widgets.map((w) => {
+        const on = isWidgetVisible(w, settings.widget_visibility);
+        return (
+          <div
+            key={w.id}
+            draggable
+            onDragStart={() => setDragId(w.id)}
+            onDragEnd={() => { setDragId(null); setOverId(null); }}
+            onDragOver={(e) => { e.preventDefault(); setOverId(w.id); }}
+            onDrop={(e) => {
+              e.preventDefault();
+              if (dragId) commitOrder(dragId, w.id);
+              setDragId(null);
+              setOverId(null);
+            }}
+            className={`flex items-center justify-between gap-3 border border-border p-3 bg-background ${
+              overId === w.id && dragId && dragId !== w.id ? "border-foreground" : ""
+            } ${dragId === w.id ? "opacity-50" : ""}`}
+          >
+            <span className="flex items-center gap-2 min-w-0">
+              <GripVertical size={14} className="cursor-grab text-muted-foreground shrink-0" />
+              <span className="truncate">{w.label}</span>
+            </span>
+            <input
+              type="checkbox"
+              checked={on}
+              aria-label={`Show ${w.label}`}
+              onChange={(e) =>
+                onChange({
+                  widget_visibility: { ...(settings.widget_visibility ?? {}), [w.id]: e.target.checked },
+                })
+              }
+            />
+          </div>
+        );
+      })}
     </div>
   );
 }

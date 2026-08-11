@@ -1258,6 +1258,7 @@ export type Database = {
           text_color: string
           updated_at: string
           user_id: string
+          widget_order: string[]
           widget_visibility: Json
         }
         Insert: {
@@ -1268,6 +1269,7 @@ export type Database = {
           text_color?: string
           updated_at?: string
           user_id: string
+          widget_order?: string[]
           widget_visibility?: Json
         }
         Update: {
@@ -1278,6 +1280,7 @@ export type Database = {
           text_color?: string
           updated_at?: string
           user_id?: string
+          widget_order?: string[]
           widget_visibility?: Json
         }
         Relationships: []

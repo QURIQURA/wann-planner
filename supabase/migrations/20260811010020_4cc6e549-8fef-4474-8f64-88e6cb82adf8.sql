@@ -1,0 +1,1 @@
+ALTER TABLE public.planner_user_settings ADD COLUMN IF NOT EXISTS widget_order text[] NOT NULL DEFAULT '{}';
