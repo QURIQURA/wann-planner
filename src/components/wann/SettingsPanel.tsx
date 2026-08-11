@@ -1,6 +1,7 @@
 import { useState } from "react";
-import { X } from "lucide-react";
+import { X, GripVertical } from "lucide-react";
 import type { UserSettings } from "@/lib/wann-data";
+import { orderedWidgets, isWidgetVisible } from "@/lib/widgets";
 
 const PRESETS = [
   { name: "Stone", bg: "#F5F4F1", border: "#D4D3CE", text: "#1A1A18" },
@@ -16,11 +17,6 @@ const FONTS = [
   { id: "system", label: "System" },
 ];
 
-const WIDGETS = [
-  { id: "habit_tracker", label: "Habit Tracker" },
-  { id: "weekly_review", label: "Weekly Review" },
-  { id: "monthly_summary", label: "Monthly Summary" },
-] as const;
 
 export function SettingsPanel({
   settings,
