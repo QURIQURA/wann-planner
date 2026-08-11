@@ -34,12 +34,11 @@ import {
 } from "@/lib/wann-extra";
 import { useApplySettings } from "@/lib/use-apply-settings";
 import { WeekRotation } from "@/components/wann/WeekRotation";
-import { TasksPanel } from "@/components/wann/TasksPanel";
-import { MultipleTasksPanel, type MultipleTaskForm } from "@/components/wann/MultipleTasksPanel";
-import { EventsPanel, type EventForm } from "@/components/wann/EventsPanel";
 import { SettingsPanel } from "@/components/wann/SettingsPanel";
-import { HabitTrackerPanel } from "@/components/wann/HabitTrackerPanel";
-import { MonthlySummaryPanel } from "@/components/wann/MonthlySummaryPanel";
+import { orderedWidgets, isWidgetVisible, type WidgetContext } from "@/lib/widgets";
+import type { MultipleTaskForm } from "@/components/wann/MultipleTasksPanel";
+import type { EventForm } from "@/components/wann/EventsPanel";
+
 
 export const Route = createFileRoute("/_authenticated/")({
   component: Dashboard,
