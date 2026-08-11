@@ -88,27 +88,8 @@ export function SettingsPanel({
           </div>
         )}
 
-        {tab === "widgets" && (
-          <div className="p-6 space-y-2">
-            {WIDGETS.map((w) => {
-              const on = settings.widget_visibility[w.id] !== false;
-              return (
-                <label key={w.id} className="flex items-center justify-between border border-border p-3 cursor-pointer hover:bg-muted">
-                  <span>{w.label}</span>
-                  <input
-                    type="checkbox"
-                    checked={on}
-                    onChange={(e) =>
-                      onChange({
-                        widget_visibility: { ...settings.widget_visibility, [w.id]: e.target.checked },
-                      })
-                    }
-                  />
-                </label>
-              );
-            })}
-          </div>
-        )}
+        {tab === "widgets" && <WidgetsTab settings={settings} onChange={onChange} />}
+
       </div>
     </div>
   );
