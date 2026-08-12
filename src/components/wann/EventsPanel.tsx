@@ -1,4 +1,4 @@
-import { registerWidget } from "@/lib/widget-registry";
+import type { WidgetDef } from "@/lib/widget-registry";
 import { useState } from "react";
 import type { EventEntry } from "@/lib/wann-data";
 import { daysUntilAnnual, ageOn, todayLocalStr, EVENT_COLORS, formatDateKo } from "@/lib/wann-data";
@@ -240,7 +240,7 @@ function EventEditor({
   );
 }
 
-registerWidget({
+export const eventsWidget: WidgetDef = {
   id: "events",
   label: "Events",
   render: (ctx) => (
@@ -248,4 +248,4 @@ registerWidget({
       <EventsPanel entries={ctx.events} {...ctx.eventActions} />
     </section>
   ),
-});
+};

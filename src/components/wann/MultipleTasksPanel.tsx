@@ -1,4 +1,4 @@
-import { registerWidget } from "@/lib/widget-registry";
+import type { WidgetDef } from "@/lib/widget-registry";
 import { useState } from "react";
 import type { Category, MultipleTask, MultipleTaskItem, Subtag } from "@/lib/wann-data";
 import { todayLocalStr, taskSortKey, formatDateKo, koDow } from "@/lib/wann-data";
@@ -437,7 +437,7 @@ function MultipleTaskEditor({
   );
 }
 
-registerWidget({
+export const multipleTasksWidget: WidgetDef = {
   id: "multiple_tasks",
   label: "Multiple Task",
   render: (ctx) => (
@@ -451,4 +451,4 @@ registerWidget({
       />
     </section>
   ),
-});
+};
