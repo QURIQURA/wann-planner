@@ -13,41 +13,16 @@ export type WidgetDef = {
 
 const registry = new Map<string, WidgetDef>();
 
-/** Called from each widget module so new widgets appear in Settings automatically. */
+/**
+ * Optional escape hatch for dynamically added widgets. Built-in widgets are
+ * listed as values in `src/lib/widgets.ts` instead, because side-effect
+ * registration is removed by the production bundler.
+ */
 export function registerWidget(def: WidgetDef) {
   registry.set(def.id, def);
 }
 
-/** All registered widgets, in registration order. */
-export function getWidgets(): WidgetDef[] {
+/** Widgets added through registerWidget(), in registration order. */
+export function registeredWidgets(): WidgetDef[] {
   return Array.from(registry.values());
-}
-
-export function isWidgetVisible(
-  def: WidgetDef,
-  visibility: Record<string, boolean> | null | undefined,
-): boolean {
-  const v = visibility?.[def.id];
-  if (typeof v === "boolean") return v;
-  return def.defaultVisible !== false;
-}
-
-/**
- * Registered widgets sorted by the user's saved order. Widgets missing from the
- * saved order (newly added ones) keep their registration order at the end.
- */
-export function orderedWidgets(order: string[] | null | undefined): WidgetDef[] {
-  const all = getWidgets();
-  if (!order?.length) return all;
-  const seen = new Set<string>();
-  const out: WidgetDef[] = [];
-  for (const id of order) {
-    const def = all.find((w) => w.id === id);
-    if (def && !seen.has(id)) {
-      out.push(def);
-      seen.add(id);
-    }
-  }
-  for (const def of all) if (!seen.has(def.id)) out.push(def);
-  return out;
 }
