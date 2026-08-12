@@ -1,4 +1,4 @@
-import { registerWidget } from "@/lib/widget-registry";
+import type { WidgetDef } from "@/lib/widget-registry";
 import { useEffect, useState } from "react";
 import type { Category, MultipleTask, Subtag, Task, TaskCompletion } from "@/lib/wann-data";
 import { todayLocalStr, shortTime, isOccurrenceCompleted, currentOccurrenceDate, formatDateKo, koDow } from "@/lib/wann-data";
@@ -594,7 +594,7 @@ function TaskList({
   );
 }
 
-registerWidget({
+export const tasksWidget: WidgetDef = {
   id: "tasks",
   label: "Tasks",
   render: (ctx) => (
@@ -610,4 +610,4 @@ registerWidget({
       />
     </section>
   ),
-});
+};
