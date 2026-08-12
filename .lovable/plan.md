@@ -14,8 +14,6 @@
 1. 각 패널 파일: `registerWidget({...})` 호출 대신 위젯 정의를 `export const <name>Widget: WidgetDef = {...}`로 내보냅니다 (Tasks, Multiple Task, Events, Habit Tracker, Monthly Summary 5개).
 2. `src/lib/widgets.ts`: 5개 정의를 값으로 import 해 배열로 모으고, 모듈 로드 시 `registerWidget`으로 등록합니다. 기존 `getWidgets` / `orderedWidgets` / `isWidgetVisible` 공개 API는 그대로 유지되므로 대시보드와 Settings 코드는 수정 불필요합니다.
 3. `registerWidget`은 남겨두되(외부 확장용), 기본 5개는 값 등록 경로를 사용합니다. 앞으로 새 위젯 추가 시 "정의 export + widgets.ts 배열에 한 줄 추가"가 규칙이 됩니다.
-4. 복구 검증: 빌드 결과 화면에서 TASKS 폼/목록, MULTIPLE TASK, Events가 다시 보이는지, Settings WIDGETS 탭에 5개 항목이 뜨는지, 체크박스와 드래그 순서가 반영되는지 확인합니다.
+4. 저장된 설정에서 `habit_tracker`, `monthly_summary`를 다시 켜고, 대응 패널이 없는 옛 키(`weekly_review`, `cross_app_alerts`)는 정리합니다.
+5. 복구 검증: 빌드 결과 화면에서 TASKS 폼/목록, MULTIPLE TASK, Events, Habit Tracker, Monthly Summary가 모두 보이는지, Settings WIDGETS 탭에 5개 항목이 뜨는지, 체크박스와 드래그 순서가 반영되는지 확인합니다.
 
-## 참고
-
-- Habit Tracker / Monthly Summary는 저장값이 꺼져 있어 계속 숨겨집니다. 원하시면 이번에 함께 켜진 상태로 되돌리겠습니다.
