@@ -35,7 +35,11 @@ export function MultipleTasksPanel({
   onUpdateItem,
   onToggleItem,
   onDeleteItem,
+  filter: filterProp,
+  onFilterChange,
+  hideFilterBar,
 }: {
+
   entries: MultipleTask[];
   items: MultipleTaskItem[];
   categories: Category[];
