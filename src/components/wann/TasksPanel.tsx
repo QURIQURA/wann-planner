@@ -333,6 +333,9 @@ export function TasksPanel({
           </button>
         </div>
       )}
+      </>
+      )}
+
 
       <div className="card-flat p-2 mb-3 space-y-2">
         <div className="flex items-center gap-2">
