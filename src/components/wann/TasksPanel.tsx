@@ -5,7 +5,10 @@ import { todayLocalStr, shortTime, isOccurrenceCompleted, currentOccurrenceDate,
 import { Plus, Trash2, X, ChevronDown, ChevronUp, Pencil } from "lucide-react";
 
 
+export type CategoryFilter = { categoryId: string | null; subtagId: string | null };
+
 export type NewProjectValues = {
+
   name: string;
   startDate: string | null;
   endDate: string | null;
