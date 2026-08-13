@@ -43,6 +43,9 @@ export function TasksPanel({
   onUpdateCategory,
   onUpdateSubtag,
   onDeleteSubtag,
+  filter: filterProp,
+  onFilterChange,
+  hideFilterBar,
 }: {
   categories: Category[];
   subtags: Subtag[];
@@ -62,18 +65,26 @@ export function TasksPanel({
   onUpdateCategory: (id: string, name: string, color: string) => void;
   onUpdateSubtag: (id: string, name: string) => void;
   onDeleteSubtag: (id: string) => void;
+  /** Controlled category filter (shared with the Multiple Task column). */
+  filter?: CategoryFilter;
+  onFilterChange?: (f: CategoryFilter) => void;
+  /** Hide the built-in filter bar when a shared one is rendered above. */
+  hideFilterBar?: boolean;
 }) {
   const today = todayLocalStr();
   const [showDone, setShowDone] = useState(false);
 
-  const [filter, setFilter] = useState<{ categoryId: string | null; subtagId: string | null }>({
+  const [localFilter, setLocalFilter] = useState<CategoryFilter>({
     categoryId: null,
     subtagId: null,
   });
+  const filter = filterProp ?? localFilter;
+  const setFilter = (f: CategoryFilter) => (onFilterChange ? onFilterChange(f) : setLocalFilter(f));
   const [newCat, setNewCat] = useState({ open: false, name: "", color: "#1A1A18" });
   const [editCat, setEditCat] = useState<{ id: string; name: string; color: string } | null>(null);
   const [editingSubtagId, setEditingSubtagId] = useState<string | null>(null);
   const [editingSubtagName, setEditingSubtagName] = useState("");
+
 
   const emptyForm = (): TaskFormValues => ({
     title: "",
