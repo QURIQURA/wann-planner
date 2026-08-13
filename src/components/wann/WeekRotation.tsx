@@ -858,51 +858,41 @@ function SlotCell({ dateKey, idx, isDragging }: { dateKey: string; idx: number; 
   );
 }
 
-function DraggableTimedTask({
+/** Presentational timeline row. `marker` adds a [start]/[end] tag for spanning tasks. */
+function TimedTaskBody({
   occ,
-  endTime,
-  tall,
+  timeLabel,
+  marker,
   completed,
   cat,
   project,
   onToggle,
   onEdit,
+  dragHandle,
+  dimmed,
 }: {
   occ: EffectiveOccurrence;
-  endTime?: string | null;
-  tall?: boolean;
+  timeLabel: string;
+  marker: "start" | "end" | null;
   completed: boolean;
   cat: Category | undefined;
   project?: string;
   onToggle: () => void;
   onEdit: () => void;
+  dragHandle?: React.ReactNode;
+  dimmed?: boolean;
 }) {
-  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
-    id: `task|${occ.task.id}|${occ.originalDate}`,
-    data: { kind: "task", taskId: occ.task.id, originalDate: occ.originalDate, title: occ.task.title } satisfies DragData,
-  });
   // Timeline boxes are tinted with the category colour at 50% opacity.
   const bg = hexToRgba(cat?.color, 0.5) ?? "var(--background)";
   return (
     <div
-      ref={setNodeRef}
-      className={`flex gap-1 border border-border px-1 text-[11px] leading-tight h-full overflow-hidden text-foreground ${
-        tall ? "items-start pt-0.5 flex-wrap content-start" : "items-center"
-      } ${isDragging ? "opacity-30" : ""}`}
+      className={`flex items-center gap-1 border border-border px-1 text-[11px] leading-tight h-full overflow-hidden text-foreground ${
+        dimmed ? "opacity-30" : ""
+      }`}
       style={{ background: bg }}
     >
-      <button
-        {...attributes}
-        {...listeners}
-        className="cursor-grab active:cursor-grabbing text-foreground/60 touch-none flex-shrink-0"
-        aria-label="Drag"
-      >
-        <GripVertical size={10} />
-      </button>
-      <span className="text-[9px] text-foreground/70 tabular-nums flex-shrink-0">
-        {shortTime(occ.effectiveTime)}
-        {endTime ? `–${shortTime(endTime)}` : ""}
-      </span>
+      {dragHandle ?? <span className="w-[10px] flex-shrink-0" />}
+      <span className="text-[9px] text-foreground/70 tabular-nums flex-shrink-0">{timeLabel}</span>
       <button
         onClick={onToggle}
         aria-label="Toggle"
@@ -910,9 +900,10 @@ function DraggableTimedTask({
       />
       <button
         onClick={onEdit}
-        className={`flex-1 min-w-0 text-left truncate hover:underline text-foreground ${completed ? "line-through" : ""}`}
+        className={`flex-1 min-w-[3rem] text-left truncate hover:underline text-foreground ${completed ? "line-through" : ""}`}
       >
-        {occ.task.title}
+        {occ.task.title || "(제목 없음)"}
+        {marker && <span className="ml-1 text-[9px] text-foreground/60">[{marker}]</span>}
         {(occ.task.recurrence ?? "none") !== "none" && (
           <span className="ml-1 text-[9px] text-foreground/60">↻</span>
         )}
@@ -929,9 +920,59 @@ function DraggableTimedTask({
         </span>
       )}
     </div>
-
   );
 }
+
+function DraggableTimedTask({
+  occ,
+  endTime,
+  marker,
+  completed,
+  cat,
+  project,
+  onToggle,
+  onEdit,
+}: {
+  occ: EffectiveOccurrence;
+  endTime?: string | null;
+  marker?: "start" | null;
+  completed: boolean;
+  cat: Category | undefined;
+  project?: string;
+  onToggle: () => void;
+  onEdit: () => void;
+}) {
+  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
+    id: `task|${occ.task.id}|${occ.originalDate}`,
+    data: { kind: "task", taskId: occ.task.id, originalDate: occ.originalDate, title: occ.task.title } satisfies DragData,
+  });
+  return (
+    <div ref={setNodeRef} className="h-full">
+      <TimedTaskBody
+        occ={occ}
+        timeLabel={`${shortTime(occ.effectiveTime)}${endTime ? `–${shortTime(endTime)}` : ""}`}
+        marker={marker ?? null}
+        completed={completed}
+        cat={cat}
+        project={project}
+        onToggle={onToggle}
+        onEdit={onEdit}
+        dimmed={isDragging}
+        dragHandle={
+          <button
+            {...attributes}
+            {...listeners}
+            className="cursor-grab active:cursor-grabbing text-foreground/60 touch-none flex-shrink-0"
+            aria-label="Drag"
+          >
+            <GripVertical size={10} />
+          </button>
+        }
+      />
+    </div>
+  );
+}
+
 
 function TaskLines({
   items,
