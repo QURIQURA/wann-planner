@@ -3,6 +3,8 @@ import { useState } from "react";
 import type { Category, MultipleTask, MultipleTaskItem, Subtag } from "@/lib/wann-data";
 import { todayLocalStr, taskSortKey, formatDateKo, koDow } from "@/lib/wann-data";
 import { Plus, Trash2, X, Pencil, ChevronDown, ChevronRight } from "lucide-react";
+import type { CategoryFilter } from "./TasksPanel";
+
 
 export type MultipleTaskForm = {
   name: string;
