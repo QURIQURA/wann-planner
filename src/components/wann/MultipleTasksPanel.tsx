@@ -109,6 +109,8 @@ export function MultipleTasksPanel({
       </div>
 
 
+      {!hideFilterBar && (
+      <>
       {/* filters */}
       <div className="flex flex-wrap gap-1 mb-2">
         <button
@@ -147,6 +149,9 @@ export function MultipleTasksPanel({
           ))}
         </div>
       )}
+      </>
+      )}
+
 
 
       <div className="space-y-1">
