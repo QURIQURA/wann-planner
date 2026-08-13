@@ -3,6 +3,8 @@ import { useState } from "react";
 import type { Category, MultipleTask, MultipleTaskItem, Subtag } from "@/lib/wann-data";
 import { todayLocalStr, taskSortKey, formatDateKo, koDow } from "@/lib/wann-data";
 import { Plus, Trash2, X, Pencil, ChevronDown, ChevronRight } from "lucide-react";
+import type { CategoryFilter } from "./TasksPanel";
+
 
 export type MultipleTaskForm = {
   name: string;
@@ -35,7 +37,11 @@ export function MultipleTasksPanel({
   onUpdateItem,
   onToggleItem,
   onDeleteItem,
+  filter: filterProp,
+  onFilterChange,
+  hideFilterBar,
 }: {
+
   entries: MultipleTask[];
   items: MultipleTaskItem[];
   categories: Category[];
@@ -48,6 +54,11 @@ export function MultipleTasksPanel({
   onToggleItem: (item: MultipleTaskItem) => void;
 
   onDeleteItem: (id: string) => void;
+  /** Controlled category filter (shared with the Tasks column). */
+  filter?: CategoryFilter;
+  onFilterChange?: (f: CategoryFilter) => void;
+  /** Hide the built-in filter bar when a shared one is rendered above. */
+  hideFilterBar?: boolean;
 }) {
   const [creating, setCreating] = useState(false);
   const [form, setForm] = useState<MultipleTaskForm>(emptyForm());
@@ -60,10 +71,13 @@ export function MultipleTasksPanel({
 
   const [editingItemId, setEditingItemId] = useState<string | null>(null);
   const [editingItemTitle, setEditingItemTitle] = useState("");
-  const [filter, setFilter] = useState<{ categoryId: string | null; subtagId: string | null }>({
+  const [localFilter, setLocalFilter] = useState<CategoryFilter>({
     categoryId: null,
     subtagId: null,
   });
+  const filter = filterProp ?? localFilter;
+  const setFilter = (f: CategoryFilter) => (onFilterChange ? onFilterChange(f) : setLocalFilter(f));
+
 
   const startEdit = (e: MultipleTask) => {
     setEditingId(e.id);
@@ -95,6 +109,8 @@ export function MultipleTasksPanel({
       </div>
 
 
+      {!hideFilterBar && (
+      <>
       {/* filters */}
       <div className="flex flex-wrap gap-1 mb-2">
         <button
@@ -133,6 +149,9 @@ export function MultipleTasksPanel({
           ))}
         </div>
       )}
+      </>
+      )}
+
 
 
       <div className="space-y-1">

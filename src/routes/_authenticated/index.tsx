@@ -744,9 +744,15 @@ function Dashboard() {
           onEditTask={(t) => setEditingTask(t)}
         />
 
-        {visibleWidgets.map((w) => (
-          <div key={w.id}>{w.render(widgetCtx)}</div>
-        ))}
+        {/* Combined Task/Multiple Task workspace stays right under This Week,
+            the remaining widgets stack vertically in widget_order. */}
+        {visibleWidgets
+          .slice()
+          .sort((a, b) => Number(b.id === "task_workspace") - Number(a.id === "task_workspace"))
+          .map((w) => (
+            <div key={w.id}>{w.render(widgetCtx)}</div>
+          ))}
+
 
       </main>
 
