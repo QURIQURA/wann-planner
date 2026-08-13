@@ -617,44 +617,55 @@ function TimelineGrid({
   onEdit: (t: Task) => void;
   isDragging: boolean;
 }) {
-  // Lay out timed occurrences: tasks with an end time span their duration,
-  // tasks without one occupy a single 30-min slot. Timed habits sit in the same
-  // grid so they read alongside tasks. Overlaps share the width.
-  type Block =
-    | { kind: "task"; startMin: number; endMin: number; top: number; height: number; spans: boolean; endStr: string | null; o: EffectiveOccurrence }
-    | { kind: "habit"; startMin: number; endMin: number; top: number; height: number; habit: Habit };
+  // Layout model:
+  // - A task with a duration renders TWO full-width single-slot rows: one at its
+  //   start time ("[start]") and one at its end time ("[end]"), plus a thin
+  //   vertical rail in the left gutter connecting them.
+  // - Tasks without a duration and timed habits render as one full-width row.
+  // - Rows only share width when two rows land on the same slot.
+  const RAIL_W = 4;
 
-  const posOf = (startMin: number, endMin: number) => ({
-    top: ((startMin - START_HOUR * 60) / SLOT_MIN) * SLOT_HEIGHT,
-    height: Math.max(SLOT_HEIGHT, ((endMin - startMin) / SLOT_MIN) * SLOT_HEIGHT),
-  });
+  type Row =
+    | { kind: "task"; startMin: number; marker: "start" | "end" | null; endStr: string | null; o: EffectiveOccurrence }
+    | { kind: "habit"; startMin: number; habit: Habit };
 
-  const taskBlocks: Block[] = timed.map((o) => {
+  const rows: Row[] = [];
+  const rails: { startMin: number; endMin: number; color: string | undefined; key: string }[] = [];
+
+  for (const o of timed) {
     const startMin = timeToMinutes(o.effectiveTime) ?? START_HOUR * 60;
     const endStr = occurrenceEndTime(o.task, o.effectiveTime);
     const rawEnd = timeToMinutes(endStr);
     const spans = rawEnd != null && rawEnd > startMin;
-    const endMin = spans ? rawEnd! : startMin + SLOT_MIN;
-    return { kind: "task", startMin, endMin, ...posOf(startMin, endMin), spans, endStr, o };
-  });
+    if (spans) {
+      rows.push({ kind: "task", startMin, marker: "start", endStr, o });
+      rows.push({ kind: "task", startMin: rawEnd!, marker: "end", endStr, o });
+      const cat = o.task.category_id ? catMap[o.task.category_id] : undefined;
+      rails.push({
+        startMin,
+        endMin: rawEnd!,
+        color: cat?.color ?? undefined,
+        key: `${o.task.id}-${o.originalDate}`,
+      });
+    } else {
+      rows.push({ kind: "task", startMin, marker: null, endStr: null, o });
+    }
+  }
+  for (const h of timedHabits) {
+    rows.push({ kind: "habit", startMin: timeToMinutes(h.habit_time) ?? START_HOUR * 60, habit: h });
+  }
 
-  const habitBlocks: Block[] = timedHabits.map((h) => {
-    const startMin = timeToMinutes(h.habit_time) ?? START_HOUR * 60;
-    const endMin = startMin + SLOT_MIN;
-    return { kind: "habit", startMin, endMin, ...posOf(startMin, endMin), habit: h };
-  });
+  const slotOf = (min: number) =>
+    Math.max(0, Math.min(SLOT_COUNT - 1, Math.floor((min - START_HOUR * 60) / SLOT_MIN)));
 
-  // simple lane packing for overlapping blocks
-  const laneEnds: number[] = [];
-  const placed = [...taskBlocks, ...habitBlocks]
-    .sort((a, b) => a.startMin - b.startMin)
-    .map((b) => {
-      let lane = laneEnds.findIndex((e) => e <= b.startMin);
-      if (lane === -1) { lane = laneEnds.length; laneEnds.push(b.endMin); }
-      else laneEnds[lane] = b.endMin;
-      return { ...b, lane };
-    });
-  const laneCount = Math.max(1, laneEnds.length);
+  // Rows only compete when they sit on the same slot.
+  const bySlot: Record<number, Row[]> = {};
+  for (const r of rows) {
+    const s = slotOf(r.startMin);
+    (bySlot[s] ||= []).push(r);
+  }
+
+  const gutter = rails.length * RAIL_W;
 
   return (
     <div
@@ -666,49 +677,92 @@ function TimelineGrid({
         <SlotCell key={i} dateKey={dateKey} idx={i} isDragging={isDragging} />
       ))}
 
-      {/* Timed tasks & habits positioned absolutely */}
-      {placed.map((b) => {
-        const style = {
-          top: Math.max(0, b.top),
-          height: b.height,
-          left: `${(b.lane / laneCount) * 100}%`,
-          width: `${100 / laneCount}%`,
-        };
-        if (b.kind === "habit") {
-          const h = b.habit;
-          const target = Math.max(1, h.target_count ?? 1);
+      {/* Thin progress rails for tasks that span time */}
+      {rails.map((r, i) => {
+        const top = slotOf(r.startMin) * SLOT_HEIGHT;
+        const bottom = (slotOf(r.endMin) + 1) * SLOT_HEIGHT;
+        return (
+          <div
+            key={`rail-${r.key}`}
+            className="absolute pointer-events-none"
+            style={{
+              top,
+              height: Math.max(SLOT_HEIGHT, bottom - top),
+              left: i * RAIL_W,
+              width: RAIL_W - 1,
+              background: r.color ?? "var(--foreground)",
+              opacity: 0.7,
+            }}
+          />
+        );
+      })}
+
+      {/* Rows */}
+      {Object.entries(bySlot).flatMap(([slotStr, slotRows]) =>
+        slotRows.map((b, idx) => {
+          const slot = Number(slotStr);
+          const n = slotRows.length;
+          const style = {
+            top: slot * SLOT_HEIGHT,
+            height: SLOT_HEIGHT,
+            left: `calc(${gutter}px + ${(idx / n) * 100}%)`,
+            width: `calc(${100 / n}% - ${gutter / n}px)`,
+          };
+          if (b.kind === "habit") {
+            const h = b.habit;
+            const target = Math.max(1, h.target_count ?? 1);
+            return (
+              <div key={`habit-${h.id}`} className="absolute px-0.5" style={style}>
+                <TimedHabit
+                  habit={h}
+                  count={habitCount(h.id)}
+                  target={target}
+                  onTap={() => onTapHabit(h)}
+                />
+              </div>
+            );
+          }
+          const o = b.o;
+          const completed = isOccurrenceCompleted(o.task, o.originalDate, completions);
+          const cat = o.task.category_id ? catMap[o.task.category_id] : undefined;
+          const project = o.task.multiple_task_id ? projMap[o.task.multiple_task_id] : undefined;
+          const key = `${o.task.id}-${o.originalDate}-${b.marker ?? "single"}`;
+          if (b.marker === "end") {
+            return (
+              <div key={key} className="absolute px-0.5" style={style}>
+                <TimedTaskBody
+                  occ={o}
+                  timeLabel={shortTime(b.endStr)}
+                  marker="end"
+                  completed={completed}
+                  cat={cat}
+                  project={project}
+                  onToggle={() => onToggle(o.task, o.originalDate)}
+                  onEdit={() => onEdit(o.task)}
+                />
+              </div>
+            );
+          }
           return (
-            <div key={`habit-${h.id}`} className="absolute px-0.5" style={style}>
-              <TimedHabit
-                habit={h}
-                count={habitCount(h.id)}
-                target={target}
-                onTap={() => onTapHabit(h)}
+            <div key={key} className="absolute px-0.5" style={style}>
+              <DraggableTimedTask
+                occ={o}
+                marker={b.marker}
+                endTime={b.marker === "start" ? b.endStr : null}
+                completed={completed}
+                cat={cat}
+                project={project}
+                onToggle={() => onToggle(o.task, o.originalDate)}
+                onEdit={() => onEdit(o.task)}
               />
             </div>
           );
-        }
-        const o = b.o;
-        const completed = isOccurrenceCompleted(o.task, o.originalDate, completions);
-        const cat = o.task.category_id ? catMap[o.task.category_id] : undefined;
-        return (
-          <div key={`${o.task.id}-${o.originalDate}`} className="absolute px-0.5" style={style}>
-            <DraggableTimedTask
-              occ={o}
-              endTime={b.spans ? b.endStr : null}
-              tall={b.height > SLOT_HEIGHT * 1.5}
-              completed={completed}
-              cat={cat}
-              project={o.task.multiple_task_id ? projMap[o.task.multiple_task_id] : undefined}
-              onToggle={() => onToggle(o.task, o.originalDate)}
-              onEdit={() => onEdit(o.task)}
-            />
-          </div>
-        );
-      })}
+        }),
+      )}
     </div>
   );
 }
+
 
 /** A habit with a time — dashed border + dotted-circle icon marks it as a habit. */
 function TimedHabit({
@@ -804,51 +858,41 @@ function SlotCell({ dateKey, idx, isDragging }: { dateKey: string; idx: number; 
   );
 }
 
-function DraggableTimedTask({
+/** Presentational timeline row. `marker` adds a [start]/[end] tag for spanning tasks. */
+function TimedTaskBody({
   occ,
-  endTime,
-  tall,
+  timeLabel,
+  marker,
   completed,
   cat,
   project,
   onToggle,
   onEdit,
+  dragHandle,
+  dimmed,
 }: {
   occ: EffectiveOccurrence;
-  endTime?: string | null;
-  tall?: boolean;
+  timeLabel: string;
+  marker: "start" | "end" | null;
   completed: boolean;
   cat: Category | undefined;
   project?: string;
   onToggle: () => void;
   onEdit: () => void;
+  dragHandle?: React.ReactNode;
+  dimmed?: boolean;
 }) {
-  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
-    id: `task|${occ.task.id}|${occ.originalDate}`,
-    data: { kind: "task", taskId: occ.task.id, originalDate: occ.originalDate, title: occ.task.title } satisfies DragData,
-  });
   // Timeline boxes are tinted with the category colour at 50% opacity.
   const bg = hexToRgba(cat?.color, 0.5) ?? "var(--background)";
   return (
     <div
-      ref={setNodeRef}
-      className={`flex gap-1 border border-border px-1 text-[11px] leading-tight h-full overflow-hidden text-foreground ${
-        tall ? "items-start pt-0.5 flex-wrap content-start" : "items-center"
-      } ${isDragging ? "opacity-30" : ""}`}
+      className={`flex items-center gap-1 border border-border px-1 text-[11px] leading-tight h-full overflow-hidden text-foreground ${
+        dimmed ? "opacity-30" : ""
+      }`}
       style={{ background: bg }}
     >
-      <button
-        {...attributes}
-        {...listeners}
-        className="cursor-grab active:cursor-grabbing text-foreground/60 touch-none flex-shrink-0"
-        aria-label="Drag"
-      >
-        <GripVertical size={10} />
-      </button>
-      <span className="text-[9px] text-foreground/70 tabular-nums flex-shrink-0">
-        {shortTime(occ.effectiveTime)}
-        {endTime ? `–${shortTime(endTime)}` : ""}
-      </span>
+      {dragHandle ?? <span className="w-[10px] flex-shrink-0" />}
+      <span className="text-[9px] text-foreground/70 tabular-nums flex-shrink-0">{timeLabel}</span>
       <button
         onClick={onToggle}
         aria-label="Toggle"
@@ -856,9 +900,10 @@ function DraggableTimedTask({
       />
       <button
         onClick={onEdit}
-        className={`flex-1 min-w-0 text-left truncate hover:underline text-foreground ${completed ? "line-through" : ""}`}
+        className={`flex-1 min-w-[3rem] text-left truncate hover:underline text-foreground ${completed ? "line-through" : ""}`}
       >
-        {occ.task.title}
+        {occ.task.title || "(제목 없음)"}
+        {marker && <span className="ml-1 text-[9px] text-foreground/60">[{marker}]</span>}
         {(occ.task.recurrence ?? "none") !== "none" && (
           <span className="ml-1 text-[9px] text-foreground/60">↻</span>
         )}
@@ -875,9 +920,59 @@ function DraggableTimedTask({
         </span>
       )}
     </div>
-
   );
 }
+
+function DraggableTimedTask({
+  occ,
+  endTime,
+  marker,
+  completed,
+  cat,
+  project,
+  onToggle,
+  onEdit,
+}: {
+  occ: EffectiveOccurrence;
+  endTime?: string | null;
+  marker?: "start" | null;
+  completed: boolean;
+  cat: Category | undefined;
+  project?: string;
+  onToggle: () => void;
+  onEdit: () => void;
+}) {
+  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
+    id: `task|${occ.task.id}|${occ.originalDate}`,
+    data: { kind: "task", taskId: occ.task.id, originalDate: occ.originalDate, title: occ.task.title } satisfies DragData,
+  });
+  return (
+    <div ref={setNodeRef} className="h-full">
+      <TimedTaskBody
+        occ={occ}
+        timeLabel={`${shortTime(occ.effectiveTime)}${endTime ? `–${shortTime(endTime)}` : ""}`}
+        marker={marker ?? null}
+        completed={completed}
+        cat={cat}
+        project={project}
+        onToggle={onToggle}
+        onEdit={onEdit}
+        dimmed={isDragging}
+        dragHandle={
+          <button
+            {...attributes}
+            {...listeners}
+            className="cursor-grab active:cursor-grabbing text-foreground/60 touch-none flex-shrink-0"
+            aria-label="Drag"
+          >
+            <GripVertical size={10} />
+          </button>
+        }
+      />
+    </div>
+  );
+}
+
 
 function TaskLines({
   items,
