@@ -157,7 +157,10 @@ export function TasksPanel({
         <p className="label-caps">Tasks</p>
       </div>
 
+      {!hideFilterBar && (
+      <>
       {/* categories */}
+
       <div className="flex flex-wrap gap-1 mb-2">
         <button
           onClick={() => setFilter({ categoryId: null, subtagId: null })}
