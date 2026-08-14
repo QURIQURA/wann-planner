@@ -613,6 +613,7 @@ function Dashboard() {
   const widgetCtx: WidgetContext = {
     userId: user.id,
     anchor,
+    onAnchorChange: setAnchor,
     categories: categoriesQ.data ?? [],
     subtags: subtagsQ.data ?? [],
     tasks: tasksQ.data ?? [],
