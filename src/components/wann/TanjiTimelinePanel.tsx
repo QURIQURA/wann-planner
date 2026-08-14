@@ -63,7 +63,7 @@ export function TanjiTimelinePanel({ ctx }: { ctx: WidgetContext }) {
   const unlogged = types.filter((t) => !logByType.has(t.id));
 
   const setDraft = (id: string, patch: Partial<Draft>) =>
-    setDrafts((d) => ({ ...d, [id]: { start: "", end: "", ...d[id], ...patch } }));
+    setDrafts((d) => ({ ...d, [id]: { start: "", end: "", ...(d[id] ?? {}), ...patch } as Draft }));
 
   const commit = (type: BabySlotType, existing?: BabySlotLog) => {
     const d = drafts[type.id] ?? {
