@@ -644,6 +644,80 @@ export type Database = {
           },
         ]
       }
+      planner_baby_slot_logs: {
+        Row: {
+          created_at: string
+          date: string
+          end_time: string | null
+          id: string
+          note: string | null
+          slot_type_id: string
+          start_time: string
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          date: string
+          end_time?: string | null
+          id?: string
+          note?: string | null
+          slot_type_id: string
+          start_time: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          date?: string
+          end_time?: string | null
+          id?: string
+          note?: string | null
+          slot_type_id?: string
+          start_time?: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "planner_baby_slot_logs_slot_type_id_fkey"
+            columns: ["slot_type_id"]
+            isOneToOne: false
+            referencedRelation: "planner_baby_slot_types"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      planner_baby_slot_types: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          sort_order: number
+          tracks_duration: boolean
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          sort_order?: number
+          tracks_duration?: boolean
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          sort_order?: number
+          tracks_duration?: boolean
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       planner_diary_entries: {
         Row: {
           content_html: string

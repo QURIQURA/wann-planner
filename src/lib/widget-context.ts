@@ -18,6 +18,8 @@ import type { EventForm } from "@/components/wann/EventsPanel";
 export type WidgetContext = {
   userId: string;
   anchor: Date;
+  /** Two-way sync with the This Week timeline's anchor date. */
+  onAnchorChange?: (d: Date) => void;
 
   categories: Category[];
   subtags: Subtag[];
