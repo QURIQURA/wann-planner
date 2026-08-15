@@ -180,7 +180,7 @@ function Dashboard() {
         if (pErr) throw pErr;
         projectId = data.id;
       }
-      const { error } = await supabase.from("planner_tasks").insert({
+      const { data: created, error } = await supabase.from("planner_tasks").insert({
         user_id: user.id,
         title: input.title,
         category_id: input.categoryId,
@@ -190,10 +190,14 @@ function Dashboard() {
         end_time: input.dueTime ? input.endTime : null,
         recurrence: input.recurrence,
         multiple_task_id: projectId,
-      });
+      }).select("id").single();
       if (error) throw error;
+      if (input.subitems?.length) await replaceSubitems(created.id, input.subitems);
     },
-    onSuccess: () => { invalidate("tasks"); invalidate("multiple_tasks"); invalidate("multiple_task_items"); },
+    onSuccess: () => {
+      invalidate("tasks"); invalidate("multiple_tasks"); invalidate("multiple_task_items");
+      qc.invalidateQueries({ queryKey: ["task-subitems"] });
+    },
   });
 
   const updateTask = useMutation({
@@ -226,8 +230,12 @@ function Dashboard() {
         multiple_task_id: projectId,
       }).eq("id", id);
       if (error) throw error;
+      await replaceSubitems(id, input.subitems ?? []);
     },
-    onSuccess: () => { invalidate("tasks"); invalidate("multiple_tasks"); invalidate("multiple_task_items"); },
+    onSuccess: () => {
+      invalidate("tasks"); invalidate("multiple_tasks"); invalidate("multiple_task_items");
+      qc.invalidateQueries({ queryKey: ["task-subitems"] });
+    },
   });
 
 
