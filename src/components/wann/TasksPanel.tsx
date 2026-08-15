@@ -349,6 +349,56 @@ export function TasksPanel({
             </button>
           </div>
         )}
+        {form.dueTime && form.endTime && (
+          <div className="border-t border-border pt-2 space-y-1">
+            <p className="label-caps text-[10px] text-muted-foreground">상세 항목</p>
+            {form.subitems.map((si, i) => (
+              <div key={i} className="flex items-center gap-2">
+                <input
+                  type="time"
+                  value={si.time ?? ""}
+                  onChange={(e) => {
+                    const next = [...form.subitems];
+                    next[i] = { ...si, time: e.target.value || null };
+                    setForm({ ...form, subitems: next });
+                  }}
+                  className="bg-transparent outline-none text-sm border-b border-border py-1"
+                />
+                <input
+                  type="text"
+                  placeholder="할 일 메모"
+                  value={si.content}
+                  onChange={(e) => {
+                    const next = [...form.subitems];
+                    next[i] = { ...si, content: e.target.value };
+                    setForm({ ...form, subitems: next });
+                  }}
+                  className="flex-1 min-w-[100px] bg-transparent outline-none text-sm border-b border-border py-1"
+                />
+                <button
+                  onClick={() =>
+                    setForm({ ...form, subitems: form.subitems.filter((_, j) => j !== i) })
+                  }
+                  aria-label="상세 항목 삭제"
+                  className="hover:text-destructive"
+                >
+                  <Trash2 size={12} />
+                </button>
+              </div>
+            ))}
+            <button
+              onClick={() =>
+                setForm({
+                  ...form,
+                  subitems: [...form.subitems, { time: null, content: "", completed: false }],
+                })
+              }
+              className="border border-border px-2 py-1 label-caps hover:bg-muted flex items-center gap-1"
+            >
+              <Plus size={12} /> 상세 항목 추가
+            </button>
+          </div>
+        )}
       </div>
 
 
