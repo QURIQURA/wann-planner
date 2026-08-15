@@ -32,6 +32,7 @@ import {
   cycleHabitCount,
   type Habit,
 } from "@/lib/wann-extra";
+import { replaceSubitems } from "@/lib/wann-subitems";
 import { useApplySettings } from "@/lib/use-apply-settings";
 import { WeekRotation } from "@/components/wann/WeekRotation";
 import { SettingsPanel } from "@/components/wann/SettingsPanel";
