@@ -3,6 +3,8 @@ import { useEffect, useState } from "react";
 import type { Category, MultipleTask, Subtag, Task, TaskCompletion } from "@/lib/wann-data";
 import { todayLocalStr, shortTime, isOccurrenceCompleted, currentOccurrenceDate, formatDateKo, koDow } from "@/lib/wann-data";
 import { Plus, Trash2, X, ChevronDown, ChevronUp, Pencil } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { fetchSubitemsForTask, type SubitemDraft } from "@/lib/wann-subitems";
 import { CategoryFilterBar } from "./CategoryFilterBar";
 
 
@@ -26,6 +28,8 @@ export type TaskFormValues = {
   recurrence: string;
   projectId: string | null;
   newProject: NewProjectValues | null;
+  /** Lightweight checklist for duration tasks. */
+  subitems: SubitemDraft[];
 };
 
 
@@ -101,6 +105,7 @@ export function TasksPanel({
     recurrence: "none",
     projectId: null,
     newProject: null,
+    subitems: [],
   });
 
   const [form, setForm] = useState<TaskFormValues>(emptyForm);
@@ -117,9 +122,29 @@ export function TasksPanel({
         recurrence: editingTask.recurrence ?? "none",
         projectId: editingTask.multiple_task_id ?? null,
         newProject: null,
+        subitems: [],
       });
     }
   }, [editingTask]);
+
+  const subitemsQ = useQuery({
+    queryKey: ["task-subitems", editingTask?.id],
+    queryFn: () => fetchSubitemsForTask(editingTask!.id),
+    enabled: !!editingTask,
+  });
+
+  useEffect(() => {
+    if (!editingTask || !subitemsQ.data) return;
+    setForm((f) => ({
+      ...f,
+      subitems: subitemsQ.data.map((s) => ({
+        id: s.id,
+        time: s.time ? s.time.slice(0, 5) : null,
+        content: s.content,
+        completed: s.completed,
+      })),
+    }));
+  }, [editingTask?.id, subitemsQ.data]);
 
 
   const resetForm = () => setForm(emptyForm());
@@ -321,6 +346,56 @@ export function TasksPanel({
               className="hover:text-destructive"
             >
               <X size={12} />
+            </button>
+          </div>
+        )}
+        {form.dueTime && form.endTime && (
+          <div className="border-t border-border pt-2 space-y-1">
+            <p className="label-caps text-[10px] text-muted-foreground">상세 항목</p>
+            {form.subitems.map((si, i) => (
+              <div key={i} className="flex items-center gap-2">
+                <input
+                  type="time"
+                  value={si.time ?? ""}
+                  onChange={(e) => {
+                    const next = [...form.subitems];
+                    next[i] = { ...si, time: e.target.value || null };
+                    setForm({ ...form, subitems: next });
+                  }}
+                  className="bg-transparent outline-none text-sm border-b border-border py-1"
+                />
+                <input
+                  type="text"
+                  placeholder="할 일 메모"
+                  value={si.content}
+                  onChange={(e) => {
+                    const next = [...form.subitems];
+                    next[i] = { ...si, content: e.target.value };
+                    setForm({ ...form, subitems: next });
+                  }}
+                  className="flex-1 min-w-[100px] bg-transparent outline-none text-sm border-b border-border py-1"
+                />
+                <button
+                  onClick={() =>
+                    setForm({ ...form, subitems: form.subitems.filter((_, j) => j !== i) })
+                  }
+                  aria-label="상세 항목 삭제"
+                  className="hover:text-destructive"
+                >
+                  <Trash2 size={12} />
+                </button>
+              </div>
+            ))}
+            <button
+              onClick={() =>
+                setForm({
+                  ...form,
+                  subitems: [...form.subitems, { time: null, content: "", completed: false }],
+                })
+              }
+              className="border border-border px-2 py-1 label-caps hover:bg-muted flex items-center gap-1"
+            >
+              <Plus size={12} /> 상세 항목 추가
             </button>
           </div>
         )}

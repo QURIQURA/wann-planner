@@ -42,7 +42,9 @@ import {
   type DragEndEvent,
   type DragStartEvent,
 } from "@dnd-kit/core";
-import { ChevronLeft, ChevronRight, ChevronDown, ChevronUp, ListChecks, GripVertical, CircleDashed } from "lucide-react";
+import { ChevronLeft, ChevronRight, ChevronDown, ChevronUp, ListChecks, GripVertical, CircleDashed, StickyNote } from "lucide-react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { fetchAllSubitems, sortSubitems, updateSubitem, type TaskSubitem } from "@/lib/wann-subitems";
 import type { Habit, HabitCompletion } from "@/lib/wann-extra";
 import { habitAppliesOnDow } from "@/lib/wann-extra";
 
@@ -626,7 +628,7 @@ function TimelineGrid({
   const RAIL_W = 4;
 
   type Row =
-    | { kind: "task"; startMin: number; marker: "start" | "end" | null; endStr: string | null; o: EffectiveOccurrence }
+    | { kind: "task"; startMin: number; marker: "start" | "end" | null; endStr: string | null; endMin?: number; o: EffectiveOccurrence }
     | { kind: "habit"; startMin: number; habit: Habit };
 
   const rows: Row[] = [];
@@ -638,7 +640,7 @@ function TimelineGrid({
     const rawEnd = timeToMinutes(endStr);
     const spans = rawEnd != null && rawEnd > startMin;
     if (spans) {
-      rows.push({ kind: "task", startMin, marker: "start", endStr, o });
+      rows.push({ kind: "task", startMin, marker: "start", endStr, endMin: rawEnd!, o });
       rows.push({ kind: "task", startMin: rawEnd!, marker: "end", endStr, o });
       const cat = o.task.category_id ? catMap[o.task.category_id] : undefined;
       rails.push({
@@ -743,12 +745,29 @@ function TimelineGrid({
               </div>
             );
           }
+          if (b.marker === "start") {
+            return (
+              <div key={key} className="absolute px-0.5" style={style}>
+                <TimedTaskWithSubitems
+                  occ={o}
+                  endTime={b.endStr}
+                  startMin={b.startMin}
+                  endMin={b.endMin ?? b.startMin}
+                  completed={completed}
+                  cat={cat}
+                  project={project}
+                  onToggle={() => onToggle(o.task, o.originalDate)}
+                  onEdit={() => onEdit(o.task)}
+                />
+              </div>
+            );
+          }
           return (
             <div key={key} className="absolute px-0.5" style={style}>
               <DraggableTimedTask
                 occ={o}
                 marker={b.marker}
-                endTime={b.marker === "start" ? b.endStr : null}
+                endTime={null}
                 completed={completed}
                 cat={cat}
                 project={project}
@@ -858,6 +877,156 @@ function SlotCell({ dateKey, idx, isDragging }: { dateKey: string; idx: number; 
   );
 }
 
+
+/** Shared (deduped) query of every task subitem. */
+function useSubitemsFor(taskId: string): TaskSubitem[] {
+  const q = useQuery({ queryKey: ["task-subitems"], queryFn: fetchAllSubitems, staleTime: 30_000 });
+  return useMemo(
+    () => sortSubitems((q.data ?? []).filter((s) => s.task_id === taskId)),
+    [q.data, taskId],
+  );
+}
+
+/**
+ * A spanning task row plus its collapsible "post-it" of detail items.
+ * Each instance owns its own open state, so several days can stay expanded.
+ */
+function TimedTaskWithSubitems({
+  occ,
+  endTime,
+  endMin,
+  startMin,
+  completed,
+  cat,
+  project,
+  onToggle,
+  onEdit,
+}: {
+  occ: EffectiveOccurrence;
+  endTime: string | null;
+  endMin: number;
+  startMin: number;
+  completed: boolean;
+  cat: Category | undefined;
+  project?: string;
+  onToggle: () => void;
+  onEdit: () => void;
+}) {
+  const items = useSubitemsFor(occ.task.id);
+  const [open, setOpen] = useState(false);
+  const qc = useQueryClient();
+  const save = useMutation({
+    mutationFn: (v: { id: string; patch: Partial<TaskSubitem> }) => updateSubitem(v.id, v.patch),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["task-subitems"] }),
+  });
+
+  return (
+    <>
+      <DraggableTimedTask
+        occ={occ}
+        marker="start"
+        endTime={endTime}
+        completed={completed}
+        cat={cat}
+        project={project}
+        onToggle={onToggle}
+        onEdit={onEdit}
+        extra={
+          items.length > 0 ? (
+            <button
+              onClick={() => setOpen((o) => !o)}
+              aria-label="상세 항목 펼치기"
+              className={`flex items-center gap-0.5 text-[9px] px-0.5 border border-foreground/40 flex-shrink-0 ${open ? "bg-foreground text-background" : ""}`}
+            >
+              <StickyNote size={9} />
+              {items.length}
+            </button>
+          ) : null
+        }
+      />
+      {open && items.length > 0 && (
+        <div className="absolute left-0 right-0 top-full z-30 mt-0.5 border border-foreground bg-[#FFF9C4] shadow-sm p-1 space-y-0.5">
+          {items.map((si) => (
+            <SubitemRow
+              key={si.id}
+              item={si}
+              minMin={startMin}
+              maxMin={endMin}
+              onToggle={() => save.mutate({ id: si.id, patch: { completed: !si.completed } })}
+              onTimeChange={(time) => save.mutate({ id: si.id, patch: { time } })}
+            />
+          ))}
+        </div>
+      )}
+    </>
+  );
+}
+
+/** One detail item: checkbox + text, draggable vertically to shift its time by 30-min steps. */
+function SubitemRow({
+  item,
+  minMin,
+  maxMin,
+  onToggle,
+  onTimeChange,
+}: {
+  item: TaskSubitem;
+  minMin: number;
+  maxMin: number;
+  onToggle: () => void;
+  onTimeChange: (time: string) => void;
+}) {
+  const baseMin = timeToMinutes(item.time) ?? minMin;
+  const [preview, setPreview] = useState<number | null>(null);
+  const shown = preview ?? baseMin;
+
+  const startDrag = (e: React.PointerEvent) => {
+    if (!item.time) return;
+    e.preventDefault();
+    const startY = e.clientY;
+    const el = e.currentTarget as HTMLElement;
+    el.setPointerCapture(e.pointerId);
+    const clamp = (m: number) => Math.max(minMin, Math.min(maxMin, m));
+    const compute = (y: number) =>
+      clamp(baseMin + Math.round((y - startY) / SLOT_HEIGHT) * SLOT_MIN);
+    const move = (ev: PointerEvent) => setPreview(compute(ev.clientY));
+    const up = (ev: PointerEvent) => {
+      const next = compute(ev.clientY);
+      setPreview(null);
+      el.removeEventListener("pointermove", move);
+      el.removeEventListener("pointerup", up);
+      if (next !== baseMin) onTimeChange(minutesToTime(next));
+    };
+    el.addEventListener("pointermove", move);
+    el.addEventListener("pointerup", up);
+  };
+
+  return (
+    <div className="flex items-center gap-1 text-[10px] leading-tight text-foreground">
+      {item.time && (
+        <button
+          onPointerDown={startDrag}
+          aria-label="시간 조정"
+          className="cursor-ns-resize touch-none text-foreground/60 flex-shrink-0"
+        >
+          <GripVertical size={9} />
+        </button>
+      )}
+      <span className="tabular-nums text-foreground/70 flex-shrink-0 w-[30px]">
+        {item.time ? minutesToTime(shown) : "--:--"}
+      </span>
+      <button
+        onClick={onToggle}
+        aria-label="완료 표시"
+        className={`inline-block h-2.5 w-2.5 border border-foreground/60 flex-shrink-0 ${item.completed ? "bg-foreground" : ""}`}
+      />
+      <span className={`flex-1 min-w-0 truncate ${item.completed ? "line-through opacity-60" : ""}`}>
+        {item.content}
+      </span>
+    </div>
+  );
+}
+
 /** Presentational timeline row. `marker` adds a [start]/[end] tag for spanning tasks. */
 function TimedTaskBody({
   occ,
@@ -870,6 +1039,7 @@ function TimedTaskBody({
   onEdit,
   dragHandle,
   dimmed,
+  extra,
 }: {
   occ: EffectiveOccurrence;
   timeLabel: string;
@@ -881,6 +1051,7 @@ function TimedTaskBody({
   onEdit: () => void;
   dragHandle?: React.ReactNode;
   dimmed?: boolean;
+  extra?: React.ReactNode;
 }) {
   // Timeline boxes are tinted with the category colour at 50% opacity.
   const bg = hexToRgba(cat?.color, 0.5) ?? "var(--background)";
@@ -909,6 +1080,7 @@ function TimedTaskBody({
         )}
         {occ.isMoved && <span className="ml-1 text-[9px] text-foreground/60">•</span>}
       </button>
+      {extra}
       {project && (
         <span className="text-[9px] text-foreground/70 border-b border-foreground/30 flex-shrink-0 max-w-[70px] truncate">
           {project}
@@ -932,6 +1104,7 @@ function DraggableTimedTask({
   project,
   onToggle,
   onEdit,
+  extra,
 }: {
   occ: EffectiveOccurrence;
   endTime?: string | null;
@@ -941,13 +1114,14 @@ function DraggableTimedTask({
   project?: string;
   onToggle: () => void;
   onEdit: () => void;
+  extra?: React.ReactNode;
 }) {
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id: `task|${occ.task.id}|${occ.originalDate}`,
     data: { kind: "task", taskId: occ.task.id, originalDate: occ.originalDate, title: occ.task.title } satisfies DragData,
   });
   return (
-    <div ref={setNodeRef} className="h-full">
+    <div ref={setNodeRef} className="h-full relative">
       <TimedTaskBody
         occ={occ}
         timeLabel={`${shortTime(occ.effectiveTime)}${endTime ? `–${shortTime(endTime)}` : ""}`}
@@ -957,6 +1131,7 @@ function DraggableTimedTask({
         project={project}
         onToggle={onToggle}
         onEdit={onEdit}
+        extra={extra}
         dimmed={isDragging}
         dragHandle={
           <button
