@@ -1215,6 +1215,47 @@ export type Database = {
           },
         ]
       }
+      planner_task_subitems: {
+        Row: {
+          completed: boolean
+          content: string
+          created_at: string
+          id: string
+          sort_order: number
+          task_id: string
+          time: string | null
+          updated_at: string
+        }
+        Insert: {
+          completed?: boolean
+          content?: string
+          created_at?: string
+          id?: string
+          sort_order?: number
+          task_id: string
+          time?: string | null
+          updated_at?: string
+        }
+        Update: {
+          completed?: boolean
+          content?: string
+          created_at?: string
+          id?: string
+          sort_order?: number
+          task_id?: string
+          time?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "planner_task_subitems_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "planner_tasks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       planner_task_subtags: {
         Row: {
           category_id: string
