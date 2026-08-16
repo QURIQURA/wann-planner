@@ -38,6 +38,7 @@ import { WeekRotation } from "@/components/wann/WeekRotation";
 import { SettingsPanel } from "@/components/wann/SettingsPanel";
 import { orderedWidgets, isWidgetVisible, type WidgetContext } from "@/lib/widgets";
 import type { MultipleTaskForm } from "@/components/wann/MultipleTasksPanel";
+import type { TaskFormValues } from "@/components/wann/TaskForm";
 import type { EventForm } from "@/components/wann/EventsPanel";
 
 
