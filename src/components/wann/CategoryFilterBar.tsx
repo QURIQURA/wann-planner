@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Trash2, X, Pencil } from "lucide-react";
 import type { Category, Subtag, Task } from "@/lib/wann-data";
-import type { CategoryFilter } from "./TasksPanel";
+import type { CategoryFilter } from "./TaskForm";
 
 /**
  * Shared category / subcategory filter bar. Used standalone inside TasksPanel
