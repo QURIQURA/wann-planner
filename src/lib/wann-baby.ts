@@ -60,19 +60,21 @@ export async function addBabySlotType(args: {
   name: string;
   tracksDuration: boolean;
   sortOrder: number;
+  color?: string;
 }) {
   const { error } = await supabase.from("planner_baby_slot_types").insert({
     user_id: args.userId,
     name: args.name,
     tracks_duration: args.tracksDuration,
     sort_order: args.sortOrder,
+    ...(args.color ? { color: args.color } : {}),
   });
   if (error) throw error;
 }
 
 export async function updateBabySlotType(
   id: string,
-  patch: Partial<Pick<BabySlotType, "name" | "tracks_duration" | "sort_order">>,
+  patch: Partial<Pick<BabySlotType, "name" | "tracks_duration" | "sort_order" | "color">>,
 ) {
   const { error } = await supabase.from("planner_baby_slot_types").update(patch).eq("id", id);
   if (error) throw error;
