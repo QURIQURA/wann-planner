@@ -164,7 +164,7 @@ function Dashboard() {
 
 
   const addTask = useMutation({
-    mutationFn: async (input: import("@/components/wann/TasksPanel").TaskFormValues) => {
+    mutationFn: async (input: TaskFormValues) => {
       let projectId = input.projectId;
       if (input.newProject && input.newProject.name) {
         const { data, error: pErr } = await supabase
