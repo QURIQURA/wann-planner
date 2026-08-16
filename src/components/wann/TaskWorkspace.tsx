@@ -1,8 +1,10 @@
 import { useState } from "react";
 import type { WidgetDef } from "@/lib/widget-registry";
 import { CategoryFilterBar } from "./CategoryFilterBar";
-import { TasksPanel, type CategoryFilter } from "./TasksPanel";
+import { TasksPanel } from "./TasksPanel";
 import { MultipleTasksPanel } from "./MultipleTasksPanel";
+import { TaskForm } from "./TaskForm";
+import type { CategoryFilter } from "./TaskForm";
 import type { WidgetContext } from "@/lib/widget-context";
 
 /**
@@ -17,6 +19,17 @@ export function TaskWorkspace({ ctx }: { ctx: WidgetContext }) {
       <div className="flex items-center justify-between mb-3">
         <p className="label-caps">Task &amp; Multiple Task</p>
       </div>
+
+      <TaskForm
+        editingTask={ctx.editingTask}
+        onCancelEdit={ctx.taskActions.onCancelEdit}
+        onAddTask={ctx.taskActions.onAddTask}
+        onUpdateTask={ctx.taskActions.onUpdateTask}
+        categories={ctx.categories}
+        subtags={ctx.subtags}
+        projects={ctx.projects}
+        filter={filter}
+      />
 
       <CategoryFilterBar
         categories={ctx.categories}
@@ -70,3 +83,4 @@ export const taskWorkspaceWidget: WidgetDef = {
   defaultVisible: true,
   render: (ctx) => <TaskWorkspace ctx={ctx} />,
 };
+

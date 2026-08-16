@@ -38,6 +38,7 @@ import { WeekRotation } from "@/components/wann/WeekRotation";
 import { SettingsPanel } from "@/components/wann/SettingsPanel";
 import { orderedWidgets, isWidgetVisible, type WidgetContext } from "@/lib/widgets";
 import type { MultipleTaskForm } from "@/components/wann/MultipleTasksPanel";
+import type { TaskFormValues } from "@/components/wann/TaskForm";
 import type { EventForm } from "@/components/wann/EventsPanel";
 
 
@@ -163,7 +164,7 @@ function Dashboard() {
 
 
   const addTask = useMutation({
-    mutationFn: async (input: import("@/components/wann/TasksPanel").TaskFormValues) => {
+    mutationFn: async (input: TaskFormValues) => {
       let projectId = input.projectId;
       if (input.newProject && input.newProject.name) {
         const { data, error: pErr } = await supabase
@@ -202,7 +203,7 @@ function Dashboard() {
   });
 
   const updateTask = useMutation({
-    mutationFn: async ({ id, input }: { id: string; input: import("@/components/wann/TasksPanel").TaskFormValues }) => {
+    mutationFn: async ({ id, input }: { id: string; input: TaskFormValues }) => {
       let projectId = input.projectId;
       if (input.newProject && input.newProject.name) {
         const { data, error: pErr } = await supabase

@@ -7,7 +7,7 @@ import type {
   MultipleTaskItem,
   EventEntry,
 } from "@/lib/wann-data";
-import type { TaskFormValues } from "@/components/wann/TasksPanel";
+import type { TaskFormValues } from "@/components/wann/TaskForm";
 import type { MultipleTaskForm } from "@/components/wann/MultipleTasksPanel";
 import type { EventForm } from "@/components/wann/EventsPanel";
 
