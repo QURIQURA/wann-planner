@@ -41,6 +41,7 @@ import {
   closestCenter,
   pointerWithin,
   rectIntersection,
+  MeasuringStrategy,
   type CollisionDetection,
   type DragEndEvent,
   type DragStartEvent,
@@ -355,6 +356,10 @@ export function WeekRotation({
     <DndContext
       sensors={sensors}
       collisionDetection={collisionDetectionStrategy}
+      // Droppable rects must be re-measured continuously: the cards re-layout
+      // right after a drop (and while dragging), so cached rects from drag-start
+      // point at the previous positions and make the next drag land one card off.
+      measuring={{ droppable: { strategy: MeasuringStrategy.Always, frequency: 100 } }}
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
       onDragCancel={() => setDragging(null)}
@@ -1252,7 +1257,7 @@ function BarColumn({ dateKey, isDragging }: { dateKey: string; isDragging: boole
   return (
     <div
       ref={setNodeRef}
-      className={`h-full ${isDragging ? "border border-dashed border-border" : ""} ${
+      className={`h-full ${isDragging ? "outline outline-1 outline-dashed outline-border" : ""} ${
         isOver ? "bg-muted" : ""
       }`}
     />
@@ -1390,7 +1395,9 @@ function AllDayZone({
   return (
     <div
       ref={setNodeRef}
-      className={`mb-2 ${isDragging ? "border border-dashed border-border p-1" : ""} ${
+      // outline instead of border+padding: it must not shift the layout while
+      // dragging, otherwise every droppable below moves under the pointer.
+      className={`mb-2 min-h-[18px] ${isDragging ? "outline outline-1 outline-dashed outline-border" : ""} ${
         isOver ? "bg-muted" : ""
       }`}
     >
