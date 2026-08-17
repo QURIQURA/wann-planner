@@ -41,6 +41,7 @@ import {
   closestCenter,
   pointerWithin,
   rectIntersection,
+  MeasuringStrategy,
   type CollisionDetection,
   type DragEndEvent,
   type DragStartEvent,
