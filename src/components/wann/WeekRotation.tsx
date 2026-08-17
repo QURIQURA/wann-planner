@@ -1257,7 +1257,7 @@ function BarColumn({ dateKey, isDragging }: { dateKey: string; isDragging: boole
   return (
     <div
       ref={setNodeRef}
-      className={`h-full ${isDragging ? "border border-dashed border-border" : ""} ${
+      className={`h-full ${isDragging ? "outline outline-1 outline-dashed outline-border" : ""} ${
         isOver ? "bg-muted" : ""
       }`}
     />
