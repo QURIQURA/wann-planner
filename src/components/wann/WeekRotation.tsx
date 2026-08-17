@@ -39,6 +39,9 @@ import {
   useDroppable,
   DragOverlay,
   closestCenter,
+  pointerWithin,
+  rectIntersection,
+  type CollisionDetection,
   type DragEndEvent,
   type DragStartEvent,
 } from "@dnd-kit/core";
