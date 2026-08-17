@@ -39,6 +39,9 @@ import {
   useDroppable,
   DragOverlay,
   closestCenter,
+  pointerWithin,
+  rectIntersection,
+  type CollisionDetection,
   type DragEndEvent,
   type DragStartEvent,
 } from "@dnd-kit/core";
@@ -55,6 +58,24 @@ function addDays(d: Date, n: number) {
 }
 
 const DOW = ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"];
+
+/**
+ * Pointer-first collision detection.
+ * closestCenter compares the *dragged card's* rect center, which sits left of the
+ * pointer and made the highlighted column drift by one. The pointer is authoritative;
+ * among the containers under it we pick the most specific one.
+ */
+const DROP_SPECIFICITY = ["slot", "allday", "barcol", "day"];
+const collisionDetectionStrategy: CollisionDetection = (args) => {
+  const pointer = pointerWithin(args);
+  const collisions = pointer.length > 0 ? pointer : rectIntersection(args);
+  if (collisions.length === 0) return closestCenter(args);
+  const rank = (id: string) => {
+    const i = DROP_SPECIFICITY.indexOf(String(id).split("|")[0]);
+    return i === -1 ? DROP_SPECIFICITY.length : i;
+  };
+  return [...collisions].sort((a, b) => rank(String(a.id)) - rank(String(b.id)));
+};
 
 // Time grid config
 const START_HOUR = 6;
@@ -333,7 +354,7 @@ export function WeekRotation({
   return (
     <DndContext
       sensors={sensors}
-      collisionDetection={closestCenter}
+      collisionDetection={collisionDetectionStrategy}
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
       onDragCancel={() => setDragging(null)}
