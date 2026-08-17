@@ -104,7 +104,8 @@ export function EventsPanel({
           <p className="text-xs text-muted-foreground italic">No entries</p>
         )}
         {sorted.map((e) => {
-          const dd = e.is_recurring ? daysUntilAnnual(e.date) : null;
+          const dplus = isDPlusEvent(e);
+          const dd = !dplus && e.is_recurring ? daysUntilAnnual(e.date) : null;
           const editing = editingId === e.id;
           let age: number | null = null;
           if (e.type === "birthday" && e.birth_year) {
@@ -125,11 +126,17 @@ export function EventsPanel({
                   {e.name}
                   {age !== null && <span className="text-muted-foreground"> · turns {age}</span>}
                 </span>
-                <span className="text-[10px] label-caps text-muted-foreground">{e.type}</span>
-                {dd !== null && (
-                  <span className="text-[10px] label-caps border border-border px-1">
-                    {dd === 0 ? "TODAY" : `D-${dd}`}
+                <span className="text-[10px] label-caps text-muted-foreground">{dplus ? "D+DAY" : e.type}</span>
+                {dplus ? (
+                  <span className="text-[10px] label-caps border border-border px-1 whitespace-nowrap">
+                    {dPlusLabel(e)}
                   </span>
+                ) : (
+                  dd !== null && (
+                    <span className="text-[10px] label-caps border border-border px-1">
+                      {dd === 0 ? "TODAY" : `D-${dd}`}
+                    </span>
+                  )
                 )}
                 <button
                   onClick={() => startEdit(e)}
