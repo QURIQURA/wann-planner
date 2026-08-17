@@ -799,6 +799,8 @@ export type Database = {
           is_recurring: boolean
           name: string
           notes: string | null
+          show_day_count: boolean
+          show_duration: boolean
           type: string
           updated_at: string
           user_id: string
@@ -811,6 +813,8 @@ export type Database = {
           is_recurring?: boolean
           name: string
           notes?: string | null
+          show_day_count?: boolean
+          show_duration?: boolean
           type?: string
           updated_at?: string
           user_id: string
@@ -823,6 +827,8 @@ export type Database = {
           is_recurring?: boolean
           name?: string
           notes?: string | null
+          show_day_count?: boolean
+          show_duration?: boolean
           type?: string
           updated_at?: string
           user_id?: string
