@@ -563,8 +563,10 @@ function Dashboard() {
         date: v.date,
         type: v.type,
         notes: v.notes || null,
-        is_recurring: v.is_recurring,
+        is_recurring: v.type === DPLUS_TYPE ? false : v.is_recurring,
         birth_year: v.birth_year,
+        show_day_count: v.show_day_count,
+        show_duration: v.show_duration,
       });
       if (error) throw error;
     },
@@ -578,8 +580,10 @@ function Dashboard() {
         date: patch.date,
         type: patch.type,
         notes: patch.notes || null,
-        is_recurring: patch.is_recurring,
+        is_recurring: patch.type === DPLUS_TYPE ? false : patch.is_recurring,
         birth_year: patch.birth_year,
+        show_day_count: patch.show_day_count,
+        show_duration: patch.show_duration,
       }).eq("id", id);
       if (error) throw error;
     },
@@ -596,7 +600,10 @@ function Dashboard() {
 
   const upcoming = useMemo(() => {
     return (eventsQ.data ?? [])
-      .map((e) => ({ e, dd: e.is_recurring ? daysUntilAnnual(e.date) : Infinity }))
+      .map((e) => ({
+        e,
+        dd: isDPlusEvent(e) ? -1 : e.is_recurring ? daysUntilAnnual(e.date) : Infinity,
+      }))
       .filter((x) => x.dd <= 14)
       .sort((a, b) => a.dd - b.dd);
   }, [eventsQ.data]);
@@ -710,9 +717,9 @@ function Dashboard() {
             {upcoming.slice(0, 4).map(({ e, dd }) => (
               <span key={e.id} className="text-sm">
                 {e.name}
-                <span className="text-muted-foreground"> · {e.type}</span>
+                <span className="text-muted-foreground"> · {isDPlusEvent(e) ? "D+day" : e.type}</span>
                 <span className="ml-2 border border-border px-1 label-caps text-[10px]">
-                  {dd === 0 ? "TODAY" : `D-${dd}`}
+                  {isDPlusEvent(e) ? dPlusLabel(e) : dd === 0 ? "TODAY" : `D-${dd}`}
                 </span>
               </span>
             ))}
