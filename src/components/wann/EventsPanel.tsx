@@ -217,12 +217,21 @@ function EventEditor({
         )}
         <select
           value={value.type}
-          onChange={(e) => onChange({ ...value, type: e.target.value })}
+          onChange={(e) => {
+            const type = e.target.value;
+            onChange({
+              ...value,
+              type,
+              // D+day counts up from a fixed reference date — annual repeat makes no sense.
+              is_recurring: type === DPLUS_TYPE ? false : value.is_recurring,
+            });
+          }}
           className="bg-transparent outline-none border-b border-border py-1 text-sm"
         >
           <option value="birthday">birthday</option>
           <option value="anniversary">anniversary</option>
           <option value="holiday">public holiday</option>
+          <option value={DPLUS_TYPE}>D+day</option>
         </select>
         {value.type === "birthday" && (
           <input
@@ -234,6 +243,40 @@ function EventEditor({
           />
         )}
       </div>
+      {value.type === DPLUS_TYPE && (
+        <div className="flex gap-4 flex-wrap items-center border border-border p-2">
+          <span className="label-caps text-[10px] text-muted-foreground">표시 형식</span>
+          <label className="flex items-center gap-2 text-xs">
+            <input
+              type="checkbox"
+              checked={value.show_day_count}
+              onChange={(e) =>
+                onChange({
+                  ...value,
+                  show_day_count: e.target.checked,
+                  // at least one format must stay on
+                  show_duration: e.target.checked ? value.show_duration : true,
+                })
+              }
+            />
+            숫자로 표시 (D+{Math.max(0, daysSinceSafe(value.date))})
+          </label>
+          <label className="flex items-center gap-2 text-xs">
+            <input
+              type="checkbox"
+              checked={value.show_duration}
+              onChange={(e) =>
+                onChange({
+                  ...value,
+                  show_duration: e.target.checked,
+                  show_day_count: e.target.checked ? value.show_day_count : true,
+                })
+              }
+            />
+            기간으로 표시 ({value.date ? durationSinceLabel(value.date) : "-"})
+          </label>
+        </div>
+      )}
       <textarea
         placeholder="Notes (gift ideas…)"
         value={value.notes}
@@ -242,10 +285,13 @@ function EventEditor({
         rows={2}
       />
       <div className="flex items-center justify-between">
-        <label className="flex items-center gap-2 text-xs">
+        <label
+          className={`flex items-center gap-2 text-xs ${value.type === DPLUS_TYPE ? "opacity-40" : ""}`}
+        >
           <input
             type="checkbox"
-            checked={value.is_recurring}
+            disabled={value.type === DPLUS_TYPE}
+            checked={value.type === DPLUS_TYPE ? false : value.is_recurring}
             onChange={(e) => onChange({ ...value, is_recurring: e.target.checked })}
           />
           Repeats annually
