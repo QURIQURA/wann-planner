@@ -93,10 +93,62 @@ export const EVENT_COLORS: Record<string, string> = {
   birthday: "#D4A574",
   anniversary: "#C99BA3",
   holiday: "#C17A6E",
+  dplus: "#8FA98A",
 };
 
 /** Priority for showing a single border color when a date has multiple events. */
 export const EVENT_PRIORITY = ["birthday", "anniversary", "holiday"] as const;
+
+/** "D+day" events count up from a past reference date instead of down to a future one. */
+export const DPLUS_TYPE = "dplus";
+
+export function isDPlusEvent(e: { type: string }): boolean {
+  return e.type === DPLUS_TYPE;
+}
+
+/** Whole days elapsed since the reference date (reference day itself = 0). */
+export function daysSince(dateStr: string, today = new Date()): number {
+  const d = parseLocalDate(dateStr);
+  const t = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+  return Math.round((t.getTime() - d.getTime()) / 86400000);
+}
+
+/** Calendar months + remaining days elapsed since the reference date. */
+export function monthsDaysSince(dateStr: string, today = new Date()): { months: number; days: number } {
+  const d = parseLocalDate(dateStr);
+  const t = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+  if (t < d) return { months: 0, days: 0 };
+  let months = (t.getFullYear() - d.getFullYear()) * 12 + (t.getMonth() - d.getMonth());
+  const anchor = new Date(d.getFullYear(), d.getMonth() + months, d.getDate());
+  if (anchor > t) {
+    months -= 1;
+  }
+  const base = new Date(d.getFullYear(), d.getMonth() + months, d.getDate());
+  const days = Math.round((t.getTime() - base.getTime()) / 86400000);
+  return { months, days };
+}
+
+export function durationSinceLabel(dateStr: string, today = new Date()): string {
+  const n = daysSince(dateStr, today);
+  if (n < 0) return `${-n}일 전`;
+  const { months, days } = monthsDaysSince(dateStr, today);
+  if (months < 1) return `${n}일째`;
+  return `${months}개월 ${days}일`;
+}
+
+/** Label shown for a D+day event, honouring its display-format flags. */
+export function dPlusLabel(
+  e: { date: string; show_day_count?: boolean | null; show_duration?: boolean | null },
+  today = new Date(),
+): string {
+  const parts: string[] = [];
+  const showNum = e.show_day_count !== false;
+  if (showNum) parts.push(`D+${daysSince(e.date, today)}`);
+  if (e.show_duration) parts.push(durationSinceLabel(e.date, today));
+  if (parts.length === 0) parts.push(`D+${daysSince(e.date, today)}`);
+  return parts.join(" · ");
+}
+
 
 export async function fetchSettings(userId: string): Promise<UserSettings> {
   const { data, error } = await supabase.from("planner_user_settings").select("*").eq("user_id", userId).maybeSingle();

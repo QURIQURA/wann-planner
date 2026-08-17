@@ -1,7 +1,18 @@
 import type { WidgetDef } from "@/lib/widget-registry";
 import { useState } from "react";
 import type { EventEntry } from "@/lib/wann-data";
-import { daysUntilAnnual, ageOn, todayLocalStr, EVENT_COLORS, formatDateKo } from "@/lib/wann-data";
+import {
+  daysUntilAnnual,
+  ageOn,
+  todayLocalStr,
+  EVENT_COLORS,
+  formatDateKo,
+  DPLUS_TYPE,
+  isDPlusEvent,
+  dPlusLabel,
+  daysSince,
+  durationSinceLabel,
+} from "@/lib/wann-data";
 import { Plus, Trash2, X, Pencil } from "lucide-react";
 
 export type EventForm = {
@@ -11,6 +22,8 @@ export type EventForm = {
   notes: string;
   is_recurring: boolean;
   birth_year: number | null;
+  show_day_count: boolean;
+  show_duration: boolean;
 };
 
 const emptyForm = (): EventForm => ({
@@ -20,6 +33,8 @@ const emptyForm = (): EventForm => ({
   notes: "",
   is_recurring: true,
   birth_year: null,
+  show_day_count: true,
+  show_duration: false,
 });
 
 export function EventsPanel({
@@ -39,9 +54,8 @@ export function EventsPanel({
   const [editForm, setEditForm] = useState<EventForm>(emptyForm());
 
   const sorted = [...entries].sort((a, b) => {
-    const da = a.is_recurring ? daysUntilAnnual(a.date) : 999;
-    const db = b.is_recurring ? daysUntilAnnual(b.date) : 999;
-    return da - db;
+    const rank = (x: EventEntry) => (isDPlusEvent(x) ? 1000 : x.is_recurring ? daysUntilAnnual(x.date) : 999);
+    return rank(a) - rank(b);
   });
 
   const startEdit = (e: EventEntry) => {
@@ -53,6 +67,8 @@ export function EventsPanel({
       notes: e.notes ?? "",
       is_recurring: e.is_recurring,
       birth_year: e.birth_year,
+      show_day_count: e.show_day_count ?? true,
+      show_duration: e.show_duration ?? false,
     });
   };
 
@@ -90,7 +106,8 @@ export function EventsPanel({
           <p className="text-xs text-muted-foreground italic">No entries</p>
         )}
         {sorted.map((e) => {
-          const dd = e.is_recurring ? daysUntilAnnual(e.date) : null;
+          const dplus = isDPlusEvent(e);
+          const dd = !dplus && e.is_recurring ? daysUntilAnnual(e.date) : null;
           const editing = editingId === e.id;
           let age: number | null = null;
           if (e.type === "birthday" && e.birth_year) {
@@ -111,11 +128,17 @@ export function EventsPanel({
                   {e.name}
                   {age !== null && <span className="text-muted-foreground"> · turns {age}</span>}
                 </span>
-                <span className="text-[10px] label-caps text-muted-foreground">{e.type}</span>
-                {dd !== null && (
-                  <span className="text-[10px] label-caps border border-border px-1">
-                    {dd === 0 ? "TODAY" : `D-${dd}`}
+                <span className="text-[10px] label-caps text-muted-foreground">{dplus ? "D+DAY" : e.type}</span>
+                {dplus ? (
+                  <span className="text-[10px] label-caps border border-border px-1 whitespace-nowrap">
+                    {dPlusLabel(e)}
                   </span>
+                ) : (
+                  dd !== null && (
+                    <span className="text-[10px] label-caps border border-border px-1">
+                      {dd === 0 ? "TODAY" : `D-${dd}`}
+                    </span>
+                  )
                 )}
                 <button
                   onClick={() => startEdit(e)}
@@ -196,12 +219,21 @@ function EventEditor({
         )}
         <select
           value={value.type}
-          onChange={(e) => onChange({ ...value, type: e.target.value })}
+          onChange={(e) => {
+            const type = e.target.value;
+            onChange({
+              ...value,
+              type,
+              // D+day counts up from a fixed reference date — annual repeat makes no sense.
+              is_recurring: type === DPLUS_TYPE ? false : value.is_recurring,
+            });
+          }}
           className="bg-transparent outline-none border-b border-border py-1 text-sm"
         >
           <option value="birthday">birthday</option>
           <option value="anniversary">anniversary</option>
           <option value="holiday">public holiday</option>
+          <option value={DPLUS_TYPE}>D+day</option>
         </select>
         {value.type === "birthday" && (
           <input
@@ -213,6 +245,40 @@ function EventEditor({
           />
         )}
       </div>
+      {value.type === DPLUS_TYPE && (
+        <div className="flex gap-4 flex-wrap items-center border border-border p-2">
+          <span className="label-caps text-[10px] text-muted-foreground">표시 형식</span>
+          <label className="flex items-center gap-2 text-xs">
+            <input
+              type="checkbox"
+              checked={value.show_day_count}
+              onChange={(e) =>
+                onChange({
+                  ...value,
+                  show_day_count: e.target.checked,
+                  // at least one format must stay on
+                  show_duration: e.target.checked ? value.show_duration : true,
+                })
+              }
+            />
+            숫자로 표시 (D+{value.date ? daysSince(value.date) : 0})
+          </label>
+          <label className="flex items-center gap-2 text-xs">
+            <input
+              type="checkbox"
+              checked={value.show_duration}
+              onChange={(e) =>
+                onChange({
+                  ...value,
+                  show_duration: e.target.checked,
+                  show_day_count: e.target.checked ? value.show_day_count : true,
+                })
+              }
+            />
+            기간으로 표시 ({value.date ? durationSinceLabel(value.date) : "-"})
+          </label>
+        </div>
+      )}
       <textarea
         placeholder="Notes (gift ideas…)"
         value={value.notes}
@@ -221,10 +287,13 @@ function EventEditor({
         rows={2}
       />
       <div className="flex items-center justify-between">
-        <label className="flex items-center gap-2 text-xs">
+        <label
+          className={`flex items-center gap-2 text-xs ${value.type === DPLUS_TYPE ? "opacity-40" : ""}`}
+        >
           <input
             type="checkbox"
-            checked={value.is_recurring}
+            disabled={value.type === DPLUS_TYPE}
+            checked={value.type === DPLUS_TYPE ? false : value.is_recurring}
             onChange={(e) => onChange({ ...value, is_recurring: e.target.checked })}
           />
           Repeats annually
