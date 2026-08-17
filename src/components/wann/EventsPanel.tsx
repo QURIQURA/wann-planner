@@ -52,9 +52,8 @@ export function EventsPanel({
   const [editForm, setEditForm] = useState<EventForm>(emptyForm());
 
   const sorted = [...entries].sort((a, b) => {
-    const da = a.is_recurring ? daysUntilAnnual(a.date) : 999;
-    const db = b.is_recurring ? daysUntilAnnual(b.date) : 999;
-    return da - db;
+    const rank = (x: EventEntry) => (isDPlusEvent(x) ? 1000 : x.is_recurring ? daysUntilAnnual(x.date) : 999);
+    return rank(a) - rank(b);
   });
 
   const startEdit = (e: EventEntry) => {
@@ -66,6 +65,8 @@ export function EventsPanel({
       notes: e.notes ?? "",
       is_recurring: e.is_recurring,
       birth_year: e.birth_year,
+      show_day_count: e.show_day_count ?? true,
+      show_duration: e.show_duration ?? false,
     });
   };
 
