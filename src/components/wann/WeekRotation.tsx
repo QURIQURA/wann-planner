@@ -1395,7 +1395,9 @@ function AllDayZone({
   return (
     <div
       ref={setNodeRef}
-      className={`mb-2 ${isDragging ? "border border-dashed border-border p-1" : ""} ${
+      // outline instead of border+padding: it must not shift the layout while
+      // dragging, otherwise every droppable below moves under the pointer.
+      className={`mb-2 min-h-[18px] ${isDragging ? "outline outline-1 outline-dashed outline-border" : ""} ${
         isOver ? "bg-muted" : ""
       }`}
     >
