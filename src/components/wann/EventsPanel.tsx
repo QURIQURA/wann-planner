@@ -10,6 +10,8 @@ import {
   DPLUS_TYPE,
   isDPlusEvent,
   dPlusLabel,
+  daysSince,
+  durationSinceLabel,
 } from "@/lib/wann-data";
 import { Plus, Trash2, X, Pencil } from "lucide-react";
 
@@ -259,7 +261,7 @@ function EventEditor({
                 })
               }
             />
-            숫자로 표시 (D+{Math.max(0, daysSinceSafe(value.date))})
+            숫자로 표시 (D+{value.date ? daysSince(value.date) : 0})
           </label>
           <label className="flex items-center gap-2 text-xs">
             <input
