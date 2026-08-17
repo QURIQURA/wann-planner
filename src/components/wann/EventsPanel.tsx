@@ -1,7 +1,16 @@
 import type { WidgetDef } from "@/lib/widget-registry";
 import { useState } from "react";
 import type { EventEntry } from "@/lib/wann-data";
-import { daysUntilAnnual, ageOn, todayLocalStr, EVENT_COLORS, formatDateKo } from "@/lib/wann-data";
+import {
+  daysUntilAnnual,
+  ageOn,
+  todayLocalStr,
+  EVENT_COLORS,
+  formatDateKo,
+  DPLUS_TYPE,
+  isDPlusEvent,
+  dPlusLabel,
+} from "@/lib/wann-data";
 import { Plus, Trash2, X, Pencil } from "lucide-react";
 
 export type EventForm = {
@@ -11,6 +20,8 @@ export type EventForm = {
   notes: string;
   is_recurring: boolean;
   birth_year: number | null;
+  show_day_count: boolean;
+  show_duration: boolean;
 };
 
 const emptyForm = (): EventForm => ({
@@ -20,6 +31,8 @@ const emptyForm = (): EventForm => ({
   notes: "",
   is_recurring: true,
   birth_year: null,
+  show_day_count: true,
+  show_duration: false,
 });
 
 export function EventsPanel({
