@@ -356,6 +356,10 @@ export function WeekRotation({
     <DndContext
       sensors={sensors}
       collisionDetection={collisionDetectionStrategy}
+      // Droppable rects must be re-measured continuously: the cards re-layout
+      // right after a drop (and while dragging), so cached rects from drag-start
+      // point at the previous positions and make the next drag land one card off.
+      measuring={{ droppable: { strategy: MeasuringStrategy.Always, frequency: 100 } }}
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
       onDragCancel={() => setDragging(null)}
