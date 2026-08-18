@@ -3,6 +3,7 @@ import type {
   Task,
   Category,
   EventEntry,
+  EventNote,
   TaskCompletion,
   MultipleTask,
   MultipleTaskItem,
