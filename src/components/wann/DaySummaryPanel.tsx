@@ -64,13 +64,20 @@ export function DaySummaryPanel({ date }: { date: string }) {
           {!!s?.events.length && (
             <Section icon={<Cake size={11} />} title={`Events (${s.events.length})`}>
               {s.events.map((e) => (
-                <li key={e.id} className="flex items-center gap-2 text-sm">
-                  <span
-                    className="h-2 w-2 flex-shrink-0"
-                    style={{ background: EVENT_COLORS[e.type] ?? "var(--border)" }}
-                  />
-                  <span className="flex-1 truncate">{e.name}</span>
-                  <span className="text-[10px] label-caps text-muted-foreground">{e.type}</span>
+                <li key={e.id} className="text-sm">
+                  <div className="flex items-center gap-2">
+                    <span
+                      className="h-2 w-2 flex-shrink-0"
+                      style={{ background: EVENT_COLORS[e.type] ?? "var(--border)" }}
+                    />
+                    <span className="flex-1 truncate">{e.name}</span>
+                    <span className="text-[10px] label-caps text-muted-foreground">{e.type}</span>
+                  </div>
+                  {e.records.map((r, i) => (
+                    <p key={i} className="pl-4 text-xs text-muted-foreground italic">
+                      · {r}
+                    </p>
+                  ))}
                 </li>
               ))}
             </Section>

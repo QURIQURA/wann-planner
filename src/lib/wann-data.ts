@@ -442,3 +442,36 @@ export function shiftDate(dateStr: string, n: number): string {
 export function diffDays(a: string, b: string): number {
   return Math.round((parseLocalDate(b).getTime() - parseLocalDate(a).getTime()) / 86400000);
 }
+
+/* ---------- EVENT RECORDS (기록) — separate from the single `notes` field ---------- */
+export type EventNote = Tables<"planner_event_notes">;
+
+export async function fetchEventNotes(): Promise<EventNote[]> {
+  const { data, error } = await supabase
+    .from("planner_event_notes")
+    .select("*")
+    .order("created_at", { ascending: false });
+  if (error) throw error;
+  return data ?? [];
+}
+
+/** Sort records: recurring events by year desc, D+day events by date desc. */
+export function sortEventNotes(notes: EventNote[]): EventNote[] {
+  return [...notes].sort((a, b) => {
+    const ka = a.date ?? (a.year ? `${a.year}-12-31` : "");
+    const kb = b.date ?? (b.year ? `${b.year}-12-31` : "");
+    if (ka !== kb) return kb.localeCompare(ka);
+    return (b.created_at ?? "").localeCompare(a.created_at ?? "");
+  });
+}
+
+/** Short one-line label for a record, e.g. "2026" or "D+291 · 8/17". */
+export function eventNoteLabel(note: EventNote, event?: { date: string } | null): string {
+  if (note.date) {
+    const d = note.date;
+    const md = `${Number(d.slice(5, 7))}/${Number(d.slice(8, 10))}`;
+    if (event) return `D+${daysSince(event.date, parseLocalDate(d))} · ${md}`;
+    return md;
+  }
+  return note.year ? String(note.year) : "";
+}

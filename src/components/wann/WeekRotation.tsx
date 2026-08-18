@@ -3,6 +3,7 @@ import type {
   Task,
   Category,
   EventEntry,
+  EventNote,
   TaskCompletion,
   MultipleTask,
   MultipleTaskItem,
@@ -16,6 +17,8 @@ import {
   effectiveOccurrencesOnDate,
   isOccurrenceCompleted,
   eventsOnDate,
+  sortEventNotes,
+  eventNoteLabel,
   EVENT_COLORS,
   EVENT_PRIORITY,
   occurrenceEndTime,
@@ -125,6 +128,7 @@ export function WeekRotation({
   tasks,
   categories,
   events,
+  eventNotes = [],
   completions,
   exceptions,
   multipleTasks,
@@ -144,6 +148,7 @@ export function WeekRotation({
   tasks: Task[];
   categories: Category[];
   events: EventEntry[];
+  eventNotes?: EventNote[];
   completions: TaskCompletion[];
   exceptions: RecurringException[];
   multipleTasks: MultipleTask[];
@@ -296,6 +301,7 @@ export function WeekRotation({
         allDay={allDay}
         timed={timed}
         dayEvents={dayEvents}
+        eventNotes={eventNotes}
         dayMultiples={dayMultiples}
         dayHabits={dayHabits}
         habitCompletions={habitCompletions}
@@ -482,6 +488,7 @@ function DayCard({
   allDay,
   timed,
   dayEvents,
+  eventNotes,
   dayMultiples,
   dayHabits,
   habitCompletions,
@@ -505,6 +512,7 @@ function DayCard({
   allDay: EffectiveOccurrence[];
   timed: EffectiveOccurrence[];
   dayEvents: EventEntry[];
+  eventNotes: EventNote[];
   dayMultiples: MultipleTask[];
   dayHabits: Habit[];
   habitCompletions: HabitCompletion[];
@@ -548,7 +556,7 @@ function DayCard({
         <p className="label-caps text-[10px] text-muted-foreground mb-1">All-day</p>
         <div className="space-y-1">
           {dayEvents.map((ev) => (
-            <DraggableEventLine key={ev.id} ev={ev} />
+            <DraggableEventLine key={ev.id} ev={ev} notes={eventNotes.filter((n) => n.event_id === ev.id)} />
           ))}
 
           {dayMultiples.map((m) => {
@@ -1407,7 +1415,9 @@ function AllDayZone({
 }
 
 /** Events can be dragged onto another day card to change their date. */
-function DraggableEventLine({ ev }: { ev: EventEntry }) {
+function DraggableEventLine({ ev, notes = [] }: { ev: EventEntry; notes?: EventNote[] }) {
+  // Timeline shows only the single most recent record, if any.
+  const latest = sortEventNotes(notes)[0];
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id: `event|${ev.id}`,
     data: { kind: "event", eventId: ev.id, title: ev.name } satisfies DragData,
@@ -1430,6 +1440,11 @@ function DraggableEventLine({ ev }: { ev: EventEntry }) {
       <span className="flex-1 truncate">
         {ev.name}
         <span className="text-muted-foreground"> · {ev.type}</span>
+        {latest && (
+          <span className="text-muted-foreground">
+            {" "}· {eventNoteLabel(latest, ev)} {latest.note}
+          </span>
+        )}
       </span>
     </div>
   );

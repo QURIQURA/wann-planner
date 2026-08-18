@@ -1,6 +1,6 @@
 import type { WidgetDef } from "@/lib/widget-registry";
 import { useState } from "react";
-import type { EventEntry } from "@/lib/wann-data";
+import type { EventEntry, EventNote } from "@/lib/wann-data";
 import {
   daysUntilAnnual,
   ageOn,
@@ -12,8 +12,18 @@ import {
   dPlusLabel,
   daysSince,
   durationSinceLabel,
+  sortEventNotes,
+  eventNoteLabel,
 } from "@/lib/wann-data";
-import { Plus, Trash2, X, Pencil } from "lucide-react";
+import { Plus, Trash2, X, Pencil, ChevronDown, ChevronRight, Check } from "lucide-react";
+
+export type EventNoteInput = { year: number | null; date: string | null; note: string };
+
+export type EventNoteActions = {
+  onAddNote: (eventId: string, v: EventNoteInput) => void;
+  onUpdateNote: (id: string, note: string) => void;
+  onDeleteNote: (id: string) => void;
+};
 
 export type EventForm = {
   name: string;
@@ -39,15 +49,20 @@ const emptyForm = (): EventForm => ({
 
 export function EventsPanel({
   entries,
+  notes = [],
   onAdd,
   onUpdate,
   onDelete,
+  onAddNote,
+  onUpdateNote,
+  onDeleteNote,
 }: {
   entries: EventEntry[];
+  notes?: EventNote[];
   onAdd: (v: EventForm) => void;
   onUpdate: (id: string, patch: EventForm) => void;
   onDelete: (id: string) => void;
-}) {
+} & Partial<EventNoteActions>) {
   const [creating, setCreating] = useState(false);
   const [form, setForm] = useState<EventForm>(emptyForm());
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -171,6 +186,15 @@ export function EventsPanel({
                     onCancel={() => setEditingId(null)}
                   />
                 </div>
+              )}
+              {onAddNote && onUpdateNote && onDeleteNote && (
+                <EventRecords
+                  event={e}
+                  notes={notes.filter((n) => n.event_id === e.id)}
+                  onAddNote={onAddNote}
+                  onUpdateNote={onUpdateNote}
+                  onDeleteNote={onDeleteNote}
+                />
               )}
             </div>
           );
@@ -314,7 +338,143 @@ export const eventsWidget: WidgetDef = {
   label: "Events",
   render: (ctx) => (
     <section className="card-flat p-4">
-      <EventsPanel entries={ctx.events} {...ctx.eventActions} />
+      <EventsPanel entries={ctx.events} notes={ctx.eventNotes} {...ctx.eventActions} />
     </section>
   ),
 };
+
+/**
+ * Accumulating record log for one Event — separate from the single `notes` field.
+ * Recurring events record per year; D+day events record per date.
+ */
+function EventRecords({
+  event,
+  notes,
+  onAddNote,
+  onUpdateNote,
+  onDeleteNote,
+}: { event: EventEntry; notes: EventNote[] } & EventNoteActions) {
+  const [open, setOpen] = useState(false);
+  const [draft, setDraft] = useState("");
+  const [year, setYear] = useState(String(new Date().getFullYear()));
+  const [date, setDate] = useState(todayLocalStr());
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editDraft, setEditDraft] = useState("");
+
+  const dplus = isDPlusEvent(event);
+  const sorted = sortEventNotes(notes);
+
+  const submit = () => {
+    const text = draft.trim();
+    if (!text) return;
+    onAddNote(event.id, {
+      year: dplus ? null : Number(year) || new Date().getFullYear(),
+      date: dplus ? date : null,
+      note: text,
+    });
+    setDraft("");
+  };
+
+  return (
+    <div className="pl-6 pb-2">
+      <button
+        onClick={() => setOpen(!open)}
+        className="flex items-center gap-1 label-caps text-[10px] text-muted-foreground hover:text-foreground"
+      >
+        {open ? <ChevronDown size={11} /> : <ChevronRight size={11} />}
+        기록 ({notes.length}개)
+      </button>
+
+      {open && (
+        <div className="mt-2 space-y-2">
+          <div className="flex items-center gap-2">
+            {dplus ? (
+              <input
+                type="date"
+                value={date}
+                onChange={(ev) => setDate(ev.target.value)}
+                className="bg-transparent outline-none border-b border-border py-1 text-xs"
+              />
+            ) : (
+              <input
+                type="number"
+                value={year}
+                onChange={(ev) => setYear(ev.target.value)}
+                className="bg-transparent outline-none border-b border-border py-1 text-xs w-16"
+                aria-label="Year"
+              />
+            )}
+            <input
+              type="text"
+              placeholder="기록 추가"
+              value={draft}
+              onChange={(ev) => setDraft(ev.target.value)}
+              onKeyDown={(ev) => {
+                if (ev.key === "Enter") submit();
+              }}
+              className="flex-1 bg-transparent outline-none border-b border-border py-1 text-xs"
+            />
+            <button onClick={submit} className="border border-border px-2 py-0.5 label-caps text-[10px] hover:bg-muted">
+              추가
+            </button>
+          </div>
+
+          {sorted.length === 0 && <p className="text-xs text-muted-foreground italic">기록 없음</p>}
+
+          {sorted.map((n) => (
+            <div key={n.id} className="flex items-start gap-2 group/rec text-xs">
+              <span className="label-caps text-[10px] text-muted-foreground whitespace-nowrap pt-0.5">
+                {eventNoteLabel(n, dplus ? event : null)}
+              </span>
+              {editingId === n.id ? (
+                <>
+                  <input
+                    value={editDraft}
+                    onChange={(ev) => setEditDraft(ev.target.value)}
+                    onKeyDown={(ev) => {
+                      if (ev.key === "Enter") {
+                        onUpdateNote(n.id, editDraft.trim());
+                        setEditingId(null);
+                      }
+                    }}
+                    className="flex-1 bg-transparent outline-none border-b border-border"
+                  />
+                  <button
+                    onClick={() => {
+                      onUpdateNote(n.id, editDraft.trim());
+                      setEditingId(null);
+                    }}
+                    aria-label="Save record"
+                  >
+                    <Check size={12} />
+                  </button>
+                </>
+              ) : (
+                <>
+                  <span className="flex-1">{n.note}</span>
+                  <button
+                    onClick={() => {
+                      setEditingId(n.id);
+                      setEditDraft(n.note);
+                    }}
+                    className="opacity-0 group-hover/rec:opacity-100 hover:text-foreground"
+                    aria-label="Edit record"
+                  >
+                    <Pencil size={11} />
+                  </button>
+                </>
+              )}
+              <button
+                onClick={() => onDeleteNote(n.id)}
+                className="opacity-0 group-hover/rec:opacity-100 hover:text-destructive"
+                aria-label="Delete record"
+              >
+                <Trash2 size={11} />
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}

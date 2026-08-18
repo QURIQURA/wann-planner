@@ -12,6 +12,7 @@ import {
   fetchSubtags,
   fetchTasks,
   fetchEvents,
+  fetchEventNotes,
   fetchMultipleTasks,
   fetchMultipleTaskItems,
   fetchCompletions,
@@ -42,7 +43,7 @@ import { SettingsPanel } from "@/components/wann/SettingsPanel";
 import { orderedWidgets, isWidgetVisible, type WidgetContext } from "@/lib/widgets";
 import type { MultipleTaskForm } from "@/components/wann/MultipleTasksPanel";
 import type { TaskFormValues } from "@/components/wann/TaskForm";
-import type { EventForm } from "@/components/wann/EventsPanel";
+import type { EventForm, EventNoteInput } from "@/components/wann/EventsPanel";
 
 
 export const Route = createFileRoute("/_authenticated/")({
@@ -63,6 +64,7 @@ function Dashboard() {
   const subtagsQ = useQuery({ queryKey: ["subtags", user.id], queryFn: () => fetchSubtags(user.id) });
   const tasksQ = useQuery({ queryKey: ["tasks", user.id], queryFn: () => fetchTasks(user.id) });
   const eventsQ = useQuery({ queryKey: ["events", user.id], queryFn: () => fetchEvents(user.id) });
+  const eventNotesQ = useQuery({ queryKey: ["event_notes", user.id], queryFn: fetchEventNotes });
   const multipleQ = useQuery({ queryKey: ["multiple_tasks", user.id], queryFn: () => fetchMultipleTasks(user.id) });
   const multipleItemsQ = useQuery({ queryKey: ["multiple_task_items", user.id], queryFn: () => fetchMultipleTaskItems(user.id) });
   const completionsQ = useQuery({ queryKey: ["completions", user.id], queryFn: () => fetchCompletions(user.id) });
@@ -601,6 +603,36 @@ function Dashboard() {
     onSuccess: () => invalidate("events"),
   });
 
+  // --- Event records (기록) ---
+  const addEventNote = useMutation({
+    mutationFn: async ({ eventId, v }: { eventId: string; v: EventNoteInput }) => {
+      const { error } = await supabase.from("planner_event_notes").insert({
+        event_id: eventId,
+        year: v.year,
+        date: v.date,
+        note: v.note,
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => invalidate("event_notes"),
+  });
+
+  const updateEventNote = useMutation({
+    mutationFn: async ({ id, note }: { id: string; note: string }) => {
+      const { error } = await supabase.from("planner_event_notes").update({ note }).eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => invalidate("event_notes"),
+  });
+
+  const deleteEventNote = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from("planner_event_notes").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => invalidate("event_notes"),
+  });
+
   const upcoming = useMemo(() => {
     return (eventsQ.data ?? [])
       .map((e) => ({
@@ -641,6 +673,7 @@ function Dashboard() {
     projects: multipleQ.data ?? [],
     projectItems: multipleItemsQ.data ?? [],
     events: eventsQ.data ?? [],
+    eventNotes: eventNotesQ.data ?? [],
     editingTask,
     taskActions: {
       onCancelEdit: () => setEditingTask(null),
@@ -672,6 +705,11 @@ function Dashboard() {
       onAdd: (v) => addEvent.mutate(v),
       onUpdate: (id, patch) => updateEvent.mutate({ id, patch }),
       onDelete: (id) => deleteEvent.mutate(id),
+      onAddNote: (eventId, v) => addEventNote.mutate({ eventId, v }),
+      onUpdateNote: (id, note) => {
+        if (note) updateEventNote.mutate({ id, note });
+      },
+      onDeleteNote: (id) => deleteEventNote.mutate(id),
     },
   };
 
@@ -737,6 +775,7 @@ function Dashboard() {
           tasks={tasksQ.data ?? []}
           categories={categoriesQ.data ?? []}
           events={eventsQ.data ?? []}
+          eventNotes={eventNotesQ.data ?? []}
           completions={completionsQ.data ?? []}
           exceptions={exceptionsQ.data ?? []}
           onMoveTask={(args) => moveTask.mutate(args)}

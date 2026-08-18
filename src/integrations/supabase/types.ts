@@ -790,6 +790,44 @@ export type Database = {
         }
         Relationships: []
       }
+      planner_event_notes: {
+        Row: {
+          created_at: string
+          date: string | null
+          event_id: string
+          id: string
+          note: string
+          updated_at: string
+          year: number | null
+        }
+        Insert: {
+          created_at?: string
+          date?: string | null
+          event_id: string
+          id?: string
+          note: string
+          updated_at?: string
+          year?: number | null
+        }
+        Update: {
+          created_at?: string
+          date?: string | null
+          event_id?: string
+          id?: string
+          note?: string
+          updated_at?: string
+          year?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "planner_event_notes_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "planner_events"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       planner_events: {
         Row: {
           birth_year: number | null
