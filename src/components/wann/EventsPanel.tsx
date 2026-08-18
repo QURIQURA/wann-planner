@@ -49,15 +49,20 @@ const emptyForm = (): EventForm => ({
 
 export function EventsPanel({
   entries,
+  notes = [],
   onAdd,
   onUpdate,
   onDelete,
+  onAddNote,
+  onUpdateNote,
+  onDeleteNote,
 }: {
   entries: EventEntry[];
+  notes?: EventNote[];
   onAdd: (v: EventForm) => void;
   onUpdate: (id: string, patch: EventForm) => void;
   onDelete: (id: string) => void;
-}) {
+} & Partial<EventNoteActions>) {
   const [creating, setCreating] = useState(false);
   const [form, setForm] = useState<EventForm>(emptyForm());
   const [editingId, setEditingId] = useState<string | null>(null);
