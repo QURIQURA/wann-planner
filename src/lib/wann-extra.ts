@@ -337,7 +337,7 @@ export function monthBounds(year: number, month0: number) {
 export type DaySummary = {
   tasks: Array<{ id: string; title: string; category: string | null; categoryColor: string | null }>;
   habits: Array<{ id: string; name: string; count: number; target: number }>;
-  events: Array<{ id: string; name: string; type: string }>;
+  events: Array<{ id: string; name: string; type: string; records: string[] }>;
   multipleItems: Array<{ id: string; title: string; parent: string | null }>;
 };
 
@@ -357,6 +357,7 @@ export async function fetchDaySummary(date: string): Promise<DaySummary> {
     habitsRes,
     habitLogsRes,
     eventsRes,
+    eventNotesRes,
     mtItemsRes,
     mtRes,
   ] = await Promise.all([
@@ -366,6 +367,7 @@ export async function fetchDaySummary(date: string): Promise<DaySummary> {
     supabase.from("planner_habits").select("id,name,target_count"),
     supabase.from("planner_habit_completions").select("habit_id,count").eq("date", date),
     supabase.from("planner_events").select("id,name,type,date,is_recurring"),
+    supabase.from("planner_event_notes").select("id,event_id,year,date,note"),
     supabase
       .from("planner_tasks")
       .select("id,title,multiple_task_id,completed,completed_at")
@@ -375,7 +377,7 @@ export async function fetchDaySummary(date: string): Promise<DaySummary> {
     supabase.from("planner_multiple_tasks").select("id,name"),
   ]);
 
-  const err = [catsRes, tasksRes, completionsRes, habitsRes, habitLogsRes, eventsRes, mtItemsRes, mtRes]
+  const err = [catsRes, tasksRes, completionsRes, habitsRes, habitLogsRes, eventsRes, eventNotesRes, mtItemsRes, mtRes]
     .find((r) => r.error);
   if (err?.error) throw err.error;
 
@@ -405,9 +407,18 @@ export async function fetchDaySummary(date: string): Promise<DaySummary> {
       return { id: h.id, name: h.name, count: l.count ?? 0, target: h.target_count ?? 1 };
     });
 
+  const year = Number(date.slice(0, 4));
   const events = (eventsRes.data ?? [])
     .filter((e) => (e.is_recurring ? e.date.slice(5) === mmdd : e.date === date))
-    .map((e) => ({ id: e.id, name: e.name, type: e.type }));
+    .map((e) => ({
+      id: e.id,
+      name: e.name,
+      type: e.type,
+      // Records left on this event for this specific day (D+day) or year (recurring).
+      records: (eventNotesRes.data ?? [])
+        .filter((n) => n.event_id === e.id && (n.date ? n.date === date : n.year === year))
+        .map((n) => n.note),
+    }));
 
   const mtById = new Map((mtRes.data ?? []).map((m) => [m.id, m.name]));
   const multipleItems = (mtItemsRes.data ?? [])
