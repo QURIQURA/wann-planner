@@ -338,7 +338,7 @@ export const eventsWidget: WidgetDef = {
   label: "Events",
   render: (ctx) => (
     <section className="card-flat p-4">
-      <EventsPanel entries={ctx.events} {...ctx.eventActions} />
+      <EventsPanel entries={ctx.events} notes={ctx.eventNotes} {...ctx.eventActions} />
     </section>
   ),
 };

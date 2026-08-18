@@ -6,10 +6,11 @@ import type {
   MultipleTask,
   MultipleTaskItem,
   EventEntry,
+  EventNote,
 } from "@/lib/wann-data";
 import type { TaskFormValues } from "@/components/wann/TaskForm";
 import type { MultipleTaskForm } from "@/components/wann/MultipleTasksPanel";
-import type { EventForm } from "@/components/wann/EventsPanel";
+import type { EventForm, EventNoteActions } from "@/components/wann/EventsPanel";
 
 /**
  * Everything a dashboard widget may need. The dashboard builds this once and
@@ -28,6 +29,7 @@ export type WidgetContext = {
   projects: MultipleTask[];
   projectItems: MultipleTaskItem[];
   events: EventEntry[];
+  eventNotes: EventNote[];
   editingTask: Task | null;
 
   taskActions: {
@@ -59,5 +61,5 @@ export type WidgetContext = {
     onAdd: (v: EventForm) => void;
     onUpdate: (id: string, patch: EventForm) => void;
     onDelete: (id: string) => void;
-  };
+  } & EventNoteActions;
 };
