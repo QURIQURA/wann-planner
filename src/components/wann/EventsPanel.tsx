@@ -187,6 +187,15 @@ export function EventsPanel({
                   />
                 </div>
               )}
+              {onAddNote && onUpdateNote && onDeleteNote && (
+                <EventRecords
+                  event={e}
+                  notes={notes.filter((n) => n.event_id === e.id)}
+                  onAddNote={onAddNote}
+                  onUpdateNote={onUpdateNote}
+                  onDeleteNote={onDeleteNote}
+                />
+              )}
             </div>
           );
         })}
