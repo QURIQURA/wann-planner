@@ -1,6 +1,6 @@
 import type { WidgetDef } from "@/lib/widget-registry";
 import { useState } from "react";
-import type { EventEntry } from "@/lib/wann-data";
+import type { EventEntry, EventNote } from "@/lib/wann-data";
 import {
   daysUntilAnnual,
   ageOn,
@@ -12,8 +12,18 @@ import {
   dPlusLabel,
   daysSince,
   durationSinceLabel,
+  sortEventNotes,
+  eventNoteLabel,
 } from "@/lib/wann-data";
-import { Plus, Trash2, X, Pencil } from "lucide-react";
+import { Plus, Trash2, X, Pencil, ChevronDown, ChevronRight, Check } from "lucide-react";
+
+export type EventNoteInput = { year: number | null; date: string | null; note: string };
+
+export type EventNoteActions = {
+  onAddNote: (eventId: string, v: EventNoteInput) => void;
+  onUpdateNote: (id: string, note: string) => void;
+  onDeleteNote: (id: string) => void;
+};
 
 export type EventForm = {
   name: string;
