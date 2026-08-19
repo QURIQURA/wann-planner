@@ -578,6 +578,14 @@ function Dashboard() {
     onSuccess: () => invalidate("events"),
   });
 
+  const toggleEventPin = useMutation({
+    mutationFn: async ({ id, pinned }: { id: string; pinned: boolean }) => {
+      const { error } = await supabase.from("planner_events").update({ is_pinned: pinned }).eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => invalidate("events"),
+  });
+
   const updateEvent = useMutation({
     mutationFn: async ({ id, patch }: { id: string; patch: EventForm }) => {
       const { error } = await supabase.from("planner_events").update({
