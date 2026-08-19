@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import type { Category, MultipleTask, Subtag, Task } from "@/lib/wann-data";
+import type { Category, MultipleTask, MultipleTaskItem, Subtag, Task } from "@/lib/wann-data";
 import { todayLocalStr, shortTime, formatDateKo, koDow } from "@/lib/wann-data";
 import { Plus, Trash2, X } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
@@ -35,6 +35,7 @@ export function TaskForm({
   categories,
   subtags,
   projects,
+  projectItems,
   filter,
 }: {
   editingTask: Task | null;
@@ -44,6 +45,7 @@ export function TaskForm({
   categories: Category[];
   subtags: Subtag[];
   projects: MultipleTask[];
+  projectItems: MultipleTaskItem[];
   filter: CategoryFilter;
 }) {
   const emptyForm = (): TaskFormValues => ({
@@ -104,6 +106,18 @@ export function TaskForm({
   }, [filter.categoryId, filter.subtagId]);
 
   const resetForm = () => setForm(emptyForm());
+
+  /**
+   * Fully completed projects are hidden from the dropdown so new tasks aren't
+   * added to them by mistake. Projects with no sub-tasks (0/0) have no progress
+   * at all, so they stay selectable.
+   */
+  const selectableProjects = projects.filter((p) => {
+    const items = projectItems.filter((i) => i.multiple_task_id === p.id);
+    if (items.length === 0) return true;
+    if (p.id === form.projectId || p.id === editingTask?.multiple_task_id) return true;
+    return items.some((i) => !i.completed);
+  });
 
   const submit = () => {
     if (!form.title.trim()) return;
@@ -222,7 +236,7 @@ export function TaskForm({
           className="bg-transparent outline-none text-sm border-b border-border py-1"
         >
           <option value="">소속 프로젝트 없음</option>
-          {projects.map((p) => (
+          {selectableProjects.map((p) => (
             <option key={p.id} value={p.id}>{p.name}</option>
           ))}
           <option value="__new__">+ 새 프로젝트</option>
