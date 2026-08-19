@@ -644,6 +644,21 @@ export type Database = {
           },
         ]
       }
+      household_members: {
+        Row: {
+          created_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       planner_baby_slot_logs: {
         Row: {
           created_at: string
@@ -1455,7 +1470,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      is_household_member: { Args: { _user_id: string }; Returns: boolean }
     }
     Enums: {
       [_ in never]: never
