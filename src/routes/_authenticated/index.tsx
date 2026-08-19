@@ -639,8 +639,9 @@ function Dashboard() {
         e,
         dd: isDPlusEvent(e) ? -1 : e.is_recurring ? daysUntilAnnual(e.date) : Infinity,
       }))
-      .filter((x) => x.dd <= 14)
-      .sort((a, b) => a.dd - b.dd);
+      .filter((x) => x.dd <= 14 || x.e.is_pinned)
+      // pinned events always lead the bar, regardless of D-day
+      .sort((a, b) => Number(b.e.is_pinned) - Number(a.e.is_pinned) || a.dd - b.dd);
   }, [eventsQ.data]);
 
   const handleSignOut = async () => {
