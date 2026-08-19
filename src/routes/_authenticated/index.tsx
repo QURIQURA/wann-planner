@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
-import { Settings as SettingsIcon, LogOut, BookOpen } from "lucide-react";
+import { Settings as SettingsIcon, LogOut, BookOpen, LineChart } from "lucide-react";
 import { toast } from "sonner";
 
 import { supabase } from "@/integrations/supabase/client";
@@ -741,6 +741,14 @@ function Dashboard() {
             >
               <BookOpen size={14} />
               <span className="label-caps hidden sm:inline">Diary</span>
+            </Link>
+            <Link
+              to="/patterns"
+              className="border border-border p-2 hover:bg-muted flex items-center gap-1"
+              aria-label="Patterns"
+            >
+              <LineChart size={14} />
+              <span className="label-caps hidden sm:inline">Patterns</span>
             </Link>
             <span className="text-xs text-muted-foreground hidden sm:block">{user.email}</span>
             <button
