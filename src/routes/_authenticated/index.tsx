@@ -714,6 +714,7 @@ function Dashboard() {
       onAdd: (v) => addEvent.mutate(v),
       onUpdate: (id, patch) => updateEvent.mutate({ id, patch }),
       onDelete: (id) => deleteEvent.mutate(id),
+      onTogglePin: (id, pinned) => toggleEventPin.mutate({ id, pinned }),
       onAddNote: (eventId, v) => addEventNote.mutate({ eventId, v }),
       onUpdateNote: (id, note) => {
         if (note) updateEventNote.mutate({ id, note });
