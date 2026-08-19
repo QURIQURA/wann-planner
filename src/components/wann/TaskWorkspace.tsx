@@ -28,6 +28,7 @@ export function TaskWorkspace({ ctx }: { ctx: WidgetContext }) {
         categories={ctx.categories}
         subtags={ctx.subtags}
         projects={ctx.projects}
+        projectItems={ctx.projectItems}
         filter={filter}
       />
 

@@ -578,6 +578,14 @@ function Dashboard() {
     onSuccess: () => invalidate("events"),
   });
 
+  const toggleEventPin = useMutation({
+    mutationFn: async ({ id, pinned }: { id: string; pinned: boolean }) => {
+      const { error } = await supabase.from("planner_events").update({ is_pinned: pinned }).eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => invalidate("events"),
+  });
+
   const updateEvent = useMutation({
     mutationFn: async ({ id, patch }: { id: string; patch: EventForm }) => {
       const { error } = await supabase.from("planner_events").update({
@@ -639,8 +647,9 @@ function Dashboard() {
         e,
         dd: isDPlusEvent(e) ? -1 : e.is_recurring ? daysUntilAnnual(e.date) : Infinity,
       }))
-      .filter((x) => x.dd <= 14)
-      .sort((a, b) => a.dd - b.dd);
+      .filter((x) => x.dd <= 14 || x.e.is_pinned)
+      // pinned events always lead the bar, regardless of D-day
+      .sort((a, b) => Number(b.e.is_pinned) - Number(a.e.is_pinned) || a.dd - b.dd);
   }, [eventsQ.data]);
 
   const handleSignOut = async () => {
@@ -705,6 +714,7 @@ function Dashboard() {
       onAdd: (v) => addEvent.mutate(v),
       onUpdate: (id, patch) => updateEvent.mutate({ id, patch }),
       onDelete: (id) => deleteEvent.mutate(id),
+      onTogglePin: (id, pinned) => toggleEventPin.mutate({ id, pinned }),
       onAddNote: (eventId, v) => addEventNote.mutate({ eventId, v }),
       onUpdateNote: (id, note) => {
         if (note) updateEventNote.mutate({ id, note });

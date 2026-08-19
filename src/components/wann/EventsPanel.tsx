@@ -15,7 +15,7 @@ import {
   sortEventNotes,
   eventNoteLabel,
 } from "@/lib/wann-data";
-import { Plus, Trash2, X, Pencil, ChevronDown, ChevronRight, Check } from "lucide-react";
+import { Plus, Trash2, X, Pencil, ChevronDown, ChevronRight, Check, Pin } from "lucide-react";
 
 export type EventNoteInput = { year: number | null; date: string | null; note: string };
 
@@ -53,6 +53,7 @@ export function EventsPanel({
   onAdd,
   onUpdate,
   onDelete,
+  onTogglePin,
   onAddNote,
   onUpdateNote,
   onDeleteNote,
@@ -62,6 +63,7 @@ export function EventsPanel({
   onAdd: (v: EventForm) => void;
   onUpdate: (id: string, patch: EventForm) => void;
   onDelete: (id: string) => void;
+  onTogglePin?: (id: string, pinned: boolean) => void;
 } & Partial<EventNoteActions>) {
   const [creating, setCreating] = useState(false);
   const [form, setForm] = useState<EventForm>(emptyForm());
@@ -70,7 +72,8 @@ export function EventsPanel({
 
   const sorted = [...entries].sort((a, b) => {
     const rank = (x: EventEntry) => (isDPlusEvent(x) ? 1000 : x.is_recurring ? daysUntilAnnual(x.date) : 999);
-    return rank(a) - rank(b);
+    // pinned events stick to the top, sorted among themselves by nearest date
+    return Number(b.is_pinned) - Number(a.is_pinned) || rank(a) - rank(b);
   });
 
   const startEdit = (e: EventEntry) => {
@@ -154,6 +157,16 @@ export function EventsPanel({
                       {dd === 0 ? "TODAY" : `D-${dd}`}
                     </span>
                   )
+                )}
+                {onTogglePin && (
+                  <button
+                    onClick={() => onTogglePin(e.id, !e.is_pinned)}
+                    className={e.is_pinned ? "text-foreground" : "opacity-0 group-hover:opacity-100 hover:text-foreground"}
+                    aria-label={e.is_pinned ? "Unpin" : "Pin"}
+                    title={e.is_pinned ? "고정 해제" : "고정"}
+                  >
+                    <Pin size={12} fill={e.is_pinned ? "currentColor" : "none"} />
+                  </button>
                 )}
                 <button
                   onClick={() => startEdit(e)}

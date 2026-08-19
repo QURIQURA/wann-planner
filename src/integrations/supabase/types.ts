@@ -834,6 +834,7 @@ export type Database = {
           created_at: string
           date: string
           id: string
+          is_pinned: boolean
           is_recurring: boolean
           name: string
           notes: string | null
@@ -848,6 +849,7 @@ export type Database = {
           created_at?: string
           date: string
           id?: string
+          is_pinned?: boolean
           is_recurring?: boolean
           name: string
           notes?: string | null
@@ -862,6 +864,7 @@ export type Database = {
           created_at?: string
           date?: string
           id?: string
+          is_pinned?: boolean
           is_recurring?: boolean
           name?: string
           notes?: string | null
