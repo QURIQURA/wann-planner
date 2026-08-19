@@ -742,6 +742,14 @@ function Dashboard() {
               <BookOpen size={14} />
               <span className="label-caps hidden sm:inline">Diary</span>
             </Link>
+            <Link
+              to="/patterns"
+              className="border border-border p-2 hover:bg-muted flex items-center gap-1"
+              aria-label="Patterns"
+            >
+              <LineChart size={14} />
+              <span className="label-caps hidden sm:inline">Patterns</span>
+            </Link>
             <span className="text-xs text-muted-foreground hidden sm:block">{user.email}</span>
             <button
               onClick={() => setSettingsOpen(true)}
