@@ -61,5 +61,6 @@ export type WidgetContext = {
     onAdd: (v: EventForm) => void;
     onUpdate: (id: string, patch: EventForm) => void;
     onDelete: (id: string) => void;
+    onTogglePin: (id: string, pinned: boolean) => void;
   } & EventNoteActions;
 };
