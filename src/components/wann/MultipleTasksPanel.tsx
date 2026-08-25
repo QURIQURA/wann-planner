@@ -449,8 +449,9 @@ function MultipleTaskEditor({
           <input
             type="date"
             value={value.date ?? ""}
+            disabled={value.date === null && value.endDate === null}
             onChange={(e) => onChange({ ...value, date: e.target.value || null })}
-            className="bg-transparent outline-none border-b border-border py-1 text-sm"
+            className="bg-transparent outline-none border-b border-border py-1 text-sm disabled:opacity-40"
           />
         </label>
         <label className="flex items-center gap-1 text-[10px] text-muted-foreground label-caps">
@@ -459,9 +460,25 @@ function MultipleTaskEditor({
             type="date"
             value={value.endDate ?? ""}
             min={value.date ?? undefined}
+            disabled={value.date === null && value.endDate === null}
             onChange={(e) => onChange({ ...value, endDate: e.target.value || null })}
-            className="bg-transparent outline-none border-b border-border py-1 text-sm"
+            className="bg-transparent outline-none border-b border-border py-1 text-sm disabled:opacity-40"
           />
+        </label>
+        <label className="flex items-center gap-1 text-[10px] text-muted-foreground label-caps">
+          <input
+            type="checkbox"
+            checked={value.date === null && value.endDate === null}
+            onChange={(e) =>
+              onChange(
+                e.target.checked
+                  ? { ...value, date: null, endDate: null }
+                  : { ...value, date: todayLocalStr() },
+              )
+            }
+            className="h-3 w-3 accent-foreground"
+          />
+          날짜 미정
         </label>
         {value.date && (
           <span className="text-[10px] text-muted-foreground tabular-nums">
