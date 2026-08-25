@@ -69,7 +69,7 @@ export function TaskForm({
         title: editingTask.title,
         categoryId: editingTask.category_id,
         subtagId: editingTask.subtag_id,
-        dueDate: editingTask.due_date ?? todayLocalStr(),
+        dueDate: editingTask.due_date ?? null,
         dueTime: shortTime(editingTask.due_time) || null,
         endTime: shortTime(editingTask.end_time) || null,
         recurrence: editingTask.recurrence ?? "none",
@@ -125,6 +125,9 @@ export function TaskForm({
     const payload: TaskFormValues = {
       ...form,
       title: form.title.trim(),
+      recurrence: form.dueDate ? form.recurrence : "none",
+      dueTime: form.dueDate ? form.dueTime : null,
+      endTime: form.dueDate ? form.endTime : null,
       newProject: form.newProject
         ? { ...form.newProject, name: form.newProject.name.trim() }
         : null,
@@ -167,9 +170,25 @@ export function TaskForm({
         <input
           type="date"
           value={form.dueDate ?? ""}
+          disabled={form.dueDate === null}
           onChange={(e) => setForm({ ...form, dueDate: e.target.value || null })}
-          className="bg-transparent outline-none text-sm border-b border-border py-1"
+          className="bg-transparent outline-none text-sm border-b border-border py-1 disabled:opacity-40"
         />
+        <label className="flex items-center gap-1 text-[10px] label-caps text-muted-foreground">
+          <input
+            type="checkbox"
+            checked={form.dueDate === null}
+            onChange={(e) =>
+              setForm(
+                e.target.checked
+                  ? { ...form, dueDate: null, dueTime: null, endTime: null, recurrence: "none" }
+                  : { ...form, dueDate: todayLocalStr() },
+              )
+            }
+            className="h-3 w-3 accent-foreground"
+          />
+          날짜 미정
+        </label>
         {form.dueDate && (
           <span className="text-[10px] text-muted-foreground tabular-nums">
             {formatDateKo(form.dueDate)} ({koDow(form.dueDate)})
@@ -179,8 +198,9 @@ export function TaskForm({
         <input
           type="time"
           value={form.dueTime ?? ""}
+          disabled={!form.dueDate}
           onChange={(e) => setForm({ ...form, dueTime: e.target.value || null })}
-          className="bg-transparent outline-none text-sm border-b border-border py-1"
+          className="bg-transparent outline-none text-sm border-b border-border py-1 disabled:opacity-40"
         />
         <label className="text-[10px] label-caps text-muted-foreground">End</label>
         <input
@@ -213,9 +233,11 @@ export function TaskForm({
           ))}
         </select>
         <select
-          value={form.recurrence}
+          value={form.dueDate ? form.recurrence : "none"}
           onChange={(e) => setForm({ ...form, recurrence: e.target.value })}
-          className="bg-transparent outline-none text-sm border-b border-border py-1"
+          disabled={!form.dueDate}
+          title={form.dueDate ? "Recurrence" : "날짜 미정 항목은 반복할 수 없습니다"}
+          className="bg-transparent outline-none text-sm border-b border-border py-1 disabled:opacity-40"
         >
           <option value="none">once</option>
           <option value="daily">daily</option>

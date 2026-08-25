@@ -65,6 +65,8 @@ export function MultipleTasksPanel({
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState<MultipleTaskForm>(emptyForm());
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [showUndated, setShowUndated] = useState(false);
+  const [showFinished, setShowFinished] = useState(false);
   const [childInput, setChildInput] = useState<Record<string, string>>({});
   const [childDate, setChildDate] = useState<Record<string, string>>({});
   const [childTime, setChildTime] = useState<Record<string, string>>({});
@@ -154,11 +156,14 @@ export function MultipleTasksPanel({
 
 
 
-      <div className="space-y-1">
-        {visible.length === 0 && (
-          <p className="text-xs text-muted-foreground italic">No entries</p>
-        )}
-        {visible.map((e) => {
+      {(() => {
+        const pctOf = (e: MultipleTask) => {
+          const ch = items.filter((i) => i.multiple_task_id === e.id);
+          return ch.length > 0
+            ? Math.round((ch.filter((i) => i.completed).length / ch.length) * 100)
+            : null;
+        };
+        const renderEntry = (e: MultipleTask) => {
           const cat = e.category_id ? categories.find((c) => c.id === e.category_id) : null;
           const subId = (e as MultipleTask & { subtag_id: string | null }).subtag_id ?? null;
           const sub = subId ? subtags.find((s) => s.id === subId) : null;
@@ -360,8 +365,49 @@ export function MultipleTasksPanel({
               )}
             </div>
           );
-        })}
-      </div>
+        };
+
+        const finished = visible.filter((e) => pctOf(e) === 100);
+        const rest = visible.filter((e) => pctOf(e) !== 100);
+        const active = rest
+          .filter((e) => !!e.date)
+          .slice()
+          .sort((a, b) => (a.date ?? "").localeCompare(b.date ?? ""));
+        const undated = rest.filter((e) => !e.date);
+
+        return (
+          <div className="space-y-1">
+            {visible.length === 0 && (
+              <p className="text-xs text-muted-foreground italic">No entries</p>
+            )}
+            {active.map(renderEntry)}
+            {undated.length > 0 && (
+              <div className="mt-3 border-t border-border pt-2">
+                <button
+                  onClick={() => setShowUndated((v) => !v)}
+                  className="flex items-center gap-1 text-[10px] label-caps text-muted-foreground hover:text-foreground"
+                >
+                  {showUndated ? <ChevronDown size={10} /> : <ChevronRight size={10} />}
+                  날짜 미정 ({undated.length})
+                </button>
+                {showUndated && <div className="mt-1">{undated.map(renderEntry)}</div>}
+              </div>
+            )}
+            {finished.length > 0 && (
+              <div className="mt-3 border-t border-border pt-2">
+                <button
+                  onClick={() => setShowFinished((v) => !v)}
+                  className="flex items-center gap-1 text-[10px] label-caps text-muted-foreground hover:text-foreground"
+                >
+                  {showFinished ? <ChevronDown size={10} /> : <ChevronRight size={10} />}
+                  완료됨 ({finished.length})
+                </button>
+                {showFinished && <div className="mt-1">{finished.map(renderEntry)}</div>}
+              </div>
+            )}
+          </div>
+        );
+      })()}
     </div>
   );
 }
@@ -403,8 +449,9 @@ function MultipleTaskEditor({
           <input
             type="date"
             value={value.date ?? ""}
+            disabled={value.date === null && value.endDate === null}
             onChange={(e) => onChange({ ...value, date: e.target.value || null })}
-            className="bg-transparent outline-none border-b border-border py-1 text-sm"
+            className="bg-transparent outline-none border-b border-border py-1 text-sm disabled:opacity-40"
           />
         </label>
         <label className="flex items-center gap-1 text-[10px] text-muted-foreground label-caps">
@@ -413,9 +460,25 @@ function MultipleTaskEditor({
             type="date"
             value={value.endDate ?? ""}
             min={value.date ?? undefined}
+            disabled={value.date === null && value.endDate === null}
             onChange={(e) => onChange({ ...value, endDate: e.target.value || null })}
-            className="bg-transparent outline-none border-b border-border py-1 text-sm"
+            className="bg-transparent outline-none border-b border-border py-1 text-sm disabled:opacity-40"
           />
+        </label>
+        <label className="flex items-center gap-1 text-[10px] text-muted-foreground label-caps">
+          <input
+            type="checkbox"
+            checked={value.date === null && value.endDate === null}
+            onChange={(e) =>
+              onChange(
+                e.target.checked
+                  ? { ...value, date: null, endDate: null }
+                  : { ...value, date: todayLocalStr() },
+              )
+            }
+            className="h-3 w-3 accent-foreground"
+          />
+          날짜 미정
         </label>
         {value.date && (
           <span className="text-[10px] text-muted-foreground tabular-nums">

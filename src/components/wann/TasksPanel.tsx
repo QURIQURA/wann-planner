@@ -1,7 +1,7 @@
 import type { WidgetDef } from "@/lib/widget-registry";
 import { useState } from "react";
 import type { Category, MultipleTask, Subtag, Task, TaskCompletion } from "@/lib/wann-data";
-import { todayLocalStr, shortTime, isOccurrenceCompleted, currentOccurrenceDate, koDow } from "@/lib/wann-data";
+import { todayLocalStr, shortTime, isOccurrenceCompleted, currentOccurrenceDate, koDow, taskSortKey } from "@/lib/wann-data";
 import { Trash2, ChevronDown, ChevronUp } from "lucide-react";
 import { CategoryFilterBar } from "./CategoryFilterBar";
 import type { CategoryFilter, TaskFormValues } from "./TaskForm";
@@ -55,6 +55,7 @@ export function TasksPanel({
 }) {
   const today = todayLocalStr();
   const [showDone, setShowDone] = useState(false);
+  const [showUndated, setShowUndated] = useState(false);
 
   const [localFilter, setLocalFilter] = useState<CategoryFilter>({
     categoryId: null,
@@ -91,15 +92,54 @@ export function TasksPanel({
         />
       )}
 
-      <TaskList
-        items={filtered.filter((t) => !isOccurrenceCompleted(t, currentOccurrenceDate(t, today), completions))}
-        categories={categories}
-        projects={projects}
-        editingId={editingTask?.id ?? null}
-        onToggle={onToggleTask}
-        onEdit={onEditTask}
-        onDelete={onDeleteTask}
-      />
+      {(() => {
+        const open = filtered.filter(
+          (t) => !isOccurrenceCompleted(t, currentOccurrenceDate(t, today), completions),
+        );
+        const dated = open
+          .filter((t) => !!t.due_date)
+          .slice()
+          .sort((a, b) => taskSortKey(a).localeCompare(taskSortKey(b)));
+        const undated = open.filter((t) => !t.due_date);
+        return (
+          <>
+            <TaskList
+              items={dated}
+              categories={categories}
+              projects={projects}
+              editingId={editingTask?.id ?? null}
+              onToggle={onToggleTask}
+              onEdit={onEditTask}
+              onDelete={onDeleteTask}
+            />
+            {undated.length > 0 && (
+              <div className="mt-3 border-t border-border pt-2">
+                <button
+                  onClick={() => setShowUndated((v) => !v)}
+                  className="flex items-center gap-1 text-[10px] label-caps text-muted-foreground hover:text-foreground"
+                >
+                  {showUndated ? <ChevronUp size={10} /> : <ChevronDown size={10} />}
+                  날짜 미정 ({undated.length})
+                </button>
+                {showUndated && (
+                  <div className="mt-1">
+                    <TaskList
+                      items={undated}
+                      categories={categories}
+                      projects={projects}
+                      editingId={editingTask?.id ?? null}
+                      onToggle={onToggleTask}
+                      onEdit={onEditTask}
+                      onDelete={onDeleteTask}
+                    />
+                  </div>
+                )}
+              </div>
+            )}
+          </>
+        );
+      })()}
+
 
       {(() => {
         const done = filtered.filter((t) => isOccurrenceCompleted(t, currentOccurrenceDate(t, today), completions));
