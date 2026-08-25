@@ -125,6 +125,9 @@ export function TaskForm({
     const payload: TaskFormValues = {
       ...form,
       title: form.title.trim(),
+      recurrence: form.dueDate ? form.recurrence : "none",
+      dueTime: form.dueDate ? form.dueTime : null,
+      endTime: form.dueDate ? form.endTime : null,
       newProject: form.newProject
         ? { ...form.newProject, name: form.newProject.name.trim() }
         : null,
