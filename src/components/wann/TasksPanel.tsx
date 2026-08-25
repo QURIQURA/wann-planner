@@ -55,6 +55,7 @@ export function TasksPanel({
 }) {
   const today = todayLocalStr();
   const [showDone, setShowDone] = useState(false);
+  const [showUndated, setShowUndated] = useState(false);
 
   const [localFilter, setLocalFilter] = useState<CategoryFilter>({
     categoryId: null,
