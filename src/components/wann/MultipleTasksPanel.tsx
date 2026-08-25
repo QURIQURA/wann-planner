@@ -65,6 +65,8 @@ export function MultipleTasksPanel({
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState<MultipleTaskForm>(emptyForm());
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [showUndated, setShowUndated] = useState(false);
+  const [showFinished, setShowFinished] = useState(false);
   const [childInput, setChildInput] = useState<Record<string, string>>({});
   const [childDate, setChildDate] = useState<Record<string, string>>({});
   const [childTime, setChildTime] = useState<Record<string, string>>({});
