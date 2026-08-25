@@ -1,7 +1,7 @@
 import type { WidgetDef } from "@/lib/widget-registry";
 import { useState } from "react";
 import type { Category, MultipleTask, Subtag, Task, TaskCompletion } from "@/lib/wann-data";
-import { todayLocalStr, shortTime, isOccurrenceCompleted, currentOccurrenceDate, koDow } from "@/lib/wann-data";
+import { todayLocalStr, shortTime, isOccurrenceCompleted, currentOccurrenceDate, koDow, taskSortKey } from "@/lib/wann-data";
 import { Trash2, ChevronDown, ChevronUp } from "lucide-react";
 import { CategoryFilterBar } from "./CategoryFilterBar";
 import type { CategoryFilter, TaskFormValues } from "./TaskForm";
