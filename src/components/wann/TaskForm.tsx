@@ -69,7 +69,7 @@ export function TaskForm({
         title: editingTask.title,
         categoryId: editingTask.category_id,
         subtagId: editingTask.subtag_id,
-        dueDate: editingTask.due_date ?? todayLocalStr(),
+        dueDate: editingTask.due_date ?? null,
         dueTime: shortTime(editingTask.due_time) || null,
         endTime: shortTime(editingTask.end_time) || null,
         recurrence: editingTask.recurrence ?? "none",
