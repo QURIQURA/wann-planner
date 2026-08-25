@@ -230,9 +230,11 @@ export function TaskForm({
           ))}
         </select>
         <select
-          value={form.recurrence}
+          value={form.dueDate ? form.recurrence : "none"}
           onChange={(e) => setForm({ ...form, recurrence: e.target.value })}
-          className="bg-transparent outline-none text-sm border-b border-border py-1"
+          disabled={!form.dueDate}
+          title={form.dueDate ? "Recurrence" : "날짜 미정 항목은 반복할 수 없습니다"}
+          className="bg-transparent outline-none text-sm border-b border-border py-1 disabled:opacity-40"
         >
           <option value="none">once</option>
           <option value="daily">daily</option>
