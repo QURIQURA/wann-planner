@@ -363,8 +363,49 @@ export function MultipleTasksPanel({
               )}
             </div>
           );
-        })}
-      </div>
+        };
+
+        const finished = visible.filter((e) => pctOf(e) === 100);
+        const rest = visible.filter((e) => pctOf(e) !== 100);
+        const active = rest
+          .filter((e) => !!e.date)
+          .slice()
+          .sort((a, b) => (a.date ?? "").localeCompare(b.date ?? ""));
+        const undated = rest.filter((e) => !e.date);
+
+        return (
+          <div className="space-y-1">
+            {visible.length === 0 && (
+              <p className="text-xs text-muted-foreground italic">No entries</p>
+            )}
+            {active.map(renderEntry)}
+            {undated.length > 0 && (
+              <div className="mt-3 border-t border-border pt-2">
+                <button
+                  onClick={() => setShowUndated((v) => !v)}
+                  className="flex items-center gap-1 text-[10px] label-caps text-muted-foreground hover:text-foreground"
+                >
+                  {showUndated ? <ChevronDown size={10} /> : <ChevronRight size={10} />}
+                  날짜 미정 ({undated.length})
+                </button>
+                {showUndated && <div className="mt-1">{undated.map(renderEntry)}</div>}
+              </div>
+            )}
+            {finished.length > 0 && (
+              <div className="mt-3 border-t border-border pt-2">
+                <button
+                  onClick={() => setShowFinished((v) => !v)}
+                  className="flex items-center gap-1 text-[10px] label-caps text-muted-foreground hover:text-foreground"
+                >
+                  {showFinished ? <ChevronDown size={10} /> : <ChevronRight size={10} />}
+                  완료됨 ({finished.length})
+                </button>
+                {showFinished && <div className="mt-1">{finished.map(renderEntry)}</div>}
+              </div>
+            )}
+          </div>
+        );
+      })()}
     </div>
   );
 }
