@@ -154,11 +154,14 @@ export function MultipleTasksPanel({
 
 
 
-      <div className="space-y-1">
-        {visible.length === 0 && (
-          <p className="text-xs text-muted-foreground italic">No entries</p>
-        )}
-        {visible.map((e) => {
+      {(() => {
+        const pctOf = (e: MultipleTask) => {
+          const ch = items.filter((i) => i.multiple_task_id === e.id);
+          return ch.length > 0
+            ? Math.round((ch.filter((i) => i.completed).length / ch.length) * 100)
+            : null;
+        };
+        const renderEntry = (e: MultipleTask) => {
           const cat = e.category_id ? categories.find((c) => c.id === e.category_id) : null;
           const subId = (e as MultipleTask & { subtag_id: string | null }).subtag_id ?? null;
           const sub = subId ? subtags.find((s) => s.id === subId) : null;
