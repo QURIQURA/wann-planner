@@ -1,7 +1,7 @@
 import type { WidgetDef } from "@/lib/widget-registry";
-import { Fragment, useMemo, useState } from "react";
+import { Fragment, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Check, Pencil, Plus, Trash2, X, CircleDashed } from "lucide-react";
+import { Check, Pencil, Plus, Trash2, X, CircleDashed, ChevronLeft, ChevronRight, AlertTriangle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import {
   fetchHabits,
@@ -53,6 +53,7 @@ type HabitDraft = {
   time: string;
   groupId: string; // "" = none, "__new" = create
   newGroupName: string;
+  isCritical: boolean;
 };
 
 const emptyDraft = (): HabitDraft => ({
@@ -62,11 +63,27 @@ const emptyDraft = (): HabitDraft => ({
   time: "",
   groupId: "",
   newGroupName: "",
+  isCritical: false,
 });
 
 export function HabitTrackerPanel({ userId, anchorDate }: { userId: string; anchorDate: Date }) {
   const qc = useQueryClient();
-  const weekStart = useMemo(() => startOfWeek(anchorDate), [anchorDate]);
+  // Independent of the app's main day/anchor: lets you page through past or
+  // future weeks here without moving the This Week view. Resets to 0 whenever
+  // the app's anchor moves to a different week, so switching days elsewhere
+  // doesn't leave this panel stuck looking at a stale week.
+  const [weekOffset, setWeekOffset] = useState(0);
+  const anchorWeekKey = useMemo(() => formatLocalDate(startOfWeek(anchorDate)), [anchorDate]);
+  const prevAnchorWeekKeyRef = useRef(anchorWeekKey);
+  if (prevAnchorWeekKeyRef.current !== anchorWeekKey) {
+    prevAnchorWeekKeyRef.current = anchorWeekKey;
+    if (weekOffset !== 0) setWeekOffset(0);
+  }
+  const weekStart = useMemo(() => {
+    const base = startOfWeek(anchorDate);
+    base.setDate(base.getDate() + weekOffset * 7);
+    return base;
+  }, [anchorDate, weekOffset]);
   const days = useMemo(
     () =>
       Array.from({ length: 7 }, (_, i) => {
@@ -125,6 +142,7 @@ export function HabitTrackerPanel({ userId, anchorDate }: { userId: string; anch
         target_count: Math.max(1, draft.target),
         habit_time: draft.time || null,
         routine_group_id,
+        is_critical: draft.isCritical,
       });
       if (error) throw error;
     },
@@ -147,6 +165,7 @@ export function HabitTrackerPanel({ userId, anchorDate }: { userId: string; anch
           target_count: Math.max(1, editDraft.target),
           habit_time: editDraft.time || null,
           routine_group_id,
+          is_critical: editDraft.isCritical,
         })
         .eq("id", id);
       if (error) throw error;
@@ -273,6 +292,19 @@ export function HabitTrackerPanel({ userId, anchorDate }: { userId: string; anch
             className="bg-transparent border-b border-border text-sm py-1"
           />
         )}
+        <label
+          className={`flex items-center gap-1 text-[10px] label-caps ${d.isCritical ? "text-foreground" : "text-muted-foreground"}`}
+          title="놓치면 안 됨"
+        >
+          <input
+            type="checkbox"
+            checked={d.isCritical}
+            onChange={(e) => set({ ...d, isCritical: e.target.checked })}
+            className="h-3 w-3 accent-foreground"
+          />
+          <AlertTriangle size={11} />
+          Critical
+        </label>
         <button
           onClick={() => d.name.trim() && onSubmit()}
           className="ml-auto border border-border px-2 py-1 text-xs hover:bg-muted"
@@ -329,6 +361,9 @@ export function HabitTrackerPanel({ userId, anchorDate }: { userId: string; anch
           ) : (
             <span className="flex items-center gap-1">
               <CircleDashed size={11} className="text-muted-foreground flex-shrink-0" />
+              {h.is_critical && (
+                <AlertTriangle size={11} className="text-destructive flex-shrink-0" aria-label="놓치면 안 됨" />
+              )}
               {h.name}
               {h.habit_time && (
                 <span className="text-[10px] text-muted-foreground tabular-nums">{shortTime(h.habit_time)}</span>
@@ -356,6 +391,7 @@ export function HabitTrackerPanel({ userId, anchorDate }: { userId: string; anch
                     time: h.habit_time ? h.habit_time.slice(0, 5) : "",
                     groupId: h.routine_group_id ?? "",
                     newGroupName: "",
+                    isCritical: h.is_critical ?? false,
                   });
                 }}
                 className="opacity-0 group-hover:opacity-100"
@@ -382,7 +418,31 @@ export function HabitTrackerPanel({ userId, anchorDate }: { userId: string; anch
       <div className="flex items-center justify-between mb-4">
         <div>
           <p className="label-caps">Habits &amp; Routines</p>
-          <p className="text-xs text-muted-foreground">Week of {startKey}</p>
+          <div className="flex items-center gap-1 mt-0.5">
+            <button
+              onClick={() => setWeekOffset((v) => v - 1)}
+              className="text-muted-foreground hover:text-foreground"
+              aria-label="Previous week"
+            >
+              <ChevronLeft size={12} />
+            </button>
+            <p className="text-xs text-muted-foreground">Week of {startKey}</p>
+            <button
+              onClick={() => setWeekOffset((v) => v + 1)}
+              className="text-muted-foreground hover:text-foreground"
+              aria-label="Next week"
+            >
+              <ChevronRight size={12} />
+            </button>
+            {weekOffset !== 0 && (
+              <button
+                onClick={() => setWeekOffset(0)}
+                className="ml-1 border border-border px-1.5 py-0.5 text-[10px] label-caps hover:bg-muted"
+              >
+                This week
+              </button>
+            )}
+          </div>
         </div>
         <div className="flex items-center gap-1">
           <button

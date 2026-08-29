@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
-import { Settings as SettingsIcon, LogOut, BookOpen, LineChart } from "lucide-react";
+import { Settings as SettingsIcon, LogOut, BookOpen, LineChart, CalendarDays } from "lucide-react";
 import { toast } from "sonner";
 
 import { supabase } from "@/integrations/supabase/client";
@@ -48,12 +48,22 @@ import type { EventForm, EventNoteInput } from "@/components/wann/EventsPanel";
 
 export const Route = createFileRoute("/_authenticated/")({
   component: Dashboard,
+  // Lets the Month view (and anything else) deep-link into a specific day,
+  // e.g. navigating here with `search={{ date: "2026-08-17" }}`.
+  validateSearch: (search: Record<string, unknown>): { date?: string } => ({
+    date: typeof search.date === "string" ? search.date : undefined,
+  }),
 });
 
 function Dashboard() {
   const { user } = Route.useRouteContext() as { user: { id: string; email?: string } };
+  const { date: dateParam } = Route.useSearch();
   const qc = useQueryClient();
   const [anchor, setAnchor] = useState(() => {
+    if (dateParam) {
+      const [y, m, d] = dateParam.split("-").map(Number);
+      if (y && m && d) return new Date(y, m - 1, d);
+    }
     const d = new Date(); d.setHours(0,0,0,0); return d;
   });
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -197,6 +207,7 @@ function Dashboard() {
         end_time: input.dueTime ? input.endTime : null,
         recurrence: input.recurrence,
         multiple_task_id: projectId,
+        is_critical: input.isCritical,
       }).select("id").single();
       if (error) throw error;
       if (input.subitems?.length) await replaceSubitems(created.id, input.subitems);
@@ -235,6 +246,7 @@ function Dashboard() {
         end_time: input.dueTime ? input.endTime : null,
         recurrence: input.recurrence,
         multiple_task_id: projectId,
+        is_critical: input.isCritical,
       }).eq("id", id);
       if (error) throw error;
       await replaceSubitems(id, input.subitems ?? []);
@@ -734,6 +746,14 @@ function Dashboard() {
             <h1 className="text-lg font-light tracking-tight">Weekly OS</h1>
           </div>
           <div className="flex items-center gap-2">
+            <Link
+              to="/month"
+              className="border border-border p-2 hover:bg-muted flex items-center gap-1"
+              aria-label="Month"
+            >
+              <CalendarDays size={14} />
+              <span className="label-caps hidden sm:inline">Month</span>
+            </Link>
             <Link
               to="/diary"
               className="border border-border p-2 hover:bg-muted flex items-center gap-1"

@@ -49,7 +49,7 @@ import {
   type DragEndEvent,
   type DragStartEvent,
 } from "@dnd-kit/core";
-import { ChevronLeft, ChevronRight, ChevronDown, ChevronUp, ListChecks, GripVertical, CircleDashed, StickyNote } from "lucide-react";
+import { ChevronLeft, ChevronRight, ChevronDown, ChevronUp, ListChecks, GripVertical, CircleDashed, StickyNote, AlertTriangle } from "lucide-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { fetchAllSubitems, sortSubitems, updateSubitem, type TaskSubitem } from "@/lib/wann-subitems";
 import type { Habit, HabitCompletion } from "@/lib/wann-extra";
@@ -1095,11 +1095,12 @@ function TimedTaskBody({
 }) {
   // Timeline boxes are tinted with the category colour at 50% opacity.
   const bg = hexToRgba(cat?.color, 0.5) ?? "var(--background)";
+  const critical = !!occ.task.is_critical;
   return (
     <div
-      className={`flex items-center gap-1 border border-border px-1 text-[11px] leading-tight h-full overflow-hidden text-foreground ${
-        dimmed ? "opacity-30" : ""
-      }`}
+      className={`flex items-center gap-1 px-1 text-[11px] leading-tight h-full overflow-hidden text-foreground ${
+        critical ? "border-2 border-destructive" : "border border-border"
+      } ${dimmed ? "opacity-30" : ""}`}
       style={{ background: bg }}
     >
       {dragHandle ?? <span className="w-[10px] flex-shrink-0" />}
@@ -1109,6 +1110,9 @@ function TimedTaskBody({
         aria-label="Toggle"
         className={`inline-block h-2.5 w-2.5 border border-foreground/50 flex-shrink-0 ${completed ? "bg-foreground" : ""}`}
       />
+      {critical && (
+        <AlertTriangle size={10} className="text-destructive flex-shrink-0" aria-label="놓치면 안 됨" />
+      )}
       <button
         onClick={onEdit}
         className={`flex-1 min-w-[3rem] text-left truncate hover:underline text-foreground ${completed ? "line-through" : ""}`}
@@ -1496,8 +1500,11 @@ function DraggableAllDayTask({
       <button
         onClick={onToggle}
         aria-label="Toggle"
-        className={`mt-1 inline-block h-3 w-3 border border-border flex-shrink-0 ${completed ? "bg-foreground" : ""}`}
+        className={`mt-1 inline-block h-3 w-3 border flex-shrink-0 ${occ.task.is_critical ? "border-2 border-destructive" : "border-border"} ${completed ? "bg-foreground" : ""}`}
       />
+      {occ.task.is_critical && (
+        <AlertTriangle size={11} className="mt-0.5 text-destructive flex-shrink-0" aria-label="놓치면 안 됨" />
+      )}
       <button
         onClick={onEdit}
         className={`text-sm flex-1 text-left truncate hover:underline text-foreground ${completed ? "line-through" : ""}`}

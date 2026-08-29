@@ -1,7 +1,7 @@
 import type { WidgetDef } from "@/lib/widget-registry";
 import { useState } from "react";
 import type { Category, MultipleTask, Subtag, Task, TaskCompletion } from "@/lib/wann-data";
-import { todayLocalStr, shortTime, isOccurrenceCompleted, currentOccurrenceDate, koDow, taskSortKey } from "@/lib/wann-data";
+import { todayLocalStr, shortTime, isOccurrenceCompleted, currentOccurrenceDate, koDow, taskSortKey, diffDays } from "@/lib/wann-data";
 import { Trash2, ChevronDown, ChevronUp } from "lucide-react";
 import { CategoryFilterBar } from "./CategoryFilterBar";
 import type { CategoryFilter, TaskFormValues } from "./TaskForm";
@@ -67,6 +67,14 @@ export function TasksPanel({
   const filtered = tasks.filter((t) => {
     if (filter.categoryId && t.category_id !== filter.categoryId) return false;
     if (filter.subtagId && t.subtag_id !== filter.subtagId) return false;
+    // Recurring tasks only show their nearest occurrence when it falls within a
+    // week of today — this list is a "what's live right now" view, not a full
+    // history. This Week / Month views are unaffected: they scope by date range
+    // already and never go through this filter.
+    if ((t.recurrence ?? "none") !== "none" && t.due_date) {
+      const occ = currentOccurrenceDate(t, today);
+      if (Math.abs(diffDays(today, occ)) > 7) return false;
+    }
     return true;
   });
 

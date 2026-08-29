@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import type { Category, MultipleTask, MultipleTaskItem, Subtag, Task } from "@/lib/wann-data";
 import { todayLocalStr, shortTime, formatDateKo, koDow } from "@/lib/wann-data";
-import { Plus, Trash2, X } from "lucide-react";
+import { Plus, Trash2, X, AlertTriangle } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { fetchSubitemsForTask, type SubitemDraft } from "@/lib/wann-subitems";
 
@@ -25,6 +25,8 @@ export type TaskFormValues = {
   newProject: NewProjectValues | null;
   /** Lightweight checklist for duration tasks. */
   subitems: SubitemDraft[];
+  /** "Can't miss this" marker — thicker border + icon wherever the task renders. */
+  isCritical: boolean;
 };
 
 export function TaskForm({
@@ -59,6 +61,7 @@ export function TaskForm({
     projectId: null,
     newProject: null,
     subitems: [],
+    isCritical: false,
   });
 
   const [form, setForm] = useState<TaskFormValues>(emptyForm);
@@ -76,6 +79,7 @@ export function TaskForm({
         projectId: editingTask.multiple_task_id ?? null,
         newProject: null,
         subitems: [],
+        isCritical: editingTask.is_critical ?? false,
       });
     }
   }, [editingTask]);
@@ -263,6 +267,19 @@ export function TaskForm({
           ))}
           <option value="__new__">+ 새 프로젝트</option>
         </select>
+        <label
+          className={`flex items-center gap-1 text-[10px] label-caps ${form.isCritical ? "text-foreground" : "text-muted-foreground"}`}
+          title="놓치면 안 됨"
+        >
+          <input
+            type="checkbox"
+            checked={form.isCritical}
+            onChange={(e) => setForm({ ...form, isCritical: e.target.checked })}
+            className="h-3 w-3 accent-foreground"
+          />
+          <AlertTriangle size={11} />
+          Critical
+        </label>
         <button
           onClick={submit}
           className="ml-auto border border-border px-3 py-1 label-caps hover:bg-muted flex items-center gap-1"

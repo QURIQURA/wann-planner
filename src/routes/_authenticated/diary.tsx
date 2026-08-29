@@ -13,7 +13,7 @@ import {
   fetchDiaryPhotosRange,
   signDiaryPhotoUrl,
 } from "@/lib/wann-extra";
-import { formatLocalDate, todayLocalStr, parseLocalDate } from "@/lib/wann-data";
+import { formatLocalDate, todayLocalStr, parseLocalDate, fetchTasks, fetchEvents, tasksOnDate, eventsOnDate } from "@/lib/wann-data";
 import { StickerPicker } from "@/components/wann/StickerPicker";
 import { DaySummaryPanel } from "@/components/wann/DaySummaryPanel";
 import { DiaryPhotos } from "@/components/wann/DiaryPhotos";
@@ -82,6 +82,7 @@ function DiaryPage() {
         )}
         {view === "month" && (
           <MonthView
+            userId={user.id}
             cursor={monthCursor}
             onShift={(delta) => setMonthCursor(new Date(monthCursor.getFullYear(), monthCursor.getMonth() + delta, 1))}
             onSelectDate={(d) => { setSelectedDate(d); setView("day"); }}
@@ -332,10 +333,12 @@ function DayView({ userId, date, onNavigate }: { userId: string; date: string; o
 
 /* ---------- MONTH VIEW ---------- */
 function MonthView({
+  userId,
   cursor,
   onShift,
   onSelectDate,
 }: {
+  userId: string;
   cursor: Date;
   onShift: (delta: number) => void;
   onSelectDate: (d: string) => void;
@@ -352,6 +355,22 @@ function MonthView({
     queryKey: ["diary-month", start, end],
     queryFn: () => fetchDiaryMonthPreviews(start, end),
   });
+  // "일정 있음" indicator (item #4-B) — separate from the diary-entry dot below.
+  // Reuses the same query keys as the main dashboard, so this is usually a cache hit.
+  const tasksQ = useQuery({ queryKey: ["tasks", userId], queryFn: () => fetchTasks(userId) });
+  const eventsQ = useQuery({ queryKey: ["events", userId], queryFn: () => fetchEvents(userId) });
+  const scheduleDates = useMemo(() => {
+    const tasks = tasksQ.data ?? [];
+    const events = eventsQ.data ?? [];
+    const set = new Set<string>();
+    for (let d = 1; d <= days; d++) {
+      const dateStr = formatLocalDate(new Date(year, month0, d));
+      if (tasksOnDate(tasks, dateStr).length > 0 || eventsOnDate(events, dateStr).length > 0) {
+        set.add(dateStr);
+      }
+    }
+    return set;
+  }, [tasksQ.data, eventsQ.data, year, month0, days]);
   const coversQ = useQuery({
     queryKey: ["diary-month-photos", start, end],
     queryFn: () => fetchDiaryPhotosRange(start, end),
@@ -456,6 +475,14 @@ function MonthView({
               </div>
               {entry?.preview && !coverUrl && (
                 <p className="text-[10px] text-muted-foreground line-clamp-2 mt-1">{entry.preview}</p>
+              )}
+              {scheduleDates.has(c.date) && (
+                <span
+                  className="absolute bottom-1 left-1 h-1.5 w-1.5 rounded-full border border-foreground"
+                  style={{ background: coverUrl ? "transparent" : "var(--background)" }}
+                  aria-label="일정 있음"
+                  title="일정 있음"
+                />
               )}
             </button>
           );

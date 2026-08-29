@@ -933,6 +933,7 @@ export type Database = {
           days_of_week: number[]
           habit_time: string | null
           id: string
+          is_critical: boolean
           name: string
           routine_group_id: string | null
           sort_order: number
@@ -946,6 +947,7 @@ export type Database = {
           days_of_week?: number[]
           habit_time?: string | null
           id?: string
+          is_critical?: boolean
           name: string
           routine_group_id?: string | null
           sort_order?: number
@@ -959,6 +961,7 @@ export type Database = {
           days_of_week?: number[]
           habit_time?: string | null
           id?: string
+          is_critical?: boolean
           name?: string
           routine_group_id?: string | null
           sort_order?: number
@@ -1363,6 +1366,7 @@ export type Database = {
           due_time: string | null
           end_time: string | null
           id: string
+          is_critical: boolean
           multiple_task_id: string | null
           notes: string | null
           recurrence: string
@@ -1380,6 +1384,7 @@ export type Database = {
           due_time?: string | null
           end_time?: string | null
           id?: string
+          is_critical?: boolean
           multiple_task_id?: string | null
           notes?: string | null
           recurrence?: string
@@ -1397,6 +1402,7 @@ export type Database = {
           due_time?: string | null
           end_time?: string | null
           id?: string
+          is_critical?: boolean
           multiple_task_id?: string | null
           notes?: string | null
           recurrence?: string
