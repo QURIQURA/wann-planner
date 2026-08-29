@@ -115,7 +115,7 @@ export type MoveProjectArgs = {
 };
 
 type DragData =
-  | { kind: "task"; taskId: string; originalDate: string; title: string }
+  | { kind: "task"; taskId: string; originalDate: string; title: string; isMoved: boolean }
   | { kind: "bar"; projectId: string; mode: "move" | "start" | "end"; grabbedDate: string; title: string }
   | { kind: "event"; eventId: string; title: string };
 
@@ -252,10 +252,16 @@ export function WeekRotation({
     if (overStr.startsWith("slot|")) {
       const [, date, slotStr] = overStr.split("|");
       const newTime = timeFromSlotIndex(Number(slotStr));
-      if (date === src.originalDate && newTime === (task.due_time?.slice(0, 5) ?? "")) return;
+      // Only a true no-op (unmoved occurrence dropped back on its own date+time) is skipped.
+      // A *moved* occurrence dropped back onto its original date+time must still fire, so the
+      // exception gets reverted (new_date/new_time reset to the anchor) instead of staying stuck.
+      const isNoOp = !src.isMoved && date === src.originalDate && newTime === (task.due_time?.slice(0, 5) ?? "");
+      if (isNoOp) return;
       onMoveTask({ task, originalDate: src.originalDate, newDate: date, newTime });
     } else {
-      if (dropDate === src.originalDate) return;
+      // Same reasoning as above: only skip when the occurrence was never moved in the first
+      // place. A moved occurrence dropped back on its original date is a real revert.
+      if (!src.isMoved && dropDate === src.originalDate) return;
       onMoveTask({ task, originalDate: src.originalDate, newDate: dropDate, newTime: null });
     }
   };
@@ -1152,7 +1158,7 @@ function DraggableTimedTask({
 }) {
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id: `task|${occ.task.id}|${occ.originalDate}`,
-    data: { kind: "task", taskId: occ.task.id, originalDate: occ.originalDate, title: occ.task.title } satisfies DragData,
+    data: { kind: "task", taskId: occ.task.id, originalDate: occ.originalDate, title: occ.task.title, isMoved: occ.isMoved } satisfies DragData,
   });
   return (
     <div ref={setNodeRef} className="h-full relative">
@@ -1473,6 +1479,7 @@ function DraggableAllDayTask({
       taskId: occ.task.id,
       originalDate: occ.originalDate,
       title: occ.task.title,
+      isMoved: occ.isMoved,
     } satisfies DragData,
   });
   return (
