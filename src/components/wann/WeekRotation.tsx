@@ -299,11 +299,38 @@ export function WeekRotation({
     const dayMultiples = multipleTasks.filter((m) => m.date === key && !isMultiDayProject(m));
 
     const dayHabits = habits.filter((h) => habitAppliesOnDow(h, d.getDay()));
-    const primaryType = EVENT_PRIORITY.find((t) => dayEvents.some((e) => e.type === t));
-    const primaryEvent = primaryType ? dayEvents.find((e) => e.type === primaryType) : undefined;
-    const borderColor = primaryEvent ? resolveEventColor(primaryEvent, eventTypes) : undefined;
+    // System types (birthday/anniversary/holiday/dplus) lead; any other
+    // (custom) type keeps array order after them, so a custom-type-only day
+    // still gets a border instead of none at all.
+    const priorityRank = (type: string) => {
+      const idx = (EVENT_PRIORITY as readonly string[]).indexOf(type);
+      return idx === -1 ? EVENT_PRIORITY.length : idx;
+    };
+    const orderedDayEvents = [...dayEvents].sort((a, b) => priorityRank(a.type) - priorityRank(b.type));
+    // Two events on the same day with different colours both get a ring
+    // instead of one silently winning — outer border for the first, an
+    // inner outline (not box-shadow, so it never fights the drag-over
+    // "ring-2" highlight) for the second. 3rd+ colours are dropped rather
+    // than adding more rings, which would get visually noisy fast.
+    const dayEventColors = Array.from(
+      new Set(orderedDayEvents.map((e) => resolveEventColor(e, eventTypes))),
+    );
+    const RING_WIDTH = 4; // doubled from the original 2px per user request
 
-    const cardStyle = borderColor ? { borderColor, borderWidth: 2 } : undefined;
+    const cardStyle: React.CSSProperties | undefined = dayEventColors.length
+      ? {
+          borderColor: dayEventColors[0],
+          borderWidth: RING_WIDTH,
+          ...(dayEventColors[1]
+            ? {
+                outlineStyle: "solid" as const,
+                outlineWidth: RING_WIDTH,
+                outlineColor: dayEventColors[1],
+                outlineOffset: -(RING_WIDTH * 2),
+              }
+            : {}),
+        }
+      : undefined;
     // A Review only ever shows starting on its (single, mutable) next_review_date, and then
     // carries forward every day after — never a duplicate row, never a planner_tasks row.
     const dayReviews = intentions.filter((i) => reviewShowsOnDate(i, key));

@@ -1,5 +1,5 @@
 import type { WidgetDef } from "@/lib/widget-registry";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import type { EventEntry, EventNote, EventType } from "@/lib/wann-data";
 import {
   daysUntilAnnual,
@@ -21,6 +21,7 @@ import {
   slugifyEventTypeKey,
   resolveEventColor,
   eventTypeLabel,
+  NEUTRAL_FALLBACK_COLOR,
 } from "@/lib/wann-events";
 import { Plus, Trash2, X, Pencil, ChevronDown, ChevronRight, Check, Pin, Settings2, Archive, RotateCcw } from "lucide-react";
 
@@ -472,9 +473,16 @@ export function EventEditor({
   );
 }
 
-/** Curated palette swatches — deliberately not a free RGB `<input type="color">`,
- * see wann-events.ts for why. `value === null` renders no swatch selected. */
+/** Curated palette swatches for a quick pick, plus a free `<input type="color">`
+ * (+ hex text field) for any arbitrary colour — matches the free-picker pattern
+ * already used elsewhere (SettingsPanel, CategoryFilterBar). `value === null`
+ * renders no swatch selected. */
 function ColorSwatchPicker({ value, onChange }: { value: string | null; onChange: (hex: string) => void }) {
+  const isCustom = value != null && !EVENT_PALETTE.some((c) => c.hex === value);
+  // Local draft so a half-typed hex (e.g. "#a1") isn't clobbered every
+  // keystroke by the last *committed* colour re-rendering the input.
+  const [hexDraft, setHexDraft] = useState(value ?? "");
+  useEffect(() => setHexDraft(value ?? ""), [value]);
   return (
     <div className="flex items-center gap-1 flex-wrap">
       {EVENT_PALETTE.map((c) => (
@@ -488,6 +496,25 @@ function ColorSwatchPicker({ value, onChange }: { value: string | null; onChange
           style={{ background: c.hex }}
         />
       ))}
+      <input
+        type="color"
+        value={value ?? NEUTRAL_FALLBACK_COLOR}
+        onChange={(e) => onChange(e.target.value)}
+        title="Custom colour"
+        aria-label="Custom colour"
+        className={`h-6 w-6 rounded-full border-2 flex-shrink-0 p-0 overflow-hidden ${isCustom ? "border-foreground" : "border-transparent"}`}
+      />
+      <input
+        type="text"
+        value={hexDraft}
+        placeholder="#RRGGBB"
+        onChange={(e) => {
+          const v = e.target.value.trim();
+          setHexDraft(v);
+          if (/^#[0-9a-fA-F]{6}$/.test(v)) onChange(v);
+        }}
+        className="w-[72px] bg-transparent outline-none text-xs border-b border-border py-1"
+      />
     </div>
   );
 }
