@@ -1602,6 +1602,7 @@ export type Database = {
           border_color: string
           created_at: string
           font: string
+          review_highlight_color: string
           text_color: string
           updated_at: string
           user_id: string
@@ -1613,6 +1614,7 @@ export type Database = {
           border_color?: string
           created_at?: string
           font?: string
+          review_highlight_color?: string
           text_color?: string
           updated_at?: string
           user_id: string
@@ -1624,6 +1626,7 @@ export type Database = {
           border_color?: string
           created_at?: string
           font?: string
+          review_highlight_color?: string
           text_color?: string
           updated_at?: string
           user_id?: string

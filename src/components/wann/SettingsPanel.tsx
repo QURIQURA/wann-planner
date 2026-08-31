@@ -70,6 +70,16 @@ export function SettingsPanel({
             <ColorRow label="Background" value={settings.bg_color} onChange={(v) => onChange({ bg_color: v })} />
             <ColorRow label="Border" value={settings.border_color} onChange={(v) => onChange({ border_color: v })} />
             <ColorRow label="Text" value={settings.text_color} onChange={(v) => onChange({ text_color: v })} />
+            <div>
+              <ColorRow
+                label="Review Highlight"
+                value={settings.review_highlight_color || "#FDE047"}
+                onChange={(v) => onChange({ review_highlight_color: v })}
+              />
+              <p className="text-[10px] text-muted-foreground mt-1">
+                Timeline에서 다시 확인할 Goal/Idea에 붙는 하이라이터 색 — Task 카테고리 색과 헷갈리지 않게 직접 골라보세요. 기한이 지난 리뷰는 항상 빨간색으로 표시돼요.
+              </p>
+            </div>
           </div>
         )}
 

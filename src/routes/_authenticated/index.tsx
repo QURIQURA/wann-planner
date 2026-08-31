@@ -1,6 +1,6 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
-import { Settings as SettingsIcon, LogOut, BookOpen, LineChart, CalendarDays, LayoutGrid } from "lucide-react";
+import { Settings as SettingsIcon, LogOut, BookOpen, LineChart, CalendarDays, LayoutGrid, ChevronDown, ChevronRight } from "lucide-react";
 
 import { supabase } from "@/integrations/supabase/client";
 import { isDPlusEvent, dPlusLabel } from "@/lib/wann-data";
@@ -37,6 +37,7 @@ function Dashboard() {
   const navigate = useNavigate();
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [reviewPromptDismissed, setReviewPromptDismissed] = useState(false);
+  const [expandedGroupId, setExpandedGroupId] = useState<string | null>(null);
 
   const {
     anchor,
@@ -227,6 +228,7 @@ function Dashboard() {
           onEditTask={(t) => widgetCtx.taskActions.onEditTask(t)}
           intentions={(intentionsQ.data ?? []).filter((i) => i.status === "active")}
           onOpenIntention={(id) => openGoalsWidget(id)}
+          reviewHighlightColor={settings.review_highlight_color}
         />
 
         {/* Original combined layout restored: one shared category filter,
@@ -260,23 +262,50 @@ function Dashboard() {
               ) : (
                 <div className="space-y-1">
                   {(groupsQ.data ?? []).map((g) => {
-                    const nProjects = (multipleQ.data ?? []).filter(
-                      (p) => p.group_id === g.id,
-                    ).length;
+                    const groupProjects = (multipleQ.data ?? []).filter((p) => p.group_id === g.id);
                     const nShared = (tasksQ.data ?? []).filter(
                       (t) => t.group_id === g.id && !t.multiple_task_id,
                     ).length;
+                    const expanded = expandedGroupId === g.id;
                     return (
-                      <button
-                        key={g.id}
-                        onClick={() => openGroupsWidget(g.id)}
-                        className="w-full flex items-center gap-2 py-1 border-b border-border/50 text-left hover:bg-muted"
-                      >
-                        <span className="text-sm flex-1 min-w-0 truncate">{g.name}</span>
-                        <span className="text-[10px] text-muted-foreground whitespace-nowrap">
-                          {nProjects} Projects · {nShared} Shared Tasks
-                        </span>
-                      </button>
+                      <div key={g.id} className="border-b border-border/50">
+                        <button
+                          onClick={() => setExpandedGroupId(expanded ? null : g.id)}
+                          className="w-full flex items-center gap-2 py-1 text-left hover:bg-muted"
+                        >
+                          {expanded ? <ChevronDown size={12} className="text-muted-foreground flex-shrink-0" /> : <ChevronRight size={12} className="text-muted-foreground flex-shrink-0" />}
+                          <span className="text-sm flex-1 min-w-0 truncate">{g.name}</span>
+                          <span className="text-[10px] text-muted-foreground whitespace-nowrap">
+                            {groupProjects.length} Projects · {nShared} Shared Tasks
+                          </span>
+                        </button>
+                        {expanded && (
+                          <div className="pl-5 pb-2 space-y-1">
+                            {groupProjects.length === 0 ? (
+                              <p className="text-xs text-muted-foreground italic">
+                                아직 이 Group에 속한 Project가 없어요.
+                              </p>
+                            ) : (
+                              groupProjects.map((p) => (
+                                <button
+                                  key={p.id}
+                                  onClick={() => openProject(p.id)}
+                                  className="w-full flex items-center gap-2 text-left hover:underline"
+                                  title="Tasks & Projects에서 바로 보기"
+                                >
+                                  <span className="text-sm flex-1 min-w-0 truncate">{p.name}</span>
+                                </button>
+                              ))
+                            )}
+                            <button
+                              onClick={() => openGroupsWidget(g.id)}
+                              className="label-caps text-[10px] text-muted-foreground hover:text-foreground"
+                            >
+                              그룹 상세 · Shared Tasks 보기
+                            </button>
+                          </div>
+                        )}
+                      </div>
                     );
                   })}
                 </div>

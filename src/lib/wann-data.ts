@@ -9,6 +9,11 @@ export type UserSettings = {
   font: string;
   widget_visibility: Record<string, boolean>;
   widget_order: string[];
+  /** Background colour for the "review due" highlighter-marker on Intentions
+   * (goals/ideas) in the Timeline — user-customisable so it never blends
+   * into the unrelated category colours also shown there. Overdue reviews
+   * stay a fixed red regardless of this setting (mirrors overdue Tasks). */
+  review_highlight_color: string;
 };
 
 
@@ -31,6 +36,13 @@ export type RecurringException = Tables<"planner_recurring_task_exceptions">;
 export function taskCategoryIds(t: Task): string[] {
   if (t.category_ids?.length) return t.category_ids;
   return t.category_id ? [t.category_id] : [];
+}
+
+/** An occurrence is overdue once its (effective) date is in the past and it
+ * hasn't been completed. Used to give overdue Tasks a red highlight in the
+ * Timeline, distinct from any category colour also shown there. */
+export function isOccurrenceOverdue(originalDate: string, completed: boolean, today = todayLocalStr()): boolean {
+  return !completed && originalDate < today;
 }
 
 export async function fetchExceptions(_userId: string): Promise<RecurringException[]> {

@@ -32,6 +32,7 @@ import {
   isMultiDayProject,
   shiftDate,
   diffDays,
+  isOccurrenceOverdue,
 } from "@/lib/wann-data";
 import { resolveEventColor, eventTypeLabel } from "@/lib/wann-events";
 
@@ -148,6 +149,7 @@ export function WeekRotation({
   onMoveEvent,
   intentions = [],
   onOpenIntention,
+  reviewHighlightColor,
 }: {
   anchorDate: Date;
   onAnchorChange: (d: Date) => void;
@@ -172,6 +174,10 @@ export function WeekRotation({
   /** Active IDEA/LATER/GOAL intentions whose Review Timer may be due. Optional — Timeline works without it. */
   intentions?: Intention[];
   onOpenIntention?: (id: string) => void;
+  /** User-customisable background for the "review due" highlighter-marker
+   * (see Settings > Colors). Defaults to the original yellow. Overdue
+   * reviews stay a fixed red regardless. */
+  reviewHighlightColor?: string;
 }) {
 
   // Yesterday / Today / Tomorrow — anchorDate is always the centre card.
@@ -353,6 +359,7 @@ export function WeekRotation({
         dayMultiples={dayMultiples}
         dayReviews={dayReviews}
         onOpenIntention={onOpenIntention}
+        reviewHighlightColor={reviewHighlightColor}
         dayHabits={dayHabits}
         habitCompletions={habitCompletions}
         onTapHabit={onTapHabit}
@@ -543,6 +550,7 @@ function DayCard({
   dayMultiples,
   dayReviews,
   onOpenIntention,
+  reviewHighlightColor,
   dayHabits,
   habitCompletions,
   onTapHabit,
@@ -570,6 +578,7 @@ function DayCard({
   dayMultiples: MultipleTask[];
   dayReviews: Intention[];
   onOpenIntention?: (id: string) => void;
+  reviewHighlightColor?: string;
   dayHabits: Habit[];
   habitCompletions: HabitCompletion[];
   onTapHabit: (habit: Habit, date: string) => void;
@@ -623,7 +632,9 @@ function DayCard({
             // Highlighter-marker look — deliberately loud, unlike a plain task line, so a
             // Review never blends into the rest of the timeline. Overdue swaps the highlighter
             // colour from yellow to red on top of the existing red text/icon.
-            const markerBg = overdue ? hexToRgba("#F87171", 0.35) : hexToRgba("#FDE047", 0.55);
+            const markerBg = overdue
+              ? hexToRgba("#F87171", 0.35)
+              : hexToRgba(reviewHighlightColor || "#FDE047", 0.55);
             return (
               <Comp
                 key={`review-${intention.id}`}
@@ -848,6 +859,7 @@ function TimelineGrid({
           }
           const o = b.o;
           const completed = isOccurrenceCompleted(o.task, o.originalDate, completions);
+          const overdue = isOccurrenceOverdue(o.originalDate, completed);
           const cat = o.task.category_id ? catMap[o.task.category_id] : undefined;
           const project = o.task.multiple_task_id ? projMap[o.task.multiple_task_id] : undefined;
           const key = `${o.task.id}-${o.originalDate}-${b.marker ?? "single"}`;
@@ -859,6 +871,7 @@ function TimelineGrid({
                   timeLabel={shortTime(b.endStr)}
                   marker="end"
                   completed={completed}
+                  overdue={overdue}
                   cat={cat}
                   project={project}
                   onToggle={() => onToggle(o.task, o.originalDate)}
@@ -876,6 +889,7 @@ function TimelineGrid({
                   startMin={b.startMin}
                   endMin={b.endMin ?? b.startMin}
                   completed={completed}
+                  overdue={overdue}
                   cat={cat}
                   project={project}
                   onToggle={() => onToggle(o.task, o.originalDate)}
@@ -891,6 +905,7 @@ function TimelineGrid({
                 marker={b.marker}
                 endTime={null}
                 completed={completed}
+                overdue={overdue}
                 cat={cat}
                 project={project}
                 onToggle={() => onToggle(o.task, o.originalDate)}
@@ -1019,6 +1034,7 @@ function TimedTaskWithSubitems({
   endMin,
   startMin,
   completed,
+  overdue,
   cat,
   project,
   onToggle,
@@ -1029,6 +1045,7 @@ function TimedTaskWithSubitems({
   endMin: number;
   startMin: number;
   completed: boolean;
+  overdue?: boolean;
   cat: Category | undefined;
   project?: string;
   onToggle: () => void;
@@ -1049,6 +1066,7 @@ function TimedTaskWithSubitems({
         marker="start"
         endTime={endTime}
         completed={completed}
+        overdue={overdue}
         cat={cat}
         project={project}
         onToggle={onToggle}
@@ -1155,6 +1173,7 @@ function TimedTaskBody({
   timeLabel,
   marker,
   completed,
+  overdue,
   cat,
   project,
   onToggle,
@@ -1167,6 +1186,7 @@ function TimedTaskBody({
   timeLabel: string;
   marker: "start" | "end" | null;
   completed: boolean;
+  overdue?: boolean;
   cat: Category | undefined;
   project?: string;
   onToggle: () => void;
@@ -1175,14 +1195,16 @@ function TimedTaskBody({
   dimmed?: boolean;
   extra?: React.ReactNode;
 }) {
-  // Timeline boxes are tinted with the category colour at 50% opacity.
-  const bg = hexToRgba(cat?.color, 0.5) ?? "var(--background)";
+  // Timeline boxes are tinted with the category colour at 50% opacity — an
+  // overdue Task's red highlight takes priority over that tint so it never
+  // gets lost against a category colour.
+  const bg = overdue ? hexToRgba("#F87171", 0.35) : (hexToRgba(cat?.color, 0.5) ?? "var(--background)");
   const critical = !!occ.task.is_critical;
   return (
     <div
-      className={`flex items-center gap-1 px-1 text-[11px] leading-tight h-full overflow-hidden text-foreground ${
-        critical ? "border-2 border-destructive" : "border border-border"
-      } ${dimmed ? "opacity-30" : ""}`}
+      className={`flex items-center gap-1 px-1 text-[11px] leading-tight h-full overflow-hidden ${
+        overdue ? "text-destructive font-medium" : "text-foreground"
+      } ${critical ? "border-2 border-destructive" : "border border-border"} ${dimmed ? "opacity-30" : ""}`}
       style={{ background: bg }}
     >
       {dragHandle ?? <span className="w-[10px] flex-shrink-0" />}
@@ -1197,7 +1219,7 @@ function TimedTaskBody({
       )}
       <button
         onClick={onEdit}
-        className={`flex-1 min-w-[3rem] text-left truncate hover:underline text-foreground ${completed ? "line-through" : ""}`}
+        className={`flex-1 min-w-[3rem] text-left truncate hover:underline ${completed ? "line-through" : ""}`}
       >
         {occ.task.title || "(제목 없음)"}
         {marker && <span className="ml-1 text-[9px] text-foreground/60">[{marker}]</span>}
@@ -1226,6 +1248,7 @@ function DraggableTimedTask({
   endTime,
   marker,
   completed,
+  overdue,
   cat,
   project,
   onToggle,
@@ -1236,6 +1259,7 @@ function DraggableTimedTask({
   endTime?: string | null;
   marker?: "start" | null;
   completed: boolean;
+  overdue?: boolean;
   cat: Category | undefined;
   project?: string;
   onToggle: () => void;
@@ -1253,6 +1277,7 @@ function DraggableTimedTask({
         timeLabel={`${shortTime(occ.effectiveTime)}${endTime ? `–${shortTime(endTime)}` : ""}`}
         marker={marker ?? null}
         completed={completed}
+        overdue={overdue}
         cat={cat}
         project={project}
         onToggle={onToggle}
@@ -1304,6 +1329,7 @@ function TaskLines({
         key={`${o.task.id}-${o.originalDate}`}
         occ={o}
         completed={completed}
+        overdue={isOccurrenceOverdue(o.originalDate, completed)}
         cat={cat}
         project={project}
         onToggle={() => onToggle(o.task, o.originalDate)}
@@ -1554,6 +1580,7 @@ function DraggableEventLine({
 function DraggableAllDayTask({
   occ,
   completed,
+  overdue,
   cat,
   project,
   onToggle,
@@ -1561,6 +1588,7 @@ function DraggableAllDayTask({
 }: {
   occ: EffectiveOccurrence;
   completed: boolean;
+  overdue?: boolean;
   cat?: Category;
   project?: string;
   onToggle: () => void;
@@ -1577,7 +1605,10 @@ function DraggableAllDayTask({
     } satisfies DragData,
   });
   return (
-    <div className={`flex items-start gap-1.5 group ${isDragging ? "opacity-30" : ""}`}>
+    <div
+      className={`flex items-start gap-1.5 group px-1 py-0.5 rounded-sm ${isDragging ? "opacity-30" : ""}`}
+      style={overdue ? { background: hexToRgba("#F87171", 0.35) } : undefined}
+    >
       <button
         ref={setNodeRef}
         {...attributes}
@@ -1597,7 +1628,7 @@ function DraggableAllDayTask({
       )}
       <button
         onClick={onEdit}
-        className={`text-sm flex-1 text-left truncate hover:underline text-foreground ${completed ? "line-through" : ""}`}
+        className={`text-sm flex-1 text-left truncate hover:underline ${overdue ? "text-destructive font-medium" : "text-foreground"} ${completed ? "line-through" : ""}`}
       >
         {occ.task.title}
         {(occ.task.recurrence ?? "none") !== "none" && (
