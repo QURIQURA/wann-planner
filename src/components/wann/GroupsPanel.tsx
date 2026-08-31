@@ -180,6 +180,7 @@ export function GroupsPanel({ ctx }: { ctx: WidgetContext }) {
                       subtags={ctx.subtags}
                       groups={ctx.groups}
                       hideFilterBar
+                      hideHeader
                       {...ctx.projectActions}
                       // Inside a Group, the row's trash icon unlinks the
                       // Project from this Group — it never deletes the

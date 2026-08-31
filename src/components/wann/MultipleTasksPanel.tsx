@@ -46,6 +46,7 @@ export function MultipleTasksPanel({
   filter: filterProp,
   onFilterChange,
   hideFilterBar,
+  hideHeader,
 }: {
 
   entries: MultipleTask[];
@@ -71,6 +72,9 @@ export function MultipleTasksPanel({
   onFilterChange?: (f: CategoryFilter) => void;
   /** Hide the built-in filter bar when a shared one is rendered above. */
   hideFilterBar?: boolean;
+  /** Hide the built-in "Projects" header when the caller already renders
+   * its own (e.g. GroupsPanel's "Projects" section label). */
+  hideHeader?: boolean;
 }) {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState<MultipleTaskForm>(emptyMultipleTaskForm());
@@ -116,10 +120,12 @@ export function MultipleTasksPanel({
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-4">
-        <p className="label-caps">Projects</p>
-        <span className="text-[10px] text-muted-foreground">Task 폼에서 생성</span>
-      </div>
+      {!hideHeader && (
+        <div className="flex items-center justify-between mb-4">
+          <p className="label-caps">Projects</p>
+          <span className="text-[10px] text-muted-foreground">Task 폼에서 생성</span>
+        </div>
+      )}
 
 
       {!hideFilterBar && (
