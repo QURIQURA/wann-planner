@@ -394,7 +394,7 @@ export function WeekRotation({
           <div className="flex items-center gap-1">
             <button
               onClick={() => onAnchorChange(addDays(anchorDate, -1))}
-              className="border border-border p-1 hover:bg-muted"
+              className="border border-border p-1.5 hover:bg-muted"
               aria-label="Previous day"
             >
               <ChevronLeft size={14} />
@@ -414,7 +414,7 @@ export function WeekRotation({
             </button>
             <button
               onClick={() => onAnchorChange(addDays(anchorDate, 1))}
-              className="border border-border p-1 hover:bg-muted"
+              className="border border-border p-1.5 hover:bg-muted"
               aria-label="Next day"
             >
               <ChevronRight size={14} />

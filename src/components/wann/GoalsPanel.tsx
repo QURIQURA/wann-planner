@@ -114,7 +114,7 @@ function IntentionRow({
   return (
     <div id={`gi-${intention.id}`} className="border-b border-border/50">
       <div className="flex items-center gap-2 py-1.5 group">
-        <button onClick={() => setExpanded((v) => !v)} className="text-muted-foreground flex-shrink-0" aria-label="Expand">
+        <button onClick={() => setExpanded((v) => !v)} className="text-muted-foreground flex-shrink-0 p-1 -m-1" aria-label="Expand">
           {expanded ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
         </button>
         <button onClick={() => setExpanded((v) => !v)} className="text-sm flex-1 text-left hover:underline truncate">
@@ -128,7 +128,7 @@ function IntentionRow({
         <ReviewBadge intention={intention} />
         <button
           onClick={() => actions.onDelete(intention.id)}
-          className="opacity-0 group-hover:opacity-100 hover:text-destructive flex-shrink-0"
+          className="opacity-0 group-hover:opacity-100 hover:text-destructive flex-shrink-0 p-1 -m-1"
           aria-label="Delete"
         >
           <Trash2 size={12} />

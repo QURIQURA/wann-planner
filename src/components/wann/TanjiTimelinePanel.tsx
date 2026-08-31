@@ -141,17 +141,18 @@ export function TanjiTimelinePanel({ ctx }: { ctx: WidgetContext }) {
               ))}
             </div>
 
-            {dates.map((d) => (
-              <DayColumn
-                key={d}
-                date={d}
-                isToday={d === today}
-                hours={hours}
-                types={types}
-                logs={logs.filter((l) => l.date === d)}
-                onPick={(log) => setSel({ date: d, typeId: log.slot_type_id, log })}
-                onAdd={() => types[0] && setSel({ date: d, typeId: types[0].id })}
-              />
+            {dates.map((d, i) => (
+              <div key={d} className={i === 1 ? "flex-1 min-w-0" : "hidden sm:block flex-1 min-w-0"}>
+                <DayColumn
+                  date={d}
+                  isToday={d === today}
+                  hours={hours}
+                  types={types}
+                  logs={logs.filter((l) => l.date === d)}
+                  onPick={(log) => setSel({ date: d, typeId: log.slot_type_id, log })}
+                  onAdd={() => types[0] && setSel({ date: d, typeId: types[0].id })}
+                />
+              </div>
             ))}
           </div>
 

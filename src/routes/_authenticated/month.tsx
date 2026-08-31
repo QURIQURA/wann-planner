@@ -70,7 +70,7 @@ function MonthPage() {
   return (
     <div className="min-h-screen">
       <header className="border-b border-border">
-        <div className="max-w-5xl mx-auto px-6 py-4 flex items-center gap-3">
+        <div className="max-w-5xl mx-auto px-3 sm:px-6 py-4 flex items-center gap-3">
           <Link to="/" className="border border-border p-2 hover:bg-muted" aria-label="Back">
             <ArrowLeft size={14} />
           </Link>
@@ -81,8 +81,8 @@ function MonthPage() {
         </div>
       </header>
 
-      <main className="max-w-5xl mx-auto px-6 py-6">
-        <div className="flex items-center gap-2 mb-4">
+      <main className="max-w-5xl mx-auto px-3 sm:px-6 py-6">
+        <div className="flex items-center gap-2 mb-4 flex-wrap">
           <button
             onClick={() => setCursor(new Date(year, month0 - 1, 1))}
             className="border border-border p-1 hover:bg-muted"
@@ -90,7 +90,7 @@ function MonthPage() {
           >
             <ChevronLeft size={14} />
           </button>
-          <p className="text-lg font-light tracking-tight min-w-[10rem]">
+          <p className="text-lg font-light tracking-tight min-w-0 sm:min-w-[10rem]">
             {cursor.toLocaleString(undefined, { month: "long", year: "numeric" })}
           </p>
           <button

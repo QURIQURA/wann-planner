@@ -897,12 +897,12 @@ function Dashboard() {
   return (
     <div className="min-h-screen">
       <header className="border-b border-border">
-        <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
+        <div className="max-w-7xl mx-auto px-3 sm:px-6 py-3 sm:py-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <p className="label-caps text-muted-foreground">WANN</p>
             <h1 className="text-lg font-light tracking-tight">Weekly OS</h1>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             {dueReviews.length > 0 && (
               <button
                 onClick={() => scrollToId("goals-widget")}
@@ -957,7 +957,7 @@ function Dashboard() {
 
       {dueReviews.length > 0 && !reviewPromptDismissed && (
         <div className="border-b border-border bg-muted">
-          <div className="max-w-7xl mx-auto px-6 py-3 flex items-center gap-3 flex-wrap">
+          <div className="max-w-7xl mx-auto px-3 sm:px-6 py-3 flex items-center gap-3 flex-wrap">
             <span className="text-sm">
               {dueReviews.length}개 항목을 다시 확인할 시간이에요.
             </span>
@@ -979,7 +979,7 @@ function Dashboard() {
 
       {upcoming.length > 0 && (
         <div className="border-b border-border bg-muted">
-          <div className="max-w-7xl mx-auto px-6 py-3 flex items-center gap-4 flex-wrap">
+          <div className="max-w-7xl mx-auto px-3 sm:px-6 py-3 flex items-center gap-4 flex-wrap">
             <span className="label-caps">Upcoming</span>
             {upcoming.slice(0, 4).map(({ e, dd }) => (
               <span key={e.id} className="text-sm">
@@ -994,7 +994,7 @@ function Dashboard() {
         </div>
       )}
 
-      <main className="max-w-7xl mx-auto px-6 py-6 space-y-8">
+      <main className="max-w-7xl mx-auto px-3 sm:px-6 py-6 space-y-8">
         <WeekRotation
           anchorDate={anchor}
           onAnchorChange={setAnchor}

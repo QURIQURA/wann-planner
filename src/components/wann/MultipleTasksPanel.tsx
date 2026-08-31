@@ -183,10 +183,10 @@ export function MultipleTasksPanel({
 
           return (
             <div key={e.id} id={`mt-${e.id}`} className="border-b border-border/50 rounded-sm transition-shadow">
-              <div className="flex items-center gap-2 py-1 group">
+              <div className="flex items-center gap-2 py-1 group flex-wrap">
                 <button
                   onClick={() => setExpandedId(expanded ? null : e.id)}
-                  className="text-muted-foreground"
+                  className="text-muted-foreground p-1 -m-1"
                   aria-label="Expand"
                 >
                   {expanded ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
@@ -202,7 +202,7 @@ export function MultipleTasksPanel({
 
                 <button
                   onClick={() => setExpandedId(expanded ? null : e.id)}
-                  className="text-sm flex-1 text-left hover:underline"
+                  className="text-sm flex-1 min-w-[6rem] text-left truncate hover:underline"
                 >
                   {e.name}
                   {pct !== null && (
@@ -267,7 +267,7 @@ export function MultipleTasksPanel({
                     <p className="text-xs text-muted-foreground italic">No items</p>
                   )}
                   {children.map((it) => (
-                    <div key={it.id} className="flex items-center gap-2 group/child">
+                    <div key={it.id} className="flex items-center gap-2 flex-wrap group/child">
                       <button
                         onClick={() => onToggleItem(it)}
                         aria-label="Toggle"
@@ -287,12 +287,12 @@ export function MultipleTasksPanel({
                             if (ev.key === "Enter") (ev.target as HTMLInputElement).blur();
                             if (ev.key === "Escape") setEditingItemId(null);
                           }}
-                          className="flex-1 bg-transparent outline-none border-b border-border py-0.5 text-sm"
+                          className="flex-1 min-w-[6rem] bg-transparent outline-none border-b border-border py-0.5 text-sm"
                         />
                       ) : (
                         <button
                           onClick={() => { setEditingItemId(it.id); setEditingItemTitle(it.title); }}
-                          className={`text-sm flex-1 text-left hover:underline ${it.completed ? "line-through text-muted-foreground" : ""}`}
+                          className={`text-sm flex-1 min-w-[6rem] text-left truncate hover:underline ${it.completed ? "line-through text-muted-foreground" : ""}`}
                         >
                           {it.title}
                         </button>
@@ -323,7 +323,7 @@ export function MultipleTasksPanel({
                       </button>
                     </div>
                   ))}
-                  <div className="flex gap-1 pt-1 items-center">
+                  <div className="flex gap-1 pt-1 items-center flex-wrap">
                     <input
                       type="text"
                       placeholder="+ Add item"
@@ -340,7 +340,7 @@ export function MultipleTasksPanel({
                           }
                         }
                       }}
-                      className="flex-1 bg-transparent outline-none border-b border-border py-1 text-xs"
+                      className="flex-1 min-w-[8rem] bg-transparent outline-none border-b border-border py-1 text-xs"
                     />
                     <input
                       type="date"

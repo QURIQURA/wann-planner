@@ -136,13 +136,13 @@ export function EventsPanel({
           }
           return (
             <div key={e.id} className="border-b border-border/50">
-              <div className="flex items-center gap-2 py-1 group">
+              <div className="flex items-center gap-2 py-1 group flex-wrap">
                 <span
                   className="inline-block h-3 w-3 flex-shrink-0"
                   style={{ background: EVENT_COLORS[e.type] ?? "transparent" }}
                 />
                 <span className="text-xs text-muted-foreground w-14">{e.date.slice(5)}</span>
-                <span className="text-sm flex-1">
+                <span className="text-sm flex-1 min-w-[6rem] truncate">
                   {e.name}
                   {age !== null && <span className="text-muted-foreground"> · turns {age}</span>}
                 </span>

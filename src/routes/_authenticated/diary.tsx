@@ -40,7 +40,7 @@ function DiaryPage() {
   return (
     <div className="min-h-screen">
       <header className="border-b border-border">
-        <div className="max-w-5xl mx-auto px-6 py-4 flex items-center justify-between">
+        <div className="max-w-5xl mx-auto px-3 sm:px-6 py-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-3">
             <Link to="/" className="border border-border p-2 hover:bg-muted" aria-label="Back">
               <ArrowLeft size={14} />
@@ -50,7 +50,7 @@ function DiaryPage() {
               <h1 className="text-lg font-light tracking-tight">Diary</h1>
             </div>
           </div>
-          <div className="flex gap-1">
+          <div className="flex gap-1 flex-wrap">
             {(["day","month","year"] as ViewMode[]).map((m) => (
               <button
                 key={m}
@@ -66,13 +66,13 @@ function DiaryPage() {
                 setYearCursor(today.getFullYear());
                 setView("day");
               }}
-              className="border border-border px-3 py-1 label-caps hover:bg-muted ml-2"
+              className="border border-border px-3 py-1 label-caps hover:bg-muted sm:ml-2"
             >Today</button>
           </div>
         </div>
       </header>
 
-      <main className="max-w-5xl mx-auto px-6 py-6">
+      <main className="max-w-5xl mx-auto px-3 sm:px-6 py-6">
         {view === "day" && (
           <DayView
             userId={user.id}
@@ -191,7 +191,7 @@ function DayView({ userId, date, onNavigate }: { userId: string; date: string; o
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-2 flex-wrap">
         <button onClick={() => shift(-1)} className="border border-border p-1 hover:bg-muted"><ChevronLeft size={14} /></button>
         <input
           type="date"
@@ -200,10 +200,10 @@ function DayView({ userId, date, onNavigate }: { userId: string; date: string; o
           className="bg-transparent border-b border-border py-1 text-sm"
         />
         <button onClick={() => shift(1)} className="border border-border p-1 hover:bg-muted"><ChevronRight size={14} /></button>
-        <span className="text-xs text-muted-foreground">
+        <span className="hidden sm:inline text-xs text-muted-foreground">
           {parseLocalDate(date).toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric", year: "numeric" })}
         </span>
-        <div className="flex-1" />
+        <div className="sm:flex-1" />
         <span className="text-xs text-muted-foreground">
           {save.isPending ? "Saving…" : lastSaved ? `Saved ${lastSaved}` : ""}
         </span>
@@ -246,7 +246,7 @@ function DayView({ userId, date, onNavigate }: { userId: string; date: string; o
             aria-label="Emoji"
           ><Smile size={14} /></button>
           {showEmoji && (
-            <div className="absolute top-full mt-1 left-0 card-flat p-2 grid grid-cols-10 gap-1 z-10 w-[280px]">
+            <div className="absolute top-full mt-1 left-0 card-flat p-2 grid grid-cols-10 gap-1 z-10 w-[min(280px,calc(100vw-2rem))]">
               {EMOJIS.map((e) => (
                 <button
                   key={e}

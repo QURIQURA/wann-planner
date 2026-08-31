@@ -173,10 +173,10 @@ export function MonthlySummaryPanel({ userId }: { userId: string }) {
             {perCat.length === 0 && <p className="text-xs text-muted-foreground italic">No categories</p>}
             {perCat.map(({ cat, done, occ, pct }) => (
               <div key={cat.id}>
-                <div className="flex items-center gap-2 text-sm">
-                  <span className="inline-block h-2 w-2" style={{ background: cat.color }} />
-                  <span className="flex-1">{cat.name}</span>
-                  <span className="text-xs text-muted-foreground">{done}/{occ} · {pct ?? "—"}%</span>
+                <div className="flex items-center gap-2 text-sm flex-wrap">
+                  <span className="inline-block h-2 w-2 flex-shrink-0" style={{ background: cat.color }} />
+                  <span className="flex-1 min-w-[4rem] truncate">{cat.name}</span>
+                  <span className="text-xs text-muted-foreground flex-shrink-0">{done}/{occ} · {pct ?? "—"}%</span>
                 </div>
                 {pct !== null && (
                   <div className="h-[2px] bg-border">
@@ -232,15 +232,15 @@ export function MonthlySummaryPanel({ userId }: { userId: string }) {
                 <p className="text-xs label-caps mb-1">{cat}</p>
                 <div className="space-y-1">
                   {items.map((it) => (
-                    <div key={it.id} className="flex items-center gap-2 group">
+                    <div key={it.id} className="flex items-center gap-2 flex-wrap group">
                       <button
                         onClick={() => toggleKora.mutate({ id: it.id, completed: it.completed })}
-                        className={`h-3 w-3 border border-border ${it.completed ? "bg-foreground" : ""}`}
+                        className={`h-3 w-3 border border-border flex-shrink-0 ${it.completed ? "bg-foreground" : ""}`}
                         aria-label="toggle"
                       />
-                      <span className={`text-sm flex-1 ${it.completed ? "line-through text-muted-foreground" : ""}`}>{it.title}</span>
+                      <span className={`text-sm flex-1 min-w-[4rem] truncate ${it.completed ? "line-through text-muted-foreground" : ""}`}>{it.title}</span>
                       {it.next_action_date && (
-                        <span className="text-[10px] text-muted-foreground">{it.next_action_date}</span>
+                        <span className="text-[10px] text-muted-foreground flex-shrink-0">{it.next_action_date}</span>
                       )}
                       <button
                         onClick={() => deleteKora.mutate(it.id)}
@@ -257,7 +257,7 @@ export function MonthlySummaryPanel({ userId }: { userId: string }) {
           </div>
 
           <div className="card-flat p-2 mt-3 space-y-1">
-            <div className="flex gap-1">
+            <div className="flex gap-1 flex-wrap">
               <input
                 value={koraNew.category}
                 onChange={(e) => setKoraNew({ ...koraNew, category: e.target.value })}

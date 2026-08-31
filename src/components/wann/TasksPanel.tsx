@@ -212,7 +212,7 @@ function TaskList({
         return (
           <div
             key={t.id}
-            className={`flex items-center gap-2 py-1 border-b border-border/50 group ${editingId === t.id ? "bg-muted" : ""}`}
+            className={`flex items-center gap-2 py-1 border-b border-border/50 group flex-wrap ${editingId === t.id ? "bg-muted" : ""}`}
           >
             <button
               onClick={() => onToggle(t, currentOccurrenceDate(t))}
@@ -221,7 +221,7 @@ function TaskList({
             />
             <button
               onClick={() => onEdit(t)}
-              className={`text-sm flex-1 text-left hover:underline ${completed ? "line-through text-muted-foreground" : ""}`}
+              className={`text-sm flex-1 min-w-[6rem] text-left truncate hover:underline ${completed ? "line-through text-muted-foreground" : ""}`}
             >
               {t.title}
               {(t.recurrence ?? "none") !== "none" && (
