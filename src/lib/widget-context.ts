@@ -7,10 +7,12 @@ import type {
   MultipleTaskItem,
   EventEntry,
   EventNote,
+  Intention,
 } from "@/lib/wann-data";
 import type { TaskFormValues } from "@/components/wann/TaskForm";
 import type { MultipleTaskForm } from "@/components/wann/MultipleTasksPanel";
 import type { EventForm, EventNoteActions } from "@/components/wann/EventsPanel";
+import type { IntentionActions } from "@/components/wann/GoalsPanel";
 
 /**
  * Everything a dashboard widget may need. The dashboard builds this once and
@@ -31,6 +33,8 @@ export type WidgetContext = {
   events: EventEntry[];
   eventNotes: EventNote[];
   editingTask: Task | null;
+  /** IDEA / LATER / GOAL intent layer — independent of tasks/projects. */
+  intentions: Intention[];
 
   taskActions: {
     onCancelEdit: () => void;
@@ -63,4 +67,6 @@ export type WidgetContext = {
     onDelete: (id: string) => void;
     onTogglePin: (id: string, pinned: boolean) => void;
   } & EventNoteActions;
+
+  intentionActions: IntentionActions;
 };

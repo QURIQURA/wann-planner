@@ -979,6 +979,75 @@ export type Database = {
           },
         ]
       }
+      planner_intentions: {
+        Row: {
+          category_id: string | null
+          created_at: string
+          id: string
+          last_reviewed_at: string | null
+          linked_project_id: string | null
+          next_review_date: string | null
+          notes: string | null
+          review_interval: string
+          review_interval_days: number | null
+          sort_order: number
+          stage: string
+          status: string
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          category_id?: string | null
+          created_at?: string
+          id?: string
+          last_reviewed_at?: string | null
+          linked_project_id?: string | null
+          next_review_date?: string | null
+          notes?: string | null
+          review_interval?: string
+          review_interval_days?: number | null
+          sort_order?: number
+          stage?: string
+          status?: string
+          title: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          category_id?: string | null
+          created_at?: string
+          id?: string
+          last_reviewed_at?: string | null
+          linked_project_id?: string | null
+          next_review_date?: string | null
+          notes?: string | null
+          review_interval?: string
+          review_interval_days?: number | null
+          sort_order?: number
+          stage?: string
+          status?: string
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "planner_intentions_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "planner_task_categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "planner_intentions_linked_project_id_fkey"
+            columns: ["linked_project_id"]
+            isOneToOne: false
+            referencedRelation: "planner_multiple_tasks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       planner_kora_orders: {
         Row: {
           created_at: string

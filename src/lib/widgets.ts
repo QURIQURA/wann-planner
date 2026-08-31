@@ -17,10 +17,12 @@ import { eventsWidget } from "@/components/wann/EventsPanel";
 import { habitTrackerWidget } from "@/components/wann/HabitTrackerPanel";
 import { monthlySummaryWidget } from "@/components/wann/MonthlySummaryPanel";
 import { tanjiTimelineWidget } from "@/components/wann/TanjiTimelinePanel";
+import { goalsWidget } from "@/components/wann/GoalsPanel";
 
 export const BUILT_IN_WIDGETS: WidgetDef[] = [
   taskWorkspaceWidget,
   tanjiTimelineWidget,
+  goalsWidget,
   eventsWidget,
   habitTrackerWidget,
   monthlySummaryWidget,

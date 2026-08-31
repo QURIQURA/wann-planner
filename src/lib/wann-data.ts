@@ -237,6 +237,24 @@ export async function fetchCompletions(_userId: string): Promise<TaskCompletion[
   return (data ?? []) as unknown as TaskCompletion[];
 }
 
+/* ============================================================
+ * INTENTIONS — IDEA / LATER / GOAL + Review Timer
+ * A separate "intent layer" that sits alongside (not inside) the
+ * existing Project/Multitask execution layer. See wann-intentions.ts
+ * comment block for the full design rationale.
+ * ============================================================ */
+export type Intention = Tables<"planner_intentions">;
+
+export async function fetchIntentions(_userId: string): Promise<Intention[]> {
+  const { data, error } = await supabase
+    .from("planner_intentions")
+    .select("*")
+    .order("sort_order", { ascending: true })
+    .order("created_at", { ascending: false });
+  if (error) throw error;
+  return data ?? [];
+}
+
 /**
  * Returns true if a task (recurring or one-off) occurs on the given local date.
  */
