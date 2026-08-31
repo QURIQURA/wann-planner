@@ -238,18 +238,24 @@ function Dashboard() {
 
         {/* Compact summary only — full Group detail (Projects/Shared Tasks
             lists, add flows) lives on /widgets so Dashboard doesn't grow
-            complex again. */}
-        {(groupsQ.data ?? []).length > 0 && (
-          <section className="card-flat p-4">
-            <div className="flex items-center justify-between mb-3">
-              <p className="label-caps">Groups</p>
-              <button
-                onClick={() => openGroupsWidget()}
-                className="label-caps text-[10px] text-muted-foreground hover:text-foreground"
-              >
-                모두 보기
-              </button>
-            </div>
+            complex again. Always rendered (even with 0 groups) so the
+            feature has a visible entry point — a card that only ever
+            appears once you already have a Group is undiscoverable. */}
+        <section className="card-flat p-4">
+          <div className="flex items-center justify-between mb-3">
+            <p className="label-caps">Groups</p>
+            <button
+              onClick={() => openGroupsWidget()}
+              className="label-caps text-[10px] text-muted-foreground hover:text-foreground"
+            >
+              {(groupsQ.data ?? []).length > 0 ? "모두 보기" : "+ 그룹 추가"}
+            </button>
+          </div>
+          {(groupsQ.data ?? []).length === 0 ? (
+            <p className="text-xs text-muted-foreground italic">
+              여러 Project에 걸친 묶음(예: 케이크 주문, 여행)이 필요할 때 추가하세요.
+            </p>
+          ) : (
             <div className="space-y-1">
               {(groupsQ.data ?? []).map((g) => {
                 const nProjects = (multipleQ.data ?? []).filter(
@@ -272,8 +278,8 @@ function Dashboard() {
                 );
               })}
             </div>
-          </section>
-        )}
+          )}
+        </section>
       </main>
 
       {settingsOpen && (
