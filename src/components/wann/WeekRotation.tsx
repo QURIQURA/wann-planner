@@ -586,11 +586,16 @@ function DayCard({
             const st = reviewStatus(intention.next_review_date);
             const overdue = st === "overdue";
             const Comp = onOpenIntention ? "button" : "div";
+            // Highlighter-marker look — deliberately loud, unlike a plain task line, so a
+            // Review never blends into the rest of the timeline. Overdue swaps the highlighter
+            // colour from yellow to red on top of the existing red text/icon.
+            const markerBg = overdue ? hexToRgba("#F87171", 0.35) : hexToRgba("#FDE047", 0.55);
             return (
               <Comp
                 key={`review-${intention.id}`}
                 onClick={onOpenIntention ? () => onOpenIntention(intention.id) : undefined}
-                className={`flex items-center gap-1.5 text-sm w-full text-left ${overdue ? "text-destructive" : ""} ${onOpenIntention ? "hover:underline" : ""}`}
+                className={`flex items-center gap-1.5 text-sm w-full text-left px-1.5 py-0.5 rounded-sm ${overdue ? "text-destructive font-medium" : "text-foreground"} ${onOpenIntention ? "hover:brightness-95" : ""}`}
+                style={{ background: markerBg }}
                 title={overdue ? "Review overdue" : "Review due"}
               >
                 <RotateCcw size={11} className="flex-shrink-0" />

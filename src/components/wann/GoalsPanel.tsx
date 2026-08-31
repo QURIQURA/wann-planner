@@ -36,6 +36,7 @@ export type IntentionActions = {
       category_id: string | null;
       review_interval: ReviewInterval;
       review_interval_days: number | null;
+      next_review_date: string | null;
     }>,
   ) => void;
   onKeep: (intention: Intention) => void;
@@ -167,6 +168,16 @@ function IntentionRow({
                   <option key={iv} value={iv}>{REVIEW_INTERVAL_LABEL[iv]}</option>
                 ))}
               </select>
+            </label>
+
+            <label className="flex items-center gap-1 text-[10px] label-caps text-muted-foreground">
+              or pick a date
+              <input
+                type="date"
+                value={intention.next_review_date ?? ""}
+                onChange={(e) => actions.onUpdate(intention.id, { next_review_date: e.target.value || null })}
+                className="bg-transparent outline-none border-b border-border py-1 text-xs text-foreground"
+              />
             </label>
 
             {intention.next_review_date && (
