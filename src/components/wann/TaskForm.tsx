@@ -44,6 +44,7 @@ export function TaskForm({
   projectItems,
   groups = [],
   forcedGroupId,
+  hideProjectField,
   filter,
 }: {
   editingTask: Task | null;
@@ -59,6 +60,10 @@ export function TaskForm({
   /** Pre-selects (and defaults new tasks to) this Group — used by the "Add
    * Shared Task" flow inside a Group's detail view. */
   forcedGroupId?: string;
+  /** Hide the Project selector entirely — used by the "Add Shared Task" flow
+   * inside a Group's detail view, where a Task added here must stay a pure
+   * Group-level Shared Task and should never be assignable to a Project. */
+  hideProjectField?: boolean;
   filter: CategoryFilter;
 }) {
   const emptyForm = (): TaskFormValues => ({
@@ -262,24 +267,26 @@ export function TaskForm({
           <option value="biweekly">biweekly</option>
           <option value="monthly">monthly</option>
         </select>
-        <select
-          value={form.newProject ? "__new__" : (form.projectId ?? "")}
-          onChange={(e) => {
-            const v = e.target.value;
-            if (v === "__new__") {
-              setForm({ ...form, projectId: null, newProject: { name: "", startDate: null, endDate: null }, groupId: null });
-            } else {
-              setForm({ ...form, projectId: v || null, newProject: null, groupId: v ? null : form.groupId });
-            }
-          }}
-          className="bg-transparent outline-none text-sm border-b border-border py-1"
-        >
-          <option value="">소속 프로젝트 없음</option>
-          {selectableProjects.map((p) => (
-            <option key={p.id} value={p.id}>{p.name}</option>
-          ))}
-          <option value="__new__">+ 새 프로젝트</option>
-        </select>
+        {!hideProjectField && (
+          <select
+            value={form.newProject ? "__new__" : (form.projectId ?? "")}
+            onChange={(e) => {
+              const v = e.target.value;
+              if (v === "__new__") {
+                setForm({ ...form, projectId: null, newProject: { name: "", startDate: null, endDate: null }, groupId: null });
+              } else {
+                setForm({ ...form, projectId: v || null, newProject: null, groupId: v ? null : form.groupId });
+              }
+            }}
+            className="bg-transparent outline-none text-sm border-b border-border py-1"
+          >
+            <option value="">소속 프로젝트 없음</option>
+            {selectableProjects.map((p) => (
+              <option key={p.id} value={p.id}>{p.name}</option>
+            ))}
+            <option value="__new__">+ 새 프로젝트</option>
+          </select>
+        )}
         {groups.length > 0 && (
           <select
             value={form.groupId ?? ""}
@@ -321,7 +328,7 @@ export function TaskForm({
           <Plus size={12} /> {editingTask ? "Save" : "Add"}
         </button>
       </div>
-      {form.newProject && (
+      {!hideProjectField && form.newProject && (
         <div className="border-t border-border pt-2 flex flex-wrap gap-2 items-center">
           <input
             type="text"

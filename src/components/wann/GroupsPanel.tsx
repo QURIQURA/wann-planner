@@ -333,6 +333,7 @@ export function GroupsPanel({ ctx }: { ctx: WidgetContext }) {
                         projectItems={ctx.projectItems}
                         groups={ctx.groups}
                         forcedGroupId={g.id}
+                        hideProjectField
                         filter={{ categoryId: null, subtagId: null }}
                       />
                     </div>
