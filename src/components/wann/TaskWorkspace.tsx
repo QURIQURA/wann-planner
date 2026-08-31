@@ -17,7 +17,7 @@ export function TaskWorkspace({ ctx }: { ctx: WidgetContext }) {
   return (
     <section className="card-flat p-4">
       <div className="flex items-center justify-between mb-3">
-        <p className="label-caps">Task &amp; Multiple Task</p>
+        <p className="label-caps">Tasks &amp; Projects</p>
       </div>
 
       <TaskForm

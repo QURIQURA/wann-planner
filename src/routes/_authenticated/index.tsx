@@ -8,8 +8,7 @@ import { useWannDashboard } from "@/lib/use-wann-dashboard";
 import { WeekRotation } from "@/components/wann/WeekRotation";
 import { SettingsPanel } from "@/components/wann/SettingsPanel";
 import { QuickAdd } from "@/components/wann/QuickAdd";
-import { tasksWidget } from "@/components/wann/TasksPanel";
-import { multipleTasksWidget } from "@/components/wann/MultipleTasksPanel";
+import { TaskWorkspace } from "@/components/wann/TaskWorkspace";
 
 export const Route = createFileRoute("/_authenticated/")({
   component: Dashboard,
@@ -223,11 +222,12 @@ function Dashboard() {
           onOpenIntention={(id) => openGoalsWidget(id)}
         />
 
-        {/* "What's live right now" — the same TasksPanel/MultipleTasksPanel used
-            on /widgets (full CRUD, same ctx.taskActions/projectActions), just
-            surfaced here too so Tasks/Projects don't require a page hop to see. */}
-        <div>{tasksWidget.render(widgetCtx)}</div>
-        <div>{multipleTasksWidget.render(widgetCtx)}</div>
+        {/* Original combined layout restored: one shared category filter,
+            Projects left / Tasks right — the exact same TaskWorkspace used
+            on /widgets' "Tasks & Projects" widget, same ctx.taskActions/
+            projectActions. (Splitting this into two separately-filtered
+            boxes was a mistake — same category, no reason for two boxes.) */}
+        <TaskWorkspace ctx={widgetCtx} />
       </main>
 
       {settingsOpen && (
