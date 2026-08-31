@@ -38,6 +38,7 @@ export function MultipleTasksPanel({
   onAdd,
   onUpdate,
   onDelete,
+  deleteLabel = "Delete",
   onAddItem,
   onUpdateItem,
   onToggleItem,
@@ -56,6 +57,10 @@ export function MultipleTasksPanel({
   onAdd: (v: MultipleTaskForm) => void;
   onUpdate: (id: string, patch: MultipleTaskForm) => void;
   onDelete: (id: string) => void;
+  /** Label/title for the row delete button — override when this instance's
+   * onDelete isn't a hard delete (e.g. "Remove from group" inside a Group's
+   * filtered Project list, where onDelete is wired to unlink instead). */
+  deleteLabel?: string;
   onAddItem: (parentId: string, title: string, date: string | null, time: string | null) => void;
   onUpdateItem: (id: string, patch: { title?: string; date?: string | null; time?: string | null }) => void;
   onToggleItem: (item: MultipleTaskItem) => void;
@@ -238,7 +243,8 @@ export function MultipleTasksPanel({
                 <button
                   onClick={() => onDelete(e.id)}
                   className="opacity-0 group-hover:opacity-100 hover:text-destructive"
-                  aria-label="Delete"
+                  aria-label={deleteLabel}
+                  title={deleteLabel}
                 >
                   <Trash2 size={12} />
                 </button>

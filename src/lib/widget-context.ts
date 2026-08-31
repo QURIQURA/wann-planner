@@ -80,6 +80,13 @@ export type WidgetContext = {
     onAdd: (v: { name: string; notes: string | null }) => void;
     onUpdate: (id: string, patch: { name: string; notes: string | null }) => void;
     onDelete: (id: string) => void;
+    /** Links an existing Project into a Group — a plain group_id update, the
+     * Project keeps its id/Tasks/completions/progress untouched. Never
+     * duplicates the Project row. */
+    onAddExistingProjectToGroup: (projectId: string, groupId: string) => void;
+    /** Unlinks a Project from its Group (group_id -> null). The Project
+     * itself is never deleted. */
+    onRemoveProjectFromGroup: (projectId: string) => void;
   };
 
   intentionActions: IntentionActions;

@@ -533,6 +533,21 @@ export function useWannDashboard(
     onSuccess: () => { invalidate("groups"); invalidate("multiple_tasks"); invalidate("tasks"); },
   });
 
+  // Links/unlinks an EXISTING Project to a Group — a single-column group_id
+  // update, same shape as moveProject's targeted date/end_date update. Never
+  // touches the Project's name/category/date/tasks, so its id, Tasks,
+  // completions and progress are all completely unaffected.
+  const setProjectGroup = useMutation({
+    mutationFn: async ({ projectId, groupId }: { projectId: string; groupId: string | null }) => {
+      const { error } = await supabase
+        .from("planner_multiple_tasks")
+        .update({ group_id: groupId })
+        .eq("id", projectId);
+      if (error) throw error;
+    },
+    onSuccess: () => invalidate("multiple_tasks"),
+  });
+
   const invalidateItems = () => { invalidate("multiple_task_items"); invalidate("tasks"); };
 
   const addMultipleItem = useMutation({
@@ -1001,6 +1016,8 @@ export function useWannDashboard(
       onAdd: (v) => addGroup.mutate(v),
       onUpdate: (id, patch) => updateGroup.mutate({ id, patch }),
       onDelete: (id) => deleteGroup.mutate(id),
+      onAddExistingProjectToGroup: (projectId, groupId) => setProjectGroup.mutate({ projectId, groupId }),
+      onRemoveProjectFromGroup: (projectId) => setProjectGroup.mutate({ projectId, groupId: null }),
     },
     intentionActions: {
       onAdd: (title) => addIntention.mutate(title),

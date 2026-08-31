@@ -24,6 +24,9 @@ export function GroupsPanel({ ctx }: { ctx: WidgetContext }) {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [addingProjectFor, setAddingProjectFor] = useState<string | null>(null);
   const [projectForm, setProjectForm] = useState(emptyMultipleTaskForm());
+  const [addingExistingFor, setAddingExistingFor] = useState<string | null>(null);
+  const [existingCategoryFilter, setExistingCategoryFilter] = useState<string>("");
+  const [existingProjectId, setExistingProjectId] = useState<string>("");
 
   const startEdit = (g: Group) => {
     setEditingId(g.id);
@@ -169,19 +172,100 @@ export function GroupsPanel({ ctx }: { ctx: WidgetContext }) {
                   {g.notes && <p className="text-xs text-muted-foreground italic">{g.notes}</p>}
 
                   <div className="min-w-0">
-                    <div className="flex items-center justify-between mb-2">
-                      <p className="label-caps text-[10px] text-muted-foreground">Projects</p>
-                      <button
-                        onClick={() => {
-                          setAddingProjectFor(addingProjectFor === g.id ? null : g.id);
-                          setProjectForm(emptyMultipleTaskForm(g.id));
-                        }}
-                        className="border border-border p-1 hover:bg-muted"
-                        aria-label="Add project"
-                      >
-                        <Plus size={12} />
-                      </button>
-                    </div>
+                    <p className="label-caps text-[10px] text-muted-foreground mb-2">Projects</p>
+                    <MultipleTasksPanel
+                      entries={groupProjects}
+                      items={ctx.projectItems}
+                      categories={ctx.categories}
+                      subtags={ctx.subtags}
+                      groups={ctx.groups}
+                      hideFilterBar
+                      {...ctx.projectActions}
+                      // Inside a Group, the row's trash icon unlinks the
+                      // Project from this Group — it never deletes the
+                      // Project itself (still fully editable/visible from
+                      // Widgets > Tasks & Projects).
+                      onDelete={(id) => ctx.groupActions.onRemoveProjectFromGroup(id)}
+                      deleteLabel="Remove from group"
+                    />
+
+                    {addingExistingFor === g.id && (
+                      <div className="card-flat p-3 mt-2 space-y-2">
+                        <p className="label-caps text-[10px] text-muted-foreground">Add existing project</p>
+                        <div className="flex flex-wrap gap-2 items-center">
+                          <label className="text-[10px] label-caps text-muted-foreground">Category</label>
+                          <select
+                            value={existingCategoryFilter}
+                            onChange={(e) => {
+                              setExistingCategoryFilter(e.target.value);
+                              setExistingProjectId("");
+                            }}
+                            className="bg-transparent outline-none text-sm border-b border-border py-1 min-w-0"
+                          >
+                            <option value="">All</option>
+                            <option value="uncategorized">Uncategorized</option>
+                            {ctx.categories.map((c) => (
+                              <option key={c.id} value={c.id}>{c.name}</option>
+                            ))}
+                          </select>
+                        </div>
+                        <div className="flex flex-wrap gap-2 items-center">
+                          <label className="text-[10px] label-caps text-muted-foreground">Project</label>
+                          <select
+                            value={existingProjectId}
+                            onChange={(e) => setExistingProjectId(e.target.value)}
+                            className="bg-transparent outline-none text-sm border-b border-border py-1 flex-1 min-w-0"
+                          >
+                            <option value="">Select project…</option>
+                            {ctx.projects
+                              .filter((p) => {
+                                if (p.group_id === g.id) return false; // already listed above
+                                if (existingCategoryFilter === "uncategorized") return p.category_id === null;
+                                if (existingCategoryFilter) return p.category_id === existingCategoryFilter;
+                                return true;
+                              })
+                              .map((p) => {
+                                const inOtherGroup = p.group_id != null && p.group_id !== g.id;
+                                const otherGroupName = inOtherGroup
+                                  ? ctx.groups.find((x) => x.id === p.group_id)?.name
+                                  : null;
+                                return (
+                                  <option key={p.id} value={p.id} disabled={inOtherGroup}>
+                                    {p.name}
+                                    {inOtherGroup ? ` (already in ${otherGroupName ?? "another group"})` : ""}
+                                  </option>
+                                );
+                              })}
+                          </select>
+                        </div>
+                        <div className="flex justify-end gap-2">
+                          <button
+                            onClick={() => {
+                              setAddingExistingFor(null);
+                              setExistingCategoryFilter("");
+                              setExistingProjectId("");
+                            }}
+                            className="text-[10px] label-caps border border-border px-2 py-1 hover:bg-muted"
+                          >
+                            Cancel
+                          </button>
+                          <button
+                            onClick={() => {
+                              if (!existingProjectId) return;
+                              ctx.groupActions.onAddExistingProjectToGroup(existingProjectId, g.id);
+                              setAddingExistingFor(null);
+                              setExistingCategoryFilter("");
+                              setExistingProjectId("");
+                            }}
+                            disabled={!existingProjectId}
+                            className="text-[10px] label-caps border border-border px-2 py-1 hover:bg-muted disabled:opacity-40"
+                          >
+                            Add
+                          </button>
+                        </div>
+                      </div>
+                    )}
+
                     {addingProjectFor === g.id && (
                       <MultipleTaskEditor
                         value={projectForm}
@@ -197,15 +281,30 @@ export function GroupsPanel({ ctx }: { ctx: WidgetContext }) {
                         onCancel={() => setAddingProjectFor(null)}
                       />
                     )}
-                    <MultipleTasksPanel
-                      entries={groupProjects}
-                      items={ctx.projectItems}
-                      categories={ctx.categories}
-                      subtags={ctx.subtags}
-                      groups={ctx.groups}
-                      hideFilterBar
-                      {...ctx.projectActions}
-                    />
+
+                    <div className="flex flex-col gap-2 mt-2">
+                      <button
+                        onClick={() => {
+                          setAddingProjectFor(null);
+                          setAddingExistingFor(addingExistingFor === g.id ? null : g.id);
+                          setExistingCategoryFilter("");
+                          setExistingProjectId("");
+                        }}
+                        className="w-full flex items-center gap-2 border border-dashed border-border px-3 py-2 text-sm text-muted-foreground hover:text-foreground hover:border-foreground"
+                      >
+                        <Plus size={13} /> ADD EXISTING PROJECT
+                      </button>
+                      <button
+                        onClick={() => {
+                          setAddingExistingFor(null);
+                          setAddingProjectFor(addingProjectFor === g.id ? null : g.id);
+                          setProjectForm(emptyMultipleTaskForm(g.id));
+                        }}
+                        className="w-full flex items-center gap-2 border border-dashed border-border px-3 py-2 text-sm text-muted-foreground hover:text-foreground hover:border-foreground"
+                      >
+                        <Plus size={13} /> NEW PROJECT
+                      </button>
+                    </div>
                   </div>
 
                   <div className="min-w-0 border-t border-border pt-3">
