@@ -106,8 +106,8 @@ export function MultipleTasksPanel({
   return (
     <div>
       <div className="flex items-center justify-between mb-4">
-        <p className="label-caps">Multiple Task</p>
-        <span className="text-[10px] text-muted-foreground">Tasks 폼에서 생성</span>
+        <p className="label-caps">Projects</p>
+        <span className="text-[10px] text-muted-foreground">Quick Add 또는 Task 폼에서 생성</span>
       </div>
 
 

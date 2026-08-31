@@ -8,6 +8,8 @@ import { useWannDashboard } from "@/lib/use-wann-dashboard";
 import { WeekRotation } from "@/components/wann/WeekRotation";
 import { SettingsPanel } from "@/components/wann/SettingsPanel";
 import { QuickAdd } from "@/components/wann/QuickAdd";
+import { tasksWidget } from "@/components/wann/TasksPanel";
+import { multipleTasksWidget } from "@/components/wann/MultipleTasksPanel";
 
 export const Route = createFileRoute("/_authenticated/")({
   component: Dashboard,
@@ -21,12 +23,14 @@ export const Route = createFileRoute("/_authenticated/")({
 /**
  * DASHBOARD = "What am I doing now?" — execution only.
  *
- * Just two things live here: Quick Add (capture) and Timeline (the day/week
- * grid). Everything else — full Task/Project lists, Ideas & Goals management,
- * Event/colour configuration, Habits, Monthly Summary, etc. — lives on the
- * separate /widgets page ("What do I want to manage?"). Both pages share the
- * exact same data/actions via useWannDashboard(), so an edit made in Widgets
- * is reflected here immediately (and vice versa).
+ * Quick Add (capture) → Timeline (the day/week grid) → Tasks → Projects, in
+ * that order: a glanceable view of what's live right now. Full management —
+ * category setup, Ideas & Goals, Event/colour configuration, Habits, Monthly
+ * Summary, etc. — lives on the separate /widgets page ("What do I want to
+ * manage?"). The Tasks/Projects lists below are the SAME TasksPanel /
+ * MultipleTasksPanel used on /widgets' "Tasks & Projects" widget — both
+ * pages share the exact same data/actions via useWannDashboard(), so an
+ * edit made in either place is reflected everywhere immediately.
  */
 function Dashboard() {
   const { user } = Route.useRouteContext() as { user: { id: string; email?: string } };
@@ -60,6 +64,7 @@ function Dashboard() {
     dueReviews,
     upcoming,
     handleSignOut,
+    scrollToId,
   } = useWannDashboard(user, { initialDate: dateParam });
 
   const openGoalsWidget = (intentionId?: string) =>
@@ -68,8 +73,9 @@ function Dashboard() {
       search: { open: "goals", scrollTo: intentionId ? `gi-${intentionId}` : undefined },
     });
 
-  const openProjectInWidgets = (projectId: string) =>
-    navigate({ to: "/widgets", search: { open: "task_workspace", scrollTo: `mt-${projectId}` } });
+  // The Projects list lives right on the Dashboard again (below), so a
+  // Timeline project-item tap scrolls to it in place instead of navigating away.
+  const openProject = (projectId: string) => scrollToId(`mt-${projectId}`);
 
   if (!settings) {
     return <div className="min-h-screen flex items-center justify-center label-caps text-muted-foreground">Loading</div>;
@@ -210,12 +216,18 @@ function Dashboard() {
           habits={habitsQ.data ?? []}
           habitCompletions={habitCompQ.data ?? []}
           onTapHabit={(habit, date) => tapHabit.mutate({ habit, date })}
-          onOpenMultiple={(id) => openProjectInWidgets(id)}
+          onOpenMultiple={(id) => openProject(id)}
           onToggleOccurrence={(task, date) => toggleOccurrence.mutate({ task, date })}
           onEditTask={(t) => widgetCtx.taskActions.onEditTask(t)}
           intentions={(intentionsQ.data ?? []).filter((i) => i.status === "active")}
           onOpenIntention={(id) => openGoalsWidget(id)}
         />
+
+        {/* "What's live right now" — the same TasksPanel/MultipleTasksPanel used
+            on /widgets (full CRUD, same ctx.taskActions/projectActions), just
+            surfaced here too so Tasks/Projects don't require a page hop to see. */}
+        <div>{tasksWidget.render(widgetCtx)}</div>
+        <div>{multipleTasksWidget.render(widgetCtx)}</div>
       </main>
 
       {settingsOpen && (
