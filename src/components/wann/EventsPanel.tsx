@@ -60,7 +60,7 @@ export type EventTypeActions = {
   onResetSystemColor: (key: string) => void;
 };
 
-const emptyForm = (): EventForm => ({
+export const emptyEventForm = (): EventForm => ({
   name: "",
   date: todayLocalStr(),
   type: "birthday",
@@ -95,9 +95,9 @@ export function EventsPanel({
   onTogglePin?: (id: string, pinned: boolean) => void;
 } & Partial<EventNoteActions>) {
   const [creating, setCreating] = useState(false);
-  const [form, setForm] = useState<EventForm>(emptyForm());
+  const [form, setForm] = useState<EventForm>(emptyEventForm());
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [editForm, setEditForm] = useState<EventForm>(emptyForm());
+  const [editForm, setEditForm] = useState<EventForm>(emptyEventForm());
   const [managingTypes, setManagingTypes] = useState(false);
 
   const sorted = [...entries].sort((a, b) => {
@@ -158,11 +158,11 @@ export function EventsPanel({
           onSubmit={() => {
             if (form.name.trim() && form.date) {
               onAdd({ ...form, name: form.name.trim() });
-              setForm(emptyForm());
+              setForm(emptyEventForm());
               setCreating(false);
             }
           }}
-          onCancel={() => { setCreating(false); setForm(emptyForm()); }}
+          onCancel={() => { setCreating(false); setForm(emptyEventForm()); }}
         />
       )}
 
@@ -270,7 +270,7 @@ export function EventsPanel({
 
 const CREATE_TYPE_SENTINEL = "__create_new_event_type__";
 
-function EventEditor({
+export function EventEditor({
   value,
   onChange,
   eventTypes,
