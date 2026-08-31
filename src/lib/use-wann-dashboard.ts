@@ -666,6 +666,34 @@ export function useWannDashboard(
     onSuccess: invalidateEventTypes,
   });
 
+  // System Event Types (birthday/anniversary/holiday/dplus) have no DB row by
+  // default — their colour is the EVENT_COLORS constant. Customizing one
+  // upserts a row keyed by the system key so it's picked up by the same
+  // resolveEventColor() lookup as a Custom Type's default_color; resetting
+  // deletes that row again, so an untouched install still has zero rows.
+  const setSystemEventTypeColor = useMutation({
+    mutationFn: async ({ key, name, color }: { key: string; name: string; color: string }) => {
+      const { error } = await supabase.from("planner_event_types").upsert(
+        { user_id: user.id, key, name, default_color: color, is_system: true },
+        { onConflict: "user_id,key" },
+      );
+      if (error) throw error;
+    },
+    onSuccess: invalidateEventTypes,
+  });
+
+  const resetSystemEventTypeColor = useMutation({
+    mutationFn: async (key: string) => {
+      const { error } = await supabase
+        .from("planner_event_types")
+        .delete()
+        .eq("user_id", user.id)
+        .eq("key", key);
+      if (error) throw error;
+    },
+    onSuccess: invalidateEventTypes,
+  });
+
   const deleteEvent = useMutation({
     mutationFn: async (id: string) => {
       const { error } = await supabase.from("planner_events").delete().eq("id", id);
@@ -920,6 +948,8 @@ export function useWannDashboard(
       onRename: (id, name) => renameEventType.mutate({ id, name }),
       onChangeColor: (id, color) => changeEventTypeColor.mutate({ id, color }),
       onArchive: (id) => archiveEventType.mutate(id),
+      onSetSystemColor: (key, label, color) => setSystemEventTypeColor.mutate({ key, name: label, color }),
+      onResetSystemColor: (key) => resetSystemEventTypeColor.mutate(key),
     },
     intentionActions: {
       onAdd: (title) => addIntention.mutate(title),

@@ -13,6 +13,7 @@ import {
   durationSinceLabel,
   sortEventNotes,
   eventNoteLabel,
+  EVENT_COLORS,
 } from "@/lib/wann-data";
 import {
   EVENT_PALETTE,
@@ -21,7 +22,7 @@ import {
   resolveEventColor,
   eventTypeLabel,
 } from "@/lib/wann-events";
-import { Plus, Trash2, X, Pencil, ChevronDown, ChevronRight, Check, Pin, Settings2, Archive } from "lucide-react";
+import { Plus, Trash2, X, Pencil, ChevronDown, ChevronRight, Check, Pin, Settings2, Archive, RotateCcw } from "lucide-react";
 
 export type EventNoteInput = { year: number | null; date: string | null; note: string };
 
@@ -50,6 +51,13 @@ export type EventTypeActions = {
   onRename: (id: string, name: string) => void;
   onChangeColor: (id: string, color: string) => void;
   onArchive: (id: string) => void;
+  /** Overrides one of the 4 built-in System Event Types' default colour
+   * (birthday/anniversary/holiday/dplus). Upserts a `planner_event_types` row
+   * keyed by the system key — created only when the user actually customizes
+   * it, so untouched installs keep zero rows and the original EVENT_COLORS. */
+  onSetSystemColor: (key: string, label: string, color: string) => void;
+  /** Clears a System Type's colour override, falling back to EVENT_COLORS. */
+  onResetSystemColor: (key: string) => void;
 };
 
 const emptyForm = (): EventForm => ({
@@ -282,7 +290,7 @@ function EventEditor({
   const [creatingType, setCreatingType] = useState(false);
   const [newTypeName, setNewTypeName] = useState("");
   const [newTypeColor, setNewTypeColor] = useState(EVENT_PALETTE[0].hex);
-  const activeCustomTypes = eventTypes.filter((t) => !t.is_archived);
+  const activeCustomTypes = eventTypes.filter((t) => !t.is_archived && !t.is_system);
 
   const submitNewType = () => {
     const name = newTypeName.trim();
@@ -484,23 +492,47 @@ function ColorSwatchPicker({ value, onChange }: { value: string | null; onChange
   );
 }
 
-/** System (read-only) + Custom (rename / change default colour / archive) type list. */
+/** System (colour overridable, never renamed/archived) + Custom (rename /
+ * change default colour / archive) type list. */
 function EventTypeManager({ eventTypes, actions }: { eventTypes: EventType[]; actions: EventTypeActions }) {
   const [renamingId, setRenamingId] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState("");
-  const active = eventTypes.filter((t) => !t.is_archived);
-  const archived = eventTypes.filter((t) => t.is_archived);
+  const customTypes = eventTypes.filter((t) => !t.is_system);
+  const active = customTypes.filter((t) => !t.is_archived);
+  const archived = customTypes.filter((t) => t.is_archived);
 
   return (
     <div className="card-flat p-3 mb-3 space-y-3">
       <div>
         <p className="label-caps text-[10px] text-muted-foreground mb-1">System</p>
-        <div className="flex flex-wrap gap-1">
-          {SYSTEM_EVENT_TYPES.map((t) => (
-            <span key={t.key} className="text-xs border border-border px-2 py-1 text-muted-foreground">
-              {t.label}
-            </span>
-          ))}
+        <div className="space-y-1">
+          {SYSTEM_EVENT_TYPES.map((t) => {
+            const override = eventTypes.find((et) => et.key === t.key && et.is_system);
+            const color = override?.default_color ?? EVENT_COLORS[t.key] ?? undefined;
+            return (
+              <div key={t.key} className="flex items-center gap-2 flex-wrap py-1 border-b border-border/50">
+                <span
+                  className="inline-block h-3 w-3 rounded-full flex-shrink-0"
+                  style={{ background: color }}
+                />
+                <span className="text-sm flex-1 min-w-[6rem] text-muted-foreground">{t.label}</span>
+                <ColorSwatchPicker
+                  value={color ?? null}
+                  onChange={(hex) => actions.onSetSystemColor(t.key, t.label, hex)}
+                />
+                {override && (
+                  <button
+                    onClick={() => actions.onResetSystemColor(t.key)}
+                    className="text-muted-foreground hover:text-foreground p-1 -m-1 flex-shrink-0"
+                    aria-label="Reset to default colour"
+                    title="Reset to default colour"
+                  >
+                    <RotateCcw size={12} />
+                  </button>
+                )}
+              </div>
+            );
+          })}
         </div>
       </div>
 
