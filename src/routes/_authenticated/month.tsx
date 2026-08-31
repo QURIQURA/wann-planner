@@ -7,13 +7,14 @@ import {
   fetchEvents,
   fetchExceptions,
   fetchCategories,
+  fetchEventTypes,
   effectiveOccurrencesOnDate,
   eventsOnDate,
   formatLocalDate,
   todayLocalStr,
-  EVENT_COLORS,
   type Category,
 } from "@/lib/wann-data";
+import { resolveEventColor } from "@/lib/wann-events";
 
 export const Route = createFileRoute("/_authenticated/month")({
   component: MonthPage,
@@ -42,6 +43,7 @@ function MonthPage() {
   const eventsQ = useQuery({ queryKey: ["events", user.id], queryFn: () => fetchEvents(user.id) });
   const exceptionsQ = useQuery({ queryKey: ["exceptions", user.id], queryFn: () => fetchExceptions(user.id) });
   const categoriesQ = useQuery({ queryKey: ["categories", user.id], queryFn: () => fetchCategories(user.id) });
+  const eventTypesQ = useQuery({ queryKey: ["event_types"], queryFn: () => fetchEventTypes("") });
 
   const catById = useMemo(() => {
     const m: Record<string, Category> = {};
@@ -52,6 +54,7 @@ function MonthPage() {
   const tasks = tasksQ.data ?? [];
   const events = eventsQ.data ?? [];
   const exceptions = exceptionsQ.data ?? [];
+  const eventTypes = eventTypesQ.data ?? [];
   const today = todayLocalStr();
 
   const first = new Date(year, month0, 1);
@@ -125,7 +128,7 @@ function MonthPage() {
               ...dayEvents.map((e) => ({
                 key: `ev-${e.id}`,
                 label: e.name,
-                color: EVENT_COLORS[e.type] ?? "var(--border)",
+                color: resolveEventColor(e, eventTypes),
               })),
               ...occs.map((o) => ({
                 key: `t-${o.task.id}-${o.originalDate}`,

@@ -843,9 +843,49 @@ export type Database = {
           },
         ]
       }
+      planner_event_types: {
+        Row: {
+          created_at: string
+          default_color: string | null
+          id: string
+          is_archived: boolean
+          is_system: boolean
+          key: string
+          name: string
+          sort_order: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          default_color?: string | null
+          id?: string
+          is_archived?: boolean
+          is_system?: boolean
+          key: string
+          name: string
+          sort_order?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          default_color?: string | null
+          id?: string
+          is_archived?: boolean
+          is_system?: boolean
+          key?: string
+          name?: string
+          sort_order?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       planner_events: {
         Row: {
           birth_year: number | null
+          color: string | null
           created_at: string
           date: string
           id: string
@@ -861,6 +901,7 @@ export type Database = {
         }
         Insert: {
           birth_year?: number | null
+          color?: string | null
           created_at?: string
           date: string
           id?: string
@@ -876,6 +917,7 @@ export type Database = {
         }
         Update: {
           birth_year?: number | null
+          color?: string | null
           created_at?: string
           date?: string
           id?: string

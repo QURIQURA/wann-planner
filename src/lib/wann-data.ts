@@ -96,8 +96,15 @@ export const EVENT_COLORS: Record<string, string> = {
   dplus: "#8FA98A",
 };
 
-/** Priority for showing a single border color when a date has multiple events. */
-export const EVENT_PRIORITY = ["birthday", "anniversary", "holiday"] as const;
+/**
+ * Priority for showing a single representative border color when a date has
+ * multiple events. Deterministic: first type in this list that has an event
+ * on the day wins. `dplus` used to be silently excluded (a day with only a
+ * D+day event got no border at all) — now explicitly included, last, so
+ * existing birthday/anniversary/holiday days are unaffected but a D+day-only
+ * day now gets a color too.
+ */
+export const EVENT_PRIORITY = ["birthday", "anniversary", "holiday", "dplus"] as const;
 
 /** "D+day" events count up from a past reference date instead of down to a future one. */
 export const DPLUS_TYPE = "dplus";
@@ -217,6 +224,20 @@ export async function fetchEvents(_userId: string) {
     .from("planner_events")
     .select("*")
     .order("date", { ascending: true });
+  if (error) throw error;
+  return data ?? [];
+}
+
+/** Custom Event Types only — system types (birthday/anniversary/holiday/dplus)
+ * are not stored here, see wann-events.ts. */
+export type EventType = Tables<"planner_event_types">;
+
+export async function fetchEventTypes(_userId: string): Promise<EventType[]> {
+  const { data, error } = await supabase
+    .from("planner_event_types")
+    .select("*")
+    .order("sort_order", { ascending: true })
+    .order("created_at", { ascending: true });
   if (error) throw error;
   return data ?? [];
 }

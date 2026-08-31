@@ -4,6 +4,7 @@ import type {
   Category,
   EventEntry,
   EventNote,
+  EventType,
   TaskCompletion,
   MultipleTask,
   MultipleTaskItem,
@@ -21,7 +22,6 @@ import {
   eventsOnDate,
   sortEventNotes,
   eventNoteLabel,
-  EVENT_COLORS,
   EVENT_PRIORITY,
   occurrenceEndTime,
   hexToRgba,
@@ -33,6 +33,7 @@ import {
   shiftDate,
   diffDays,
 } from "@/lib/wann-data";
+import { resolveEventColor, eventTypeLabel } from "@/lib/wann-events";
 
 import {
   DndContext,
@@ -131,6 +132,7 @@ export function WeekRotation({
   categories,
   events,
   eventNotes = [],
+  eventTypes = [],
   completions,
   exceptions,
   multipleTasks,
@@ -153,6 +155,7 @@ export function WeekRotation({
   categories: Category[];
   events: EventEntry[];
   eventNotes?: EventNote[];
+  eventTypes?: EventType[];
   completions: TaskCompletion[];
   exceptions: RecurringException[];
   multipleTasks: MultipleTask[];
@@ -297,7 +300,8 @@ export function WeekRotation({
 
     const dayHabits = habits.filter((h) => habitAppliesOnDow(h, d.getDay()));
     const primaryType = EVENT_PRIORITY.find((t) => dayEvents.some((e) => e.type === t));
-    const borderColor = primaryType ? EVENT_COLORS[primaryType] : undefined;
+    const primaryEvent = primaryType ? dayEvents.find((e) => e.type === primaryType) : undefined;
+    const borderColor = primaryEvent ? resolveEventColor(primaryEvent, eventTypes) : undefined;
 
     const cardStyle = borderColor ? { borderColor, borderWidth: 2 } : undefined;
     // A Review only ever shows starting on its (single, mutable) next_review_date, and then
@@ -318,6 +322,7 @@ export function WeekRotation({
         timed={timed}
         dayEvents={dayEvents}
         eventNotes={eventNotes}
+        eventTypes={eventTypes}
         dayMultiples={dayMultiples}
         dayReviews={dayReviews}
         onOpenIntention={onOpenIntention}
@@ -507,6 +512,7 @@ function DayCard({
   timed,
   dayEvents,
   eventNotes,
+  eventTypes,
   dayMultiples,
   dayReviews,
   onOpenIntention,
@@ -533,6 +539,7 @@ function DayCard({
   timed: EffectiveOccurrence[];
   dayEvents: EventEntry[];
   eventNotes: EventNote[];
+  eventTypes: EventType[];
   dayMultiples: MultipleTask[];
   dayReviews: Intention[];
   onOpenIntention?: (id: string) => void;
@@ -605,7 +612,12 @@ function DayCard({
             );
           })}
           {dayEvents.map((ev) => (
-            <DraggableEventLine key={ev.id} ev={ev} notes={eventNotes.filter((n) => n.event_id === ev.id)} />
+            <DraggableEventLine
+              key={ev.id}
+              ev={ev}
+              notes={eventNotes.filter((n) => n.event_id === ev.id)}
+              eventTypes={eventTypes}
+            />
           ))}
 
           {dayMultiples.map((m) => {
@@ -1468,7 +1480,15 @@ function AllDayZone({
 }
 
 /** Events can be dragged onto another day card to change their date. */
-function DraggableEventLine({ ev, notes = [] }: { ev: EventEntry; notes?: EventNote[] }) {
+function DraggableEventLine({
+  ev,
+  notes = [],
+  eventTypes = [],
+}: {
+  ev: EventEntry;
+  notes?: EventNote[];
+  eventTypes?: EventType[];
+}) {
   // Timeline shows only the single most recent record, if any.
   const latest = sortEventNotes(notes)[0];
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
@@ -1488,11 +1508,11 @@ function DraggableEventLine({ ev, notes = [] }: { ev: EventEntry; notes?: EventN
       </button>
       <span
         className="inline-block h-3 w-3 flex-shrink-0"
-        style={{ background: EVENT_COLORS[ev.type] ?? "transparent" }}
+        style={{ background: resolveEventColor(ev, eventTypes) }}
       />
       <span className="flex-1 truncate">
         {ev.name}
-        <span className="text-muted-foreground"> · {ev.type}</span>
+        <span className="text-muted-foreground"> · {eventTypeLabel(ev.type, eventTypes)}</span>
         {latest && (
           <span className="text-muted-foreground">
             {" "}· {eventNoteLabel(latest, ev)} {latest.note}

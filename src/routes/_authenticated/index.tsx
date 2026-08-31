@@ -18,6 +18,7 @@ import {
   fetchCompletions,
   fetchExceptions,
   fetchIntentions,
+  fetchEventTypes,
   daysUntilAnnual,
   isDPlusEvent,
   dPlusLabel,
@@ -84,6 +85,7 @@ function Dashboard() {
   const tasksQ = useQuery({ queryKey: ["tasks", user.id], queryFn: () => fetchTasks(user.id) });
   const eventsQ = useQuery({ queryKey: ["events", user.id], queryFn: () => fetchEvents(user.id) });
   const eventNotesQ = useQuery({ queryKey: ["event_notes", user.id], queryFn: fetchEventNotes });
+  const eventTypesQ = useQuery({ queryKey: ["event_types"], queryFn: () => fetchEventTypes(user.id) });
   const multipleQ = useQuery({ queryKey: ["multiple_tasks", user.id], queryFn: () => fetchMultipleTasks(user.id) });
   const multipleItemsQ = useQuery({ queryKey: ["multiple_task_items", user.id], queryFn: () => fetchMultipleTaskItems(user.id) });
   const completionsQ = useQuery({ queryKey: ["completions", user.id], queryFn: () => fetchCompletions(user.id) });
@@ -590,6 +592,7 @@ function Dashboard() {
         name: v.name,
         date: v.date,
         type: v.type,
+        color: v.color,
         notes: v.notes || null,
         is_recurring: v.type === DPLUS_TYPE ? false : v.is_recurring,
         birth_year: v.birth_year,
@@ -615,6 +618,7 @@ function Dashboard() {
         name: patch.name,
         date: patch.date,
         type: patch.type,
+        color: patch.color,
         notes: patch.notes || null,
         is_recurring: patch.type === DPLUS_TYPE ? false : patch.is_recurring,
         birth_year: patch.birth_year,
@@ -624,6 +628,48 @@ function Dashboard() {
       if (error) throw error;
     },
     onSuccess: () => invalidate("events"),
+  });
+
+  // --- Custom Event Types (Custom Types only — system types are a code constant) ---
+  const invalidateEventTypes = () => qc.invalidateQueries({ queryKey: ["event_types"] });
+
+  const addEventType = useMutation({
+    mutationFn: async ({ key, name, color }: { key: string; name: string; color: string }) => {
+      const { error } = await supabase.from("planner_event_types").insert({
+        user_id: user.id,
+        key,
+        name,
+        default_color: color,
+      });
+      if (error) throw error;
+    },
+    onSuccess: invalidateEventTypes,
+  });
+
+  const renameEventType = useMutation({
+    mutationFn: async ({ id, name }: { id: string; name: string }) => {
+      const { error } = await supabase.from("planner_event_types").update({ name }).eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: invalidateEventTypes,
+  });
+
+  const changeEventTypeColor = useMutation({
+    mutationFn: async ({ id, color }: { id: string; color: string }) => {
+      const { error } = await supabase.from("planner_event_types").update({ default_color: color }).eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: invalidateEventTypes,
+  });
+
+  const archiveEventType = useMutation({
+    mutationFn: async (id: string) => {
+      // Archive-only — never hard delete, so existing Events referencing this
+      // type keep resolving their colour via EVENT_COLORS/default_color fallback.
+      const { error } = await supabase.from("planner_event_types").update({ is_archived: true }).eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: invalidateEventTypes,
   });
 
   const deleteEvent = useMutation({
@@ -839,6 +885,7 @@ function Dashboard() {
     projectItems: multipleItemsQ.data ?? [],
     events: eventsQ.data ?? [],
     eventNotes: eventNotesQ.data ?? [],
+    eventTypes: eventTypesQ.data ?? [],
     editingTask,
     intentions: intentionsQ.data ?? [],
     taskActions: {
@@ -877,6 +924,12 @@ function Dashboard() {
         if (note) updateEventNote.mutate({ id, note });
       },
       onDeleteNote: (id) => deleteEventNote.mutate(id),
+    },
+    eventTypeActions: {
+      onCreate: (key, name, color) => addEventType.mutate({ key, name, color }),
+      onRename: (id, name) => renameEventType.mutate({ id, name }),
+      onChangeColor: (id, color) => changeEventTypeColor.mutate({ id, color }),
+      onArchive: (id) => archiveEventType.mutate(id),
     },
     intentionActions: {
       onAdd: (title) => addIntention.mutate(title),
@@ -1002,6 +1055,7 @@ function Dashboard() {
           categories={categoriesQ.data ?? []}
           events={eventsQ.data ?? []}
           eventNotes={eventNotesQ.data ?? []}
+          eventTypes={eventTypesQ.data ?? []}
           completions={completionsQ.data ?? []}
           exceptions={exceptionsQ.data ?? []}
           onMoveTask={(args) => moveTask.mutate(args)}

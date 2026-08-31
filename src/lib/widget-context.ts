@@ -7,11 +7,12 @@ import type {
   MultipleTaskItem,
   EventEntry,
   EventNote,
+  EventType,
   Intention,
 } from "@/lib/wann-data";
 import type { TaskFormValues } from "@/components/wann/TaskForm";
 import type { MultipleTaskForm } from "@/components/wann/MultipleTasksPanel";
-import type { EventForm, EventNoteActions } from "@/components/wann/EventsPanel";
+import type { EventForm, EventNoteActions, EventTypeActions } from "@/components/wann/EventsPanel";
 import type { IntentionActions } from "@/components/wann/GoalsPanel";
 
 /**
@@ -32,6 +33,8 @@ export type WidgetContext = {
   projectItems: MultipleTaskItem[];
   events: EventEntry[];
   eventNotes: EventNote[];
+  /** Custom Event Types only — system types are a code constant, see wann-events.ts. */
+  eventTypes: EventType[];
   editingTask: Task | null;
   /** IDEA / LATER / GOAL intent layer — independent of tasks/projects. */
   intentions: Intention[];
@@ -67,6 +70,7 @@ export type WidgetContext = {
     onDelete: (id: string) => void;
     onTogglePin: (id: string, pinned: boolean) => void;
   } & EventNoteActions;
+  eventTypeActions: EventTypeActions;
 
   intentionActions: IntentionActions;
 };

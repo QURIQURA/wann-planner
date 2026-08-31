@@ -2,11 +2,14 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { ChevronDown, ChevronRight, CheckSquare, Repeat, Cake, ListChecks } from "lucide-react";
 import { fetchDaySummary } from "@/lib/wann-extra";
-import { EVENT_COLORS } from "@/lib/wann-data";
+import { fetchEventTypes } from "@/lib/wann-data";
+import { resolveEventColor, eventTypeLabel } from "@/lib/wann-events";
 
 export function DaySummaryPanel({ date }: { date: string }) {
   const [open, setOpen] = useState(false);
   const q = useQuery({ queryKey: ["day-summary", date], queryFn: () => fetchDaySummary(date) });
+  const eventTypesQ = useQuery({ queryKey: ["event_types"], queryFn: () => fetchEventTypes("") });
+  const eventTypes = eventTypesQ.data ?? [];
   const s = q.data;
   const total =
     (s?.tasks.length ?? 0) + (s?.habits.length ?? 0) + (s?.events.length ?? 0) + (s?.multipleItems.length ?? 0);
@@ -68,10 +71,10 @@ export function DaySummaryPanel({ date }: { date: string }) {
                   <div className="flex items-center gap-2">
                     <span
                       className="h-2 w-2 flex-shrink-0"
-                      style={{ background: EVENT_COLORS[e.type] ?? "var(--border)" }}
+                      style={{ background: resolveEventColor(e, eventTypes) }}
                     />
                     <span className="flex-1 truncate">{e.name}</span>
-                    <span className="text-[10px] label-caps text-muted-foreground">{e.type}</span>
+                    <span className="text-[10px] label-caps text-muted-foreground">{eventTypeLabel(e.type, eventTypes)}</span>
                   </div>
                   {e.records.map((r, i) => (
                     <p key={i} className="pl-4 text-xs text-muted-foreground italic">

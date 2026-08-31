@@ -337,7 +337,7 @@ export function monthBounds(year: number, month0: number) {
 export type DaySummary = {
   tasks: Array<{ id: string; title: string; category: string | null; categoryColor: string | null }>;
   habits: Array<{ id: string; name: string; count: number; target: number }>;
-  events: Array<{ id: string; name: string; type: string; records: string[] }>;
+  events: Array<{ id: string; name: string; type: string; color: string | null; records: string[] }>;
   multipleItems: Array<{ id: string; title: string; parent: string | null }>;
 };
 
@@ -366,7 +366,7 @@ export async function fetchDaySummary(date: string): Promise<DaySummary> {
     supabase.from("planner_task_completions").select("task_id").eq("occurrence_date", date),
     supabase.from("planner_habits").select("id,name,target_count"),
     supabase.from("planner_habit_completions").select("habit_id,count").eq("date", date),
-    supabase.from("planner_events").select("id,name,type,date,is_recurring"),
+    supabase.from("planner_events").select("id,name,type,color,date,is_recurring"),
     supabase.from("planner_event_notes").select("id,event_id,year,date,note"),
     supabase
       .from("planner_tasks")
@@ -414,6 +414,7 @@ export async function fetchDaySummary(date: string): Promise<DaySummary> {
       id: e.id,
       name: e.name,
       type: e.type,
+      color: e.color ?? null,
       // Records left on this event for this specific day (D+day) or year (recurring).
       records: (eventNotesRes.data ?? [])
         .filter((n) => n.event_id === e.id && (n.date ? n.date === date : n.year === year))
