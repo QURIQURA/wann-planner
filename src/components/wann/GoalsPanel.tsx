@@ -49,8 +49,9 @@ export type IntentionActions = {
   onOpenLinkedProject: (projectId: string) => void;
 };
 
-/** FAST CAPTURE — the whole point of the "+ IDEA" bar: title only, one Enter, done. */
-function FastCapture({ onAdd }: { onAdd: (title: string) => void }) {
+/** FAST CAPTURE — the whole point of the "+ IDEA" bar: title only, one Enter, done.
+ * Exported so Dashboard's Quick Add can reuse it verbatim for Idea creation. */
+export function FastCapture({ onAdd }: { onAdd: (title: string) => void }) {
   const [open, setOpen] = useState(false);
   const [value, setValue] = useState("");
   if (!open) {
@@ -333,7 +334,9 @@ export function GoalsPanel({
 
 export const goalsWidget: WidgetDef = {
   id: "goals",
-  label: "Ideas / Later / Goals",
+  label: "Ideas & Goals",
+  category: "planning",
+  description: "Capture ideas, promote to goals, manage Review Timers",
   render: (ctx) => (
     <section id="goals-widget" className="card-flat p-4">
       <GoalsPanel intentions={ctx.intentions} categories={ctx.categories} actions={ctx.intentionActions} />

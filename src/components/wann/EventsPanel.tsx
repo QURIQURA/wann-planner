@@ -564,6 +564,8 @@ function EventTypeManager({ eventTypes, actions }: { eventTypes: EventType[]; ac
 export const eventsWidget: WidgetDef = {
   id: "events",
   label: "Events",
+  category: "planning",
+  description: "Birthdays, anniversaries, holidays, custom event types & colours",
   render: (ctx) => (
     <section className="card-flat p-4">
       <EventsPanel

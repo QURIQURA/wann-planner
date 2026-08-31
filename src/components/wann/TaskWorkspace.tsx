@@ -80,8 +80,10 @@ export function TaskWorkspace({ ctx }: { ctx: WidgetContext }) {
 
 export const taskWorkspaceWidget: WidgetDef = {
   id: "task_workspace",
-  label: "Task & Multiple Task",
+  label: "Tasks & Projects",
   defaultVisible: true,
+  category: "planning",
+  description: "Full task list, categories, and multi-day projects",
   render: (ctx) => <TaskWorkspace ctx={ctx} />,
 };
 

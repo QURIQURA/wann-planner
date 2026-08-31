@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as AuthenticatedIndexRouteImport } from './routes/_authenticated/index'
+import { Route as AuthenticatedWidgetsRouteImport } from './routes/_authenticated/widgets'
 import { Route as AuthenticatedPatternsRouteImport } from './routes/_authenticated/patterns'
 import { Route as AuthenticatedMonthRouteImport } from './routes/_authenticated/month'
 import { Route as AuthenticatedDiaryRouteImport } from './routes/_authenticated/diary'
@@ -28,6 +29,11 @@ const AuthenticatedRouteRoute = AuthenticatedRouteRouteImport.update({
 const AuthenticatedIndexRoute = AuthenticatedIndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedWidgetsRoute = AuthenticatedWidgetsRouteImport.update({
+  id: '/widgets',
+  path: '/widgets',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedPatternsRoute = AuthenticatedPatternsRouteImport.update({
@@ -52,12 +58,14 @@ export interface FileRoutesByFullPath {
   '/diary': typeof AuthenticatedDiaryRoute
   '/month': typeof AuthenticatedMonthRoute
   '/patterns': typeof AuthenticatedPatternsRoute
+  '/widgets': typeof AuthenticatedWidgetsRoute
 }
 export interface FileRoutesByTo {
   '/auth': typeof AuthRoute
   '/diary': typeof AuthenticatedDiaryRoute
   '/month': typeof AuthenticatedMonthRoute
   '/patterns': typeof AuthenticatedPatternsRoute
+  '/widgets': typeof AuthenticatedWidgetsRoute
   '/': typeof AuthenticatedIndexRoute
 }
 export interface FileRoutesById {
@@ -67,13 +75,14 @@ export interface FileRoutesById {
   '/_authenticated/diary': typeof AuthenticatedDiaryRoute
   '/_authenticated/month': typeof AuthenticatedMonthRoute
   '/_authenticated/patterns': typeof AuthenticatedPatternsRoute
+  '/_authenticated/widgets': typeof AuthenticatedWidgetsRoute
   '/_authenticated/': typeof AuthenticatedIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/auth' | '/diary' | '/month' | '/patterns'
+  fullPaths: '/' | '/auth' | '/diary' | '/month' | '/patterns' | '/widgets'
   fileRoutesByTo: FileRoutesByTo
-  to: '/auth' | '/diary' | '/month' | '/patterns' | '/'
+  to: '/auth' | '/diary' | '/month' | '/patterns' | '/widgets' | '/'
   id:
     | '__root__'
     | '/_authenticated'
@@ -81,6 +90,7 @@ export interface FileRouteTypes {
     | '/_authenticated/diary'
     | '/_authenticated/month'
     | '/_authenticated/patterns'
+    | '/_authenticated/widgets'
     | '/_authenticated/'
   fileRoutesById: FileRoutesById
 }
@@ -112,6 +122,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedIndexRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/widgets': {
+      id: '/_authenticated/widgets'
+      path: '/widgets'
+      fullPath: '/widgets'
+      preLoaderRoute: typeof AuthenticatedWidgetsRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/patterns': {
       id: '/_authenticated/patterns'
       path: '/patterns'
@@ -140,6 +157,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedDiaryRoute: typeof AuthenticatedDiaryRoute
   AuthenticatedMonthRoute: typeof AuthenticatedMonthRoute
   AuthenticatedPatternsRoute: typeof AuthenticatedPatternsRoute
+  AuthenticatedWidgetsRoute: typeof AuthenticatedWidgetsRoute
   AuthenticatedIndexRoute: typeof AuthenticatedIndexRoute
 }
 
@@ -147,6 +165,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedDiaryRoute: AuthenticatedDiaryRoute,
   AuthenticatedMonthRoute: AuthenticatedMonthRoute,
   AuthenticatedPatternsRoute: AuthenticatedPatternsRoute,
+  AuthenticatedWidgetsRoute: AuthenticatedWidgetsRoute,
   AuthenticatedIndexRoute: AuthenticatedIndexRoute,
 }
 

@@ -300,5 +300,7 @@ export function MonthlySummaryPanel({ userId }: { userId: string }) {
 export const monthlySummaryWidget: WidgetDef = {
   id: "monthly_summary",
   label: "Monthly Summary",
+  category: "insights",
+  description: "Completion-rate stats by category over the month",
   render: (ctx) => <MonthlySummaryPanel userId={ctx.userId} />,
 };

@@ -551,6 +551,8 @@ export function HabitTrackerPanel({ userId, anchorDate }: { userId: string; anch
 
 export const habitTrackerWidget: WidgetDef = {
   id: "habit_tracker",
-  label: "Habit Tracker",
+  label: "Habits",
+  category: "life",
+  description: "Recurring habit checklist and streaks",
   render: (ctx) => <HabitTrackerPanel userId={ctx.userId} anchorDate={ctx.anchor} />,
 };

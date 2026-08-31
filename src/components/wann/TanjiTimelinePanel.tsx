@@ -426,5 +426,7 @@ export const tanjiTimelineWidget: WidgetDef = {
   id: "tanji_timeline",
   label: "Tanji Timeline",
   defaultVisible: true,
+  category: "life",
+  description: "Daily feeding / sleep / care log",
   render: (ctx) => <TanjiTimelinePanel ctx={ctx} />,
 };
