@@ -1,9 +1,8 @@
 import { useState } from "react";
 import type { WidgetDef } from "@/lib/widget-registry";
 import type { Group } from "@/lib/wann-groups";
-import { koDow, shortTime, currentOccurrenceDate } from "@/lib/wann-data";
-import { Plus, Trash2, X, Pencil, ChevronDown, ChevronRight, AlertTriangle } from "lucide-react";
-import { MultipleTasksPanel, MultipleTaskEditor, emptyMultipleTaskForm } from "./MultipleTasksPanel";
+import { Plus, Trash2, X, Pencil, ChevronDown, ChevronRight } from "lucide-react";
+import { MultipleTasksPanel, MultipleTaskEditor, emptyMultipleTaskForm, SharedTaskList } from "./MultipleTasksPanel";
 import { TaskForm } from "./TaskForm";
 import type { WidgetContext } from "@/lib/widget-context";
 
@@ -179,6 +178,11 @@ export function GroupsPanel({ ctx }: { ctx: WidgetContext }) {
                       categories={ctx.categories}
                       subtags={ctx.subtags}
                       groups={ctx.groups}
+                      allTasks={ctx.tasks}
+                      editingTaskId={ctx.editingTask?.id ?? null}
+                      onToggleTask={ctx.taskActions.onToggleTask}
+                      onEditTask={ctx.taskActions.onEditTask}
+                      onDeleteTask={ctx.taskActions.onDeleteTask}
                       hideFilterBar
                       hideHeader
                       {...ctx.projectActions}
@@ -339,64 +343,6 @@ export function GroupsPanel({ ctx }: { ctx: WidgetContext }) {
           );
         })}
       </div>
-    </div>
-  );
-}
-
-/** Minimal Shared Task row — same fields as TasksPanel's TaskList, minus the
- * Project/Group label (redundant inside a Group's own detail view). */
-function SharedTaskList({
-  tasks,
-  editingId,
-  onToggle,
-  onEdit,
-  onDelete,
-}: {
-  tasks: import("@/lib/wann-data").Task[];
-  editingId: string | null;
-  onToggle: (t: import("@/lib/wann-data").Task, occurrenceDate: string) => void;
-  onEdit: (t: import("@/lib/wann-data").Task) => void;
-  onDelete: (id: string) => void;
-}) {
-  if (tasks.length === 0) {
-    return <p className="text-xs text-muted-foreground italic">No shared tasks</p>;
-  }
-  return (
-    <div className="space-y-1">
-      {tasks.map((t) => (
-        <div
-          key={t.id}
-          className={`flex items-center gap-2 py-1 border-b border-border/50 group flex-wrap ${editingId === t.id ? "bg-muted" : ""}`}
-        >
-          <button
-            onClick={() => onToggle(t, currentOccurrenceDate(t))}
-            aria-label="Toggle"
-            className={`h-3 w-3 border border-border flex-shrink-0 ${t.completed ? "bg-foreground" : ""}`}
-          />
-          <button
-            onClick={() => onEdit(t)}
-            className={`text-sm flex-1 min-w-[6rem] text-left truncate hover:underline ${t.completed ? "line-through text-muted-foreground" : ""}`}
-          >
-            {t.title}
-          </button>
-          {t.is_critical && <AlertTriangle size={11} className="text-muted-foreground flex-shrink-0" />}
-          {t.due_date && (
-            <span className="text-[10px] text-muted-foreground">
-              {t.due_date.slice(5)} ({koDow(t.due_date)})
-            </span>
-          )}
-          {t.due_time && (
-            <span className="text-[10px] text-muted-foreground tabular-nums">{shortTime(t.due_time)}</span>
-          )}
-          <button
-            onClick={() => onDelete(t.id)}
-            aria-label="Delete"
-            className="opacity-0 group-hover:opacity-100 hover:text-destructive"
-          >
-            <Trash2 size={12} />
-          </button>
-        </div>
-      ))}
     </div>
   );
 }

@@ -244,7 +244,7 @@ function TaskList({
               </span>
             )}
             {group && (
-              <span className="text-[10px] text-muted-foreground border-b border-dashed border-border max-w-[90px] truncate">
+              <span className="text-[10px] label-caps bg-foreground text-background px-1.5 py-0.5 max-w-[90px] truncate flex-shrink-0">
                 {group.name}
               </span>
             )}

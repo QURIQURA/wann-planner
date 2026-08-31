@@ -1,9 +1,9 @@
 import type { WidgetDef } from "@/lib/widget-registry";
 import { useState } from "react";
-import type { Category, MultipleTask, MultipleTaskItem, Subtag } from "@/lib/wann-data";
-import { todayLocalStr, taskSortKey, formatDateKo, koDow } from "@/lib/wann-data";
+import type { Category, MultipleTask, MultipleTaskItem, Subtag, Task } from "@/lib/wann-data";
+import { todayLocalStr, taskSortKey, formatDateKo, koDow, shortTime, currentOccurrenceDate } from "@/lib/wann-data";
 import type { Group } from "@/lib/wann-groups";
-import { Plus, Trash2, X, Pencil, ChevronDown, ChevronRight } from "lucide-react";
+import { Plus, Trash2, X, Pencil, ChevronDown, ChevronRight, AlertTriangle } from "lucide-react";
 import type { CategoryFilter } from "./TaskForm";
 
 
@@ -47,6 +47,11 @@ export function MultipleTasksPanel({
   onFilterChange,
   hideFilterBar,
   hideHeader,
+  allTasks,
+  editingTaskId,
+  onToggleTask,
+  onEditTask,
+  onDeleteTask,
 }: {
 
   entries: MultipleTask[];
@@ -75,6 +80,15 @@ export function MultipleTasksPanel({
   /** Hide the built-in "Projects" header when the caller already renders
    * its own (e.g. GroupsPanel's "Projects" section label). */
   hideHeader?: boolean;
+  /** Full unfiltered Task list — when provided (together with the task
+   * action callbacks below), each expanded Project that belongs to a Group
+   * additionally shows that Group's Shared Tasks inline, fully interactive,
+   * so viewing them never requires switching to the Groups tab. */
+  allTasks?: Task[];
+  editingTaskId?: string | null;
+  onToggleTask?: (t: Task, occurrenceDate: string) => void;
+  onEditTask?: (t: Task) => void;
+  onDeleteTask?: (id: string) => void;
 }) {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState<MultipleTaskForm>(emptyMultipleTaskForm());
@@ -197,6 +211,12 @@ export function MultipleTasksPanel({
           const pct = total > 0 ? Math.round((done / total) * 100) : null;
           const expanded = expandedId === e.id;
           const editing = editingId === e.id;
+          const projectGroupId = (e as MultipleTask & { group_id: string | null }).group_id ?? null;
+          const group = projectGroupId ? groups.find((g) => g.id === projectGroupId) : null;
+          const groupSharedTasks =
+            group && allTasks
+              ? allTasks.filter((t) => t.group_id === group.id && !t.multiple_task_id)
+              : [];
 
           return (
             <div key={e.id} id={`mt-${e.id}`} className="border-b border-border/50 rounded-sm transition-shadow">
@@ -380,6 +400,25 @@ export function MultipleTasksPanel({
                     />
                   </div>
 
+                  {group && (
+                    <div className="mt-3 border-t border-border pt-2">
+                      <p className="label-caps text-[10px] text-muted-foreground mb-1">
+                        Group Shared Tasks — {group.name}
+                      </p>
+                      {onToggleTask && onEditTask && onDeleteTask ? (
+                        <SharedTaskList
+                          tasks={groupSharedTasks}
+                          editingId={editingTaskId ?? null}
+                          onToggle={onToggleTask}
+                          onEdit={onEditTask}
+                          onDelete={onDeleteTask}
+                        />
+                      ) : (
+                        <p className="text-xs text-muted-foreground italic">No shared tasks</p>
+                      )}
+                    </div>
+                  )}
+
                 </div>
               )}
             </div>
@@ -554,6 +593,66 @@ export function MultipleTaskEditor({
   );
 }
 
+/** Minimal Shared Task row — same fields as TasksPanel's TaskList, minus the
+ * Project/Group label (redundant once already shown inside that Group's or
+ * Project's own detail view). Shared by GroupsPanel's Group detail and this
+ * file's per-Project "Group Shared Tasks" section. */
+export function SharedTaskList({
+  tasks,
+  editingId,
+  onToggle,
+  onEdit,
+  onDelete,
+}: {
+  tasks: Task[];
+  editingId: string | null;
+  onToggle: (t: Task, occurrenceDate: string) => void;
+  onEdit: (t: Task) => void;
+  onDelete: (id: string) => void;
+}) {
+  if (tasks.length === 0) {
+    return <p className="text-xs text-muted-foreground italic">No shared tasks</p>;
+  }
+  return (
+    <div className="space-y-1">
+      {tasks.map((t) => (
+        <div
+          key={t.id}
+          className={`flex items-center gap-2 py-1 border-b border-border/50 group flex-wrap ${editingId === t.id ? "bg-muted" : ""}`}
+        >
+          <button
+            onClick={() => onToggle(t, currentOccurrenceDate(t))}
+            aria-label="Toggle"
+            className={`h-3 w-3 border border-border flex-shrink-0 ${t.completed ? "bg-foreground" : ""}`}
+          />
+          <button
+            onClick={() => onEdit(t)}
+            className={`text-sm flex-1 min-w-[6rem] text-left truncate hover:underline ${t.completed ? "line-through text-muted-foreground" : ""}`}
+          >
+            {t.title}
+          </button>
+          {t.is_critical && <AlertTriangle size={11} className="text-muted-foreground flex-shrink-0" />}
+          {t.due_date && (
+            <span className="text-[10px] text-muted-foreground">
+              {t.due_date.slice(5)} ({koDow(t.due_date)})
+            </span>
+          )}
+          {t.due_time && (
+            <span className="text-[10px] text-muted-foreground tabular-nums">{shortTime(t.due_time)}</span>
+          )}
+          <button
+            onClick={() => onDelete(t.id)}
+            aria-label="Delete"
+            className="opacity-0 group-hover:opacity-100 hover:text-destructive"
+          >
+            <Trash2 size={12} />
+          </button>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export const multipleTasksWidget: WidgetDef = {
   id: "multiple_tasks",
   label: "Multiple Task",
@@ -564,6 +663,12 @@ export const multipleTasksWidget: WidgetDef = {
         items={ctx.projectItems}
         categories={ctx.categories}
         subtags={ctx.subtags}
+        groups={ctx.groups}
+        allTasks={ctx.tasks}
+        editingTaskId={ctx.editingTask?.id ?? null}
+        onToggleTask={ctx.taskActions.onToggleTask}
+        onEditTask={ctx.taskActions.onEditTask}
+        onDeleteTask={ctx.taskActions.onDeleteTask}
         {...ctx.projectActions}
       />
     </section>

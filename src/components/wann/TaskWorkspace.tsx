@@ -54,6 +54,12 @@ export function TaskWorkspace({ ctx }: { ctx: WidgetContext }) {
             items={ctx.projectItems}
             categories={ctx.categories}
             subtags={ctx.subtags}
+            groups={ctx.groups}
+            allTasks={ctx.tasks}
+            editingTaskId={ctx.editingTask?.id ?? null}
+            onToggleTask={ctx.taskActions.onToggleTask}
+            onEditTask={ctx.taskActions.onEditTask}
+            onDeleteTask={ctx.taskActions.onDeleteTask}
             filter={filter}
             onFilterChange={setFilter}
             hideFilterBar
