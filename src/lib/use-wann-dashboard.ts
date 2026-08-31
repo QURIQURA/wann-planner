@@ -190,6 +190,7 @@ export function useWannDashboard(
 
   const addTask = useMutation({
     mutationFn: async (input: TaskFormValues) => {
+      const primaryCategoryId = input.categoryIds[0] ?? null;
       let projectId = input.projectId;
       if (input.newProject && input.newProject.name) {
         const { data, error: pErr } = await supabase
@@ -197,7 +198,7 @@ export function useWannDashboard(
           .insert({
             user_id: user.id,
             name: input.newProject.name,
-            category_id: input.categoryId,
+            category_id: primaryCategoryId,
             subtag_id: input.subtagId,
             date: input.newProject.startDate,
             end_date: input.newProject.endDate,
@@ -210,7 +211,8 @@ export function useWannDashboard(
       const { data: created, error } = await supabase.from("planner_tasks").insert({
         user_id: user.id,
         title: input.title,
-        category_id: input.categoryId,
+        category_id: primaryCategoryId,
+        category_ids: input.categoryIds,
         subtag_id: input.subtagId,
         due_date: input.dueDate,
         due_time: input.dueTime,
@@ -231,6 +233,7 @@ export function useWannDashboard(
 
   const updateTask = useMutation({
     mutationFn: async ({ id, input }: { id: string; input: TaskFormValues }) => {
+      const primaryCategoryId = input.categoryIds[0] ?? null;
       let projectId = input.projectId;
       if (input.newProject && input.newProject.name) {
         const { data, error: pErr } = await supabase
@@ -238,7 +241,7 @@ export function useWannDashboard(
           .insert({
             user_id: user.id,
             name: input.newProject.name,
-            category_id: input.categoryId,
+            category_id: primaryCategoryId,
             subtag_id: input.subtagId,
             date: input.newProject.startDate,
             end_date: input.newProject.endDate,
@@ -250,7 +253,8 @@ export function useWannDashboard(
       }
       const { error } = await supabase.from("planner_tasks").update({
         title: input.title,
-        category_id: input.categoryId,
+        category_id: primaryCategoryId,
+        category_ids: input.categoryIds,
         subtag_id: input.subtagId,
         due_date: input.dueDate,
         due_time: input.dueTime,
@@ -563,6 +567,7 @@ export function useWannDashboard(
         title,
         multiple_task_id: parentId,
         category_id: parent?.category_id ?? null,
+        category_ids: parent?.category_id ? [parent.category_id] : [],
         subtag_id: parent?.subtag_id ?? null,
         due_date: date ?? null,
         due_time: time ?? null,

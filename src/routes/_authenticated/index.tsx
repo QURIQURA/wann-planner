@@ -234,52 +234,70 @@ function Dashboard() {
             on /widgets' "Tasks & Projects" widget, same ctx.taskActions/
             projectActions. (Splitting this into two separately-filtered
             boxes was a mistake — same category, no reason for two boxes.) */}
-        <TaskWorkspace ctx={widgetCtx} />
+        {(() => {
+          const taskWorkspaceSection = <TaskWorkspace key="task_workspace" ctx={widgetCtx} />;
 
-        {/* Compact summary only — full Group detail (Projects/Shared Tasks
-            lists, add flows) lives on /widgets so Dashboard doesn't grow
-            complex again. Always rendered (even with 0 groups) so the
-            feature has a visible entry point — a card that only ever
-            appears once you already have a Group is undiscoverable. */}
-        <section className="card-flat p-4">
-          <div className="flex items-center justify-between mb-3">
-            <p className="label-caps">Groups</p>
-            <button
-              onClick={() => openGroupsWidget()}
-              className="label-caps text-[10px] text-muted-foreground hover:text-foreground"
-            >
-              {(groupsQ.data ?? []).length > 0 ? "모두 보기" : "+ 그룹 추가"}
-            </button>
-          </div>
-          {(groupsQ.data ?? []).length === 0 ? (
-            <p className="text-xs text-muted-foreground italic">
-              여러 Project에 걸친 묶음(예: 케이크 주문, 여행)이 필요할 때 추가하세요.
-            </p>
-          ) : (
-            <div className="space-y-1">
-              {(groupsQ.data ?? []).map((g) => {
-                const nProjects = (multipleQ.data ?? []).filter(
-                  (p) => p.group_id === g.id,
-                ).length;
-                const nShared = (tasksQ.data ?? []).filter(
-                  (t) => t.group_id === g.id && !t.multiple_task_id,
-                ).length;
-                return (
-                  <button
-                    key={g.id}
-                    onClick={() => openGroupsWidget(g.id)}
-                    className="w-full flex items-center gap-2 py-1 border-b border-border/50 text-left hover:bg-muted"
-                  >
-                    <span className="text-sm flex-1 min-w-0 truncate">{g.name}</span>
-                    <span className="text-[10px] text-muted-foreground whitespace-nowrap">
-                      {nProjects} Projects · {nShared} Shared Tasks
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
-          )}
-        </section>
+          // Compact summary only — full Group detail (Projects/Shared Tasks
+          // lists, add flows) lives on /widgets so Dashboard doesn't grow
+          // complex again. Always rendered (even with 0 groups) so the
+          // feature has a visible entry point — a card that only ever
+          // appears once you already have a Group is undiscoverable.
+          const groupsSection = (
+            <section key="groups" className="card-flat p-4">
+              <div className="flex items-center justify-between mb-3">
+                <p className="label-caps">Groups</p>
+                <button
+                  onClick={() => openGroupsWidget()}
+                  className="label-caps text-[10px] text-muted-foreground hover:text-foreground"
+                >
+                  {(groupsQ.data ?? []).length > 0 ? "모두 보기" : "+ 그룹 추가"}
+                </button>
+              </div>
+              {(groupsQ.data ?? []).length === 0 ? (
+                <p className="text-xs text-muted-foreground italic">
+                  여러 Project에 걸친 묶음(예: 케이크 주문, 여행)이 필요할 때 추가하세요.
+                </p>
+              ) : (
+                <div className="space-y-1">
+                  {(groupsQ.data ?? []).map((g) => {
+                    const nProjects = (multipleQ.data ?? []).filter(
+                      (p) => p.group_id === g.id,
+                    ).length;
+                    const nShared = (tasksQ.data ?? []).filter(
+                      (t) => t.group_id === g.id && !t.multiple_task_id,
+                    ).length;
+                    return (
+                      <button
+                        key={g.id}
+                        onClick={() => openGroupsWidget(g.id)}
+                        className="w-full flex items-center gap-2 py-1 border-b border-border/50 text-left hover:bg-muted"
+                      >
+                        <span className="text-sm flex-1 min-w-0 truncate">{g.name}</span>
+                        <span className="text-[10px] text-muted-foreground whitespace-nowrap">
+                          {nProjects} Projects · {nShared} Shared Tasks
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </section>
+          );
+
+          // Settings > Widgets' "drag to reorder" list is the single source
+          // of truth for these two sections' relative order — otherwise
+          // dragging Groups above Tasks & Projects there would silently do
+          // nothing on the Dashboard, which used to render them in a fixed
+          // order regardless of widget_order.
+          const order = settings.widget_order ?? [];
+          const groupsIdx = order.indexOf("groups");
+          const tasksIdx = order.indexOf("task_workspace");
+          const groupsFirst = groupsIdx !== -1 && tasksIdx !== -1 && groupsIdx < tasksIdx;
+
+          return groupsFirst
+            ? <>{groupsSection}{taskWorkspaceSection}</>
+            : <>{taskWorkspaceSection}{groupsSection}</>;
+        })()}
       </main>
 
       {settingsOpen && (

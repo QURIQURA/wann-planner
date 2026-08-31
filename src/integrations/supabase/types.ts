@@ -1507,6 +1507,7 @@ export type Database = {
       planner_tasks: {
         Row: {
           category_id: string | null
+          category_ids: string[]
           completed: boolean
           completed_at: string | null
           created_at: string
@@ -1526,6 +1527,7 @@ export type Database = {
         }
         Insert: {
           category_id?: string | null
+          category_ids?: string[]
           completed?: boolean
           completed_at?: string | null
           created_at?: string
@@ -1545,6 +1547,7 @@ export type Database = {
         }
         Update: {
           category_id?: string | null
+          category_ids?: string[]
           completed?: boolean
           completed_at?: string | null
           created_at?: string

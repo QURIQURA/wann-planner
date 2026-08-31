@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { Category, MultipleTask, MultipleTaskItem, Subtag, Task } from "@/lib/wann-data";
 import { todayLocalStr, shortTime, formatDateKo, koDow } from "@/lib/wann-data";
 import type { Group } from "@/lib/wann-groups";
@@ -16,7 +16,10 @@ export type NewProjectValues = {
 
 export type TaskFormValues = {
   title: string;
-  categoryId: string | null;
+  /** A Task can belong to any number of categories (0, 1, or many). The
+   * first entry is treated as the "primary" category wherever only one
+   * category can be shown (colours, month view, patterns, summary stats). */
+  categoryIds: string[];
   subtagId: string | null;
   dueDate: string | null;
   dueTime: string | null;
@@ -68,7 +71,7 @@ export function TaskForm({
 }) {
   const emptyForm = (): TaskFormValues => ({
     title: "",
-    categoryId: filter.categoryId,
+    categoryIds: filter.categoryId ? [filter.categoryId] : [],
     subtagId: filter.subtagId,
     dueDate: todayLocalStr(),
     dueTime: null,
@@ -87,7 +90,11 @@ export function TaskForm({
     if (editingTask) {
       setForm({
         title: editingTask.title,
-        categoryId: editingTask.category_id,
+        categoryIds: editingTask.category_ids?.length
+          ? editingTask.category_ids
+          : editingTask.category_id
+            ? [editingTask.category_id]
+            : [],
         subtagId: editingTask.subtag_id,
         dueDate: editingTask.due_date ?? null,
         dueTime: shortTime(editingTask.due_time) || null,
@@ -233,24 +240,28 @@ export function TaskForm({
           title={form.dueTime ? "Optional end time" : "Set a start time first"}
           className="bg-transparent outline-none text-sm border-b border-border py-1 disabled:opacity-40"
         />
-        <select
-          value={form.categoryId ?? ""}
-          onChange={(e) => setForm({ ...form, categoryId: e.target.value || null, subtagId: null })}
-          className="bg-transparent outline-none text-sm border-b border-border py-1"
-        >
-          <option value="">no cat</option>
-          {categories.map((c) => (
-            <option key={c.id} value={c.id}>{c.name}</option>
-          ))}
-        </select>
+        <CategoryMultiSelect
+          categories={categories}
+          value={form.categoryIds}
+          onChange={(ids) =>
+            setForm({
+              ...form,
+              categoryIds: ids,
+              subtagId:
+                form.subtagId && subtags.some((s) => s.id === form.subtagId && ids.includes(s.category_id))
+                  ? form.subtagId
+                  : null,
+            })
+          }
+        />
         <select
           value={form.subtagId ?? ""}
           onChange={(e) => setForm({ ...form, subtagId: e.target.value || null })}
           className="bg-transparent outline-none text-sm border-b border-border py-1"
-          disabled={!form.categoryId}
+          disabled={form.categoryIds.length === 0}
         >
           <option value="">no sub</option>
-          {subtags.filter((s) => s.category_id === form.categoryId).map((s) => (
+          {subtags.filter((s) => form.categoryIds.includes(s.category_id)).map((s) => (
             <option key={s.id} value={s.id}>{s.name}</option>
           ))}
         </select>
@@ -414,6 +425,75 @@ export function TaskForm({
           >
             <Plus size={12} /> 상세 항목 추가
           </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/** Dropdown checklist — a Task can belong to any number of categories (0+). */
+function CategoryMultiSelect({
+  categories,
+  value,
+  onChange,
+}: {
+  categories: Category[];
+  value: string[];
+  onChange: (ids: string[]) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const onClick = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener("mousedown", onClick);
+    return () => document.removeEventListener("mousedown", onClick);
+  }, [open]);
+
+  const toggle = (id: string) =>
+    onChange(value.includes(id) ? value.filter((v) => v !== id) : [...value, id]);
+
+  const label =
+    value.length === 0
+      ? "no cat"
+      : value
+          .map((id) => categories.find((c) => c.id === id)?.name)
+          .filter(Boolean)
+          .join(", ");
+
+  return (
+    <div className="relative" ref={ref}>
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className="bg-transparent outline-none text-sm border-b border-border py-1 max-w-[140px] truncate text-left"
+        title={label}
+      >
+        {label}
+      </button>
+      {open && (
+        <div className="absolute z-20 top-full left-0 mt-1 card-flat bg-background border border-border p-1 min-w-[140px] max-h-[220px] overflow-y-auto">
+          {categories.length === 0 && (
+            <p className="text-xs text-muted-foreground italic px-2 py-1">No categories</p>
+          )}
+          {categories.map((c) => (
+            <label
+              key={c.id}
+              className="flex items-center gap-2 px-2 py-1 text-sm hover:bg-muted cursor-pointer whitespace-nowrap"
+            >
+              <input
+                type="checkbox"
+                checked={value.includes(c.id)}
+                onChange={() => toggle(c.id)}
+                className="h-3 w-3 accent-foreground"
+              />
+              <span className="inline-block h-2 w-2 flex-shrink-0" style={{ background: c.color }} />
+              {c.name}
+            </label>
+          ))}
         </div>
       )}
     </div>

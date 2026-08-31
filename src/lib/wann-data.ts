@@ -22,6 +22,17 @@ export type MultipleTaskItem = Task;
 export type EventEntry = Tables<"planner_events">;
 export type RecurringException = Tables<"planner_recurring_task_exceptions">;
 
+/**
+ * A Task may carry any number of categories (`category_ids`). `category_id`
+ * stays in sync as the first entry — the "primary" category — for the
+ * single-category views (colours, month view, patterns, summary stats) that
+ * only ever show one. This helper is the one place that reconciles both.
+ */
+export function taskCategoryIds(t: Task): string[] {
+  if (t.category_ids?.length) return t.category_ids;
+  return t.category_id ? [t.category_id] : [];
+}
+
 export async function fetchExceptions(_userId: string): Promise<RecurringException[]> {
   const { data, error } = await supabase.from("planner_recurring_task_exceptions").select("*");
   if (error) throw error;

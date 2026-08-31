@@ -1,7 +1,7 @@
 import type { WidgetDef } from "@/lib/widget-registry";
 import { useState } from "react";
 import type { Category, MultipleTask, Subtag, Task, TaskCompletion } from "@/lib/wann-data";
-import { todayLocalStr, shortTime, isOccurrenceCompleted, currentOccurrenceDate, koDow, taskSortKey, diffDays } from "@/lib/wann-data";
+import { todayLocalStr, shortTime, isOccurrenceCompleted, currentOccurrenceDate, koDow, taskSortKey, diffDays, taskCategoryIds } from "@/lib/wann-data";
 import type { Group } from "@/lib/wann-groups";
 import { Trash2, ChevronDown, ChevronUp } from "lucide-react";
 import { CategoryFilterBar } from "./CategoryFilterBar";
@@ -68,7 +68,7 @@ export function TasksPanel({
   const setFilter = (f: CategoryFilter) => (onFilterChange ? onFilterChange(f) : setLocalFilter(f));
 
   const filtered = tasks.filter((t) => {
-    if (filter.categoryId && t.category_id !== filter.categoryId) return false;
+    if (filter.categoryId && !taskCategoryIds(t).includes(filter.categoryId)) return false;
     if (filter.subtagId && t.subtag_id !== filter.subtagId) return false;
     // Recurring tasks only show their nearest occurrence when it falls within a
     // week of today — this list is a "what's live right now" view, not a full
@@ -215,7 +215,9 @@ function TaskList({
   return (
     <div className="space-y-1">
       {items.map((t) => {
-        const cat = t.category_id ? categories.find((c) => c.id === t.category_id) : null;
+        const cats = taskCategoryIds(t)
+          .map((id) => categories.find((c) => c.id === id))
+          .filter((c): c is Category => !!c);
         const project = t.multiple_task_id ? projects.find((p) => p.id === t.multiple_task_id) : null;
         // Mutually exclusive with project — a Task belongs to at most one.
         const group = !project && t.group_id ? groups.find((g) => g.id === t.group_id) : null;
@@ -248,11 +250,11 @@ function TaskList({
                 {group.name}
               </span>
             )}
-            {cat && (
-              <span className="text-[10px] label-caps" style={{ color: cat.color }}>
-                {cat.name}
+            {cats.map((c) => (
+              <span key={c.id} className="text-[10px] label-caps" style={{ color: c.color }}>
+                {c.name}
               </span>
-            )}
+            ))}
             {t.due_date && (
               <span className="text-[10px] text-muted-foreground">
                 {t.due_date.slice(5)} ({koDow(t.due_date)})
