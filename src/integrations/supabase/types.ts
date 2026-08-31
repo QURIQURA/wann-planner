@@ -933,6 +933,33 @@ export type Database = {
         }
         Relationships: []
       }
+      planner_groups: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          notes: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          notes?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          notes?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       planner_habit_completions: {
         Row: {
           count: number
@@ -1201,6 +1228,7 @@ export type Database = {
           created_at: string
           date: string | null
           end_date: string | null
+          group_id: string | null
           id: string
           name: string
           subtag_id: string | null
@@ -1212,6 +1240,7 @@ export type Database = {
           created_at?: string
           date?: string | null
           end_date?: string | null
+          group_id?: string | null
           id?: string
           name: string
           subtag_id?: string | null
@@ -1223,6 +1252,7 @@ export type Database = {
           created_at?: string
           date?: string | null
           end_date?: string | null
+          group_id?: string | null
           id?: string
           name?: string
           subtag_id?: string | null
@@ -1235,6 +1265,13 @@ export type Database = {
             columns: ["category_id"]
             isOneToOne: false
             referencedRelation: "planner_task_categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "planner_multiple_tasks_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "planner_groups"
             referencedColumns: ["id"]
           },
           {
@@ -1476,6 +1513,7 @@ export type Database = {
           due_date: string | null
           due_time: string | null
           end_time: string | null
+          group_id: string | null
           id: string
           is_critical: boolean
           multiple_task_id: string | null
@@ -1494,6 +1532,7 @@ export type Database = {
           due_date?: string | null
           due_time?: string | null
           end_time?: string | null
+          group_id?: string | null
           id?: string
           is_critical?: boolean
           multiple_task_id?: string | null
@@ -1512,6 +1551,7 @@ export type Database = {
           due_date?: string | null
           due_time?: string | null
           end_time?: string | null
+          group_id?: string | null
           id?: string
           is_critical?: boolean
           multiple_task_id?: string | null
@@ -1528,6 +1568,13 @@ export type Database = {
             columns: ["category_id"]
             isOneToOne: false
             referencedRelation: "planner_task_categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "planner_tasks_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "planner_groups"
             referencedColumns: ["id"]
           },
           {

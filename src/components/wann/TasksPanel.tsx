@@ -2,6 +2,7 @@ import type { WidgetDef } from "@/lib/widget-registry";
 import { useState } from "react";
 import type { Category, MultipleTask, Subtag, Task, TaskCompletion } from "@/lib/wann-data";
 import { todayLocalStr, shortTime, isOccurrenceCompleted, currentOccurrenceDate, koDow, taskSortKey, diffDays } from "@/lib/wann-data";
+import type { Group } from "@/lib/wann-groups";
 import { Trash2, ChevronDown, ChevronUp } from "lucide-react";
 import { CategoryFilterBar } from "./CategoryFilterBar";
 import type { CategoryFilter, TaskFormValues } from "./TaskForm";
@@ -10,6 +11,7 @@ export function TasksPanel({
   categories,
   subtags,
   projects,
+  groups = [],
   tasks,
   completions,
   editingTask,
@@ -32,6 +34,7 @@ export function TasksPanel({
   categories: Category[];
   subtags: Subtag[];
   projects: MultipleTask[];
+  groups?: Group[];
   tasks: Task[];
   completions: TaskCompletion[];
   editingTask: Task | null;
@@ -115,6 +118,7 @@ export function TasksPanel({
               items={dated}
               categories={categories}
               projects={projects}
+              groups={groups}
               editingId={editingTask?.id ?? null}
               onToggle={onToggleTask}
               onEdit={onEditTask}
@@ -135,6 +139,7 @@ export function TasksPanel({
                       items={undated}
                       categories={categories}
                       projects={projects}
+                      groups={groups}
                       editingId={editingTask?.id ?? null}
                       onToggle={onToggleTask}
                       onEdit={onEditTask}
@@ -167,6 +172,7 @@ export function TasksPanel({
                   items={done}
                   categories={categories}
                   projects={projects}
+                  groups={groups}
                   editingId={editingTask?.id ?? null}
                   onToggle={onToggleTask}
                   onEdit={onEditTask}
@@ -184,6 +190,7 @@ export function TasksPanel({
 
 function TaskList({
   projects,
+  groups = [],
   items,
   categories,
   editingId,
@@ -200,6 +207,7 @@ function TaskList({
   onDelete: (id: string) => void;
   completed?: boolean;
   projects: MultipleTask[];
+  groups?: Group[];
 }) {
   if (items.length === 0 && !completed) {
     return <p className="text-xs text-muted-foreground italic">No tasks</p>;
@@ -209,6 +217,8 @@ function TaskList({
       {items.map((t) => {
         const cat = t.category_id ? categories.find((c) => c.id === t.category_id) : null;
         const project = t.multiple_task_id ? projects.find((p) => p.id === t.multiple_task_id) : null;
+        // Mutually exclusive with project — a Task belongs to at most one.
+        const group = !project && t.group_id ? groups.find((g) => g.id === t.group_id) : null;
         return (
           <div
             key={t.id}
@@ -231,6 +241,11 @@ function TaskList({
             {project && (
               <span className="text-[10px] text-muted-foreground border-b border-border max-w-[90px] truncate">
                 {project.name}
+              </span>
+            )}
+            {group && (
+              <span className="text-[10px] text-muted-foreground border-b border-dashed border-border max-w-[90px] truncate">
+                {group.name}
               </span>
             )}
             {cat && (

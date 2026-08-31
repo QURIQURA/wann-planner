@@ -10,6 +10,7 @@ import type {
   EventType,
   Intention,
 } from "@/lib/wann-data";
+import type { Group } from "@/lib/wann-groups";
 import type { TaskFormValues } from "@/components/wann/TaskForm";
 import type { MultipleTaskForm } from "@/components/wann/MultipleTasksPanel";
 import type { EventForm, EventNoteActions, EventTypeActions } from "@/components/wann/EventsPanel";
@@ -38,6 +39,9 @@ export type WidgetContext = {
   editingTask: Task | null;
   /** IDEA / LATER / GOAL intent layer — independent of tasks/projects. */
   intentions: Intention[];
+  /** Generic context/batch entity above Project (e.g. a cake order made of
+   * several Projects, or a "Shared Task" belonging directly to the Group). */
+  groups: Group[];
 
   taskActions: {
     onCancelEdit: () => void;
@@ -71,6 +75,12 @@ export type WidgetContext = {
     onTogglePin: (id: string, pinned: boolean) => void;
   } & EventNoteActions;
   eventTypeActions: EventTypeActions;
+
+  groupActions: {
+    onAdd: (v: { name: string; notes: string | null }) => void;
+    onUpdate: (id: string, patch: { name: string; notes: string | null }) => void;
+    onDelete: (id: string) => void;
+  };
 
   intentionActions: IntentionActions;
 };

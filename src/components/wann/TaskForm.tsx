@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import type { Category, MultipleTask, MultipleTaskItem, Subtag, Task } from "@/lib/wann-data";
 import { todayLocalStr, shortTime, formatDateKo, koDow } from "@/lib/wann-data";
+import type { Group } from "@/lib/wann-groups";
 import { Plus, Trash2, X, AlertTriangle } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { fetchSubitemsForTask, type SubitemDraft } from "@/lib/wann-subitems";
@@ -23,6 +24,9 @@ export type TaskFormValues = {
   recurrence: string;
   projectId: string | null;
   newProject: NewProjectValues | null;
+  /** Group a "Shared Task" belongs to directly (mutually exclusive with
+   * projectId/newProject — a Task belongs to at most one of the two). */
+  groupId: string | null;
   /** Lightweight checklist for duration tasks. */
   subitems: SubitemDraft[];
   /** "Can't miss this" marker — thicker border + icon wherever the task renders. */
@@ -38,6 +42,8 @@ export function TaskForm({
   subtags,
   projects,
   projectItems,
+  groups = [],
+  forcedGroupId,
   filter,
 }: {
   editingTask: Task | null;
@@ -48,6 +54,11 @@ export function TaskForm({
   subtags: Subtag[];
   projects: MultipleTask[];
   projectItems: MultipleTaskItem[];
+  /** Groups a new/edited Task can be assigned to directly as a Shared Task. */
+  groups?: Group[];
+  /** Pre-selects (and defaults new tasks to) this Group — used by the "Add
+   * Shared Task" flow inside a Group's detail view. */
+  forcedGroupId?: string;
   filter: CategoryFilter;
 }) {
   const emptyForm = (): TaskFormValues => ({
@@ -60,6 +71,7 @@ export function TaskForm({
     recurrence: "none",
     projectId: null,
     newProject: null,
+    groupId: forcedGroupId ?? null,
     subitems: [],
     isCritical: false,
   });
@@ -78,6 +90,7 @@ export function TaskForm({
         recurrence: editingTask.recurrence ?? "none",
         projectId: editingTask.multiple_task_id ?? null,
         newProject: null,
+        groupId: editingTask.group_id ?? null,
         subitems: [],
         isCritical: editingTask.is_critical ?? false,
       });
@@ -254,9 +267,9 @@ export function TaskForm({
           onChange={(e) => {
             const v = e.target.value;
             if (v === "__new__") {
-              setForm({ ...form, projectId: null, newProject: { name: "", startDate: null, endDate: null } });
+              setForm({ ...form, projectId: null, newProject: { name: "", startDate: null, endDate: null }, groupId: null });
             } else {
-              setForm({ ...form, projectId: v || null, newProject: null });
+              setForm({ ...form, projectId: v || null, newProject: null, groupId: v ? null : form.groupId });
             }
           }}
           className="bg-transparent outline-none text-sm border-b border-border py-1"
@@ -267,6 +280,27 @@ export function TaskForm({
           ))}
           <option value="__new__">+ 새 프로젝트</option>
         </select>
+        {groups.length > 0 && (
+          <select
+            value={form.groupId ?? ""}
+            onChange={(e) => {
+              const v = e.target.value || null;
+              setForm({
+                ...form,
+                groupId: v,
+                projectId: v ? null : form.projectId,
+                newProject: v ? null : form.newProject,
+              });
+            }}
+            title="Shared Task — a Group-level Task, mutually exclusive with Project"
+            className="bg-transparent outline-none text-sm border-b border-border py-1"
+          >
+            <option value="">그룹 없음</option>
+            {groups.map((g) => (
+              <option key={g.id} value={g.id}>{g.name}</option>
+            ))}
+          </select>
+        )}
         <label
           className={`flex items-center gap-1 text-[10px] label-caps ${form.isCritical ? "text-foreground" : "text-muted-foreground"}`}
           title="놓치면 안 됨"

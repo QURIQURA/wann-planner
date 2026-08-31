@@ -29,6 +29,7 @@ export function TaskWorkspace({ ctx }: { ctx: WidgetContext }) {
         subtags={ctx.subtags}
         projects={ctx.projects}
         projectItems={ctx.projectItems}
+        groups={ctx.groups}
         filter={filter}
       />
 
@@ -64,6 +65,7 @@ export function TaskWorkspace({ ctx }: { ctx: WidgetContext }) {
             categories={ctx.categories}
             subtags={ctx.subtags}
             projects={ctx.projects}
+            groups={ctx.groups}
             tasks={ctx.tasks}
             completions={ctx.completions}
             editingTask={ctx.editingTask}

@@ -51,6 +51,7 @@ function Dashboard() {
     exceptionsQ,
     multipleQ,
     multipleItemsQ,
+    groupsQ,
     habitsQ,
     habitCompQ,
     intentionsQ,
@@ -70,6 +71,12 @@ function Dashboard() {
     navigate({
       to: "/widgets",
       search: { open: "goals", scrollTo: intentionId ? `gi-${intentionId}` : undefined },
+    });
+
+  const openGroupsWidget = (groupId?: string) =>
+    navigate({
+      to: "/widgets",
+      search: { open: "groups", scrollTo: groupId ? `group-${groupId}` : undefined },
     });
 
   // The Projects list lives right on the Dashboard again (below), so a
@@ -228,6 +235,45 @@ function Dashboard() {
             projectActions. (Splitting this into two separately-filtered
             boxes was a mistake — same category, no reason for two boxes.) */}
         <TaskWorkspace ctx={widgetCtx} />
+
+        {/* Compact summary only — full Group detail (Projects/Shared Tasks
+            lists, add flows) lives on /widgets so Dashboard doesn't grow
+            complex again. */}
+        {(groupsQ.data ?? []).length > 0 && (
+          <section className="card-flat p-4">
+            <div className="flex items-center justify-between mb-3">
+              <p className="label-caps">Groups</p>
+              <button
+                onClick={() => openGroupsWidget()}
+                className="label-caps text-[10px] text-muted-foreground hover:text-foreground"
+              >
+                모두 보기
+              </button>
+            </div>
+            <div className="space-y-1">
+              {(groupsQ.data ?? []).map((g) => {
+                const nProjects = (multipleQ.data ?? []).filter(
+                  (p) => p.group_id === g.id,
+                ).length;
+                const nShared = (tasksQ.data ?? []).filter(
+                  (t) => t.group_id === g.id && !t.multiple_task_id,
+                ).length;
+                return (
+                  <button
+                    key={g.id}
+                    onClick={() => openGroupsWidget(g.id)}
+                    className="w-full flex items-center gap-2 py-1 border-b border-border/50 text-left hover:bg-muted"
+                  >
+                    <span className="text-sm flex-1 min-w-0 truncate">{g.name}</span>
+                    <span className="text-[10px] text-muted-foreground whitespace-nowrap">
+                      {nProjects} Projects · {nShared} Shared Tasks
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          </section>
+        )}
       </main>
 
       {settingsOpen && (

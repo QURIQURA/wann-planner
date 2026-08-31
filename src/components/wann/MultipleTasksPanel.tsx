@@ -2,6 +2,7 @@ import type { WidgetDef } from "@/lib/widget-registry";
 import { useState } from "react";
 import type { Category, MultipleTask, MultipleTaskItem, Subtag } from "@/lib/wann-data";
 import { todayLocalStr, taskSortKey, formatDateKo, koDow } from "@/lib/wann-data";
+import type { Group } from "@/lib/wann-groups";
 import { Plus, Trash2, X, Pencil, ChevronDown, ChevronRight } from "lucide-react";
 import type { CategoryFilter } from "./TaskForm";
 
@@ -14,14 +15,17 @@ export type MultipleTaskForm = {
   date: string | null;
   /** end date (optional — same as start / null means single day) */
   endDate: string | null;
+  /** Group this Project optionally belongs to (context/batch above Project). */
+  groupId: string | null;
 };
 
-const emptyForm = (): MultipleTaskForm => ({
+export const emptyMultipleTaskForm = (forcedGroupId?: string): MultipleTaskForm => ({
   name: "",
   categoryId: null,
   subtagId: null,
   date: todayLocalStr(),
   endDate: null,
+  groupId: forcedGroupId ?? null,
 });
 
 
@@ -30,6 +34,7 @@ export function MultipleTasksPanel({
   items,
   categories,
   subtags,
+  groups = [],
   onAdd,
   onUpdate,
   onDelete,
@@ -46,6 +51,8 @@ export function MultipleTasksPanel({
   items: MultipleTaskItem[];
   categories: Category[];
   subtags: Subtag[];
+  /** Groups a Project can optionally belong to (context/batch above Project). */
+  groups?: Group[];
   onAdd: (v: MultipleTaskForm) => void;
   onUpdate: (id: string, patch: MultipleTaskForm) => void;
   onDelete: (id: string) => void;
@@ -60,10 +67,8 @@ export function MultipleTasksPanel({
   /** Hide the built-in filter bar when a shared one is rendered above. */
   hideFilterBar?: boolean;
 }) {
-  const [creating, setCreating] = useState(false);
-  const [form, setForm] = useState<MultipleTaskForm>(emptyForm());
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [editForm, setEditForm] = useState<MultipleTaskForm>(emptyForm());
+  const [editForm, setEditForm] = useState<MultipleTaskForm>(emptyMultipleTaskForm());
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [showUndated, setShowUndated] = useState(false);
   const [showFinished, setShowFinished] = useState(false);
@@ -89,6 +94,7 @@ export function MultipleTasksPanel({
       subtagId: (e as MultipleTask & { subtag_id: string | null }).subtag_id ?? null,
       date: e.date,
       endDate: (e as MultipleTask & { end_date: string | null }).end_date ?? null,
+      groupId: (e as MultipleTask & { group_id: string | null }).group_id ?? null,
     });
   };
 
@@ -107,7 +113,7 @@ export function MultipleTasksPanel({
     <div>
       <div className="flex items-center justify-between mb-4">
         <p className="label-caps">Projects</p>
-        <span className="text-[10px] text-muted-foreground">Quick Add 또는 Task 폼에서 생성</span>
+        <span className="text-[10px] text-muted-foreground">Task 폼에서 생성</span>
       </div>
 
 
@@ -251,6 +257,7 @@ export function MultipleTasksPanel({
                     onChange={setEditForm}
                     categories={categories}
                     subtags={subtags}
+                    groups={groups}
                     submitLabel="Save"
                     onSubmit={() => {
                       onUpdate(e.id, { ...editForm, name: editForm.name.trim() });
@@ -412,11 +419,12 @@ export function MultipleTasksPanel({
   );
 }
 
-function MultipleTaskEditor({
+export function MultipleTaskEditor({
   value,
   onChange,
   categories,
   subtags,
+  groups = [],
   onSubmit,
   onCancel,
   submitLabel,
@@ -425,6 +433,8 @@ function MultipleTaskEditor({
   onChange: (v: MultipleTaskForm) => void;
   categories: Category[];
   subtags: Subtag[];
+  /** Groups this Project can optionally belong to. */
+  groups?: Group[];
   onSubmit: () => void;
   onCancel: () => void;
   submitLabel: string;
@@ -508,6 +518,19 @@ function MultipleTaskEditor({
             <option key={s.id} value={s.id}>{s.name}</option>
           ))}
         </select>
+        {groups.length > 0 && (
+          <select
+            value={value.groupId ?? ""}
+            onChange={(e) => onChange({ ...value, groupId: e.target.value || null })}
+            title="Group this Project belongs to (optional)"
+            className="bg-transparent outline-none border-b border-border py-1 text-sm"
+          >
+            <option value="">그룹 없음</option>
+            {groups.map((g) => (
+              <option key={g.id} value={g.id}>{g.name}</option>
+            ))}
+          </select>
+        )}
         <button
           onClick={onSubmit}
           className="ml-auto border border-border px-3 py-1 label-caps hover:bg-muted"
