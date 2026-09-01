@@ -52,6 +52,7 @@ export function MultipleTasksPanel({
   onToggleTask,
   onEditTask,
   onDeleteTask,
+  hideGroupSharedTasks,
 }: {
 
   entries: MultipleTask[];
@@ -89,6 +90,11 @@ export function MultipleTasksPanel({
   onToggleTask?: (t: Task, occurrenceDate: string) => void;
   onEditTask?: (t: Task) => void;
   onDeleteTask?: (id: string) => void;
+  /** Suppress the per-project "Group Shared Tasks" section — used when the
+   * caller (GroupsPanel's own Group detail view) already shows that Group's
+   * Shared Tasks once, as its own section, so repeating them inside every
+   * expanded Project would just be a duplicate view. */
+  hideGroupSharedTasks?: boolean;
 }) {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState<MultipleTaskForm>(emptyMultipleTaskForm());
@@ -400,7 +406,7 @@ export function MultipleTasksPanel({
                     />
                   </div>
 
-                  {group && (
+                  {group && !hideGroupSharedTasks && (
                     <div className="mt-3 border-t border-border pt-2">
                       <p className="label-caps text-[10px] text-muted-foreground mb-1">
                         Group Shared Tasks — {group.name}

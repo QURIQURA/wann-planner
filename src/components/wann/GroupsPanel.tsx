@@ -174,9 +174,17 @@ export function GroupsPanel({ ctx }: { ctx: WidgetContext }) {
               )}
 
               {expanded && (
-                <div className="pl-6 pr-1 pb-3 space-y-4 min-w-0">
+                <div className="pl-6 pr-1 pb-3 space-y-3 min-w-0">
                   {g.notes && <p className="text-xs text-muted-foreground italic">{g.notes}</p>}
 
+                  {/* Projects + Shared Tasks together in one dashed box, in
+                      the Group's colour — same visual treatment as the
+                      Dashboard's Groups card, so the two views read as one
+                      consistent pattern. */}
+                  <div
+                    className="rounded-lg border-2 border-dashed p-3 space-y-4 min-w-0"
+                    style={{ borderColor: g.color || groupColor(g.id) }}
+                  >
                   <div className="min-w-0">
                     <p className="label-caps text-[10px] text-muted-foreground mb-2">Projects</p>
                     <MultipleTasksPanel
@@ -190,6 +198,7 @@ export function GroupsPanel({ ctx }: { ctx: WidgetContext }) {
                       onToggleTask={ctx.taskActions.onToggleTask}
                       onEditTask={ctx.taskActions.onEditTask}
                       onDeleteTask={ctx.taskActions.onDeleteTask}
+                      hideGroupSharedTasks
                       hideFilterBar
                       hideHeader
                       {...ctx.projectActions}
@@ -344,6 +353,7 @@ export function GroupsPanel({ ctx }: { ctx: WidgetContext }) {
                         filter={{ categoryId: null, subtagId: null }}
                       />
                     </div>
+                  </div>
                   </div>
                 </div>
               )}
