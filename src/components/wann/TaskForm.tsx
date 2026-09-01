@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import type { Category, MultipleTask, MultipleTaskItem, Subtag, Task } from "@/lib/wann-data";
-import { todayLocalStr, shortTime, formatDateKo, koDow } from "@/lib/wann-data";
+import { todayLocalStr, shortTime, formatDateKo } from "@/lib/wann-data";
 import type { Group } from "@/lib/wann-groups";
 import { Plus, Trash2, X, AlertTriangle } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
@@ -215,7 +215,7 @@ export function TaskForm({
         />
         {form.dueDate && (
           <span className="text-[10px] text-muted-foreground tabular-nums">
-            {formatDateKo(form.dueDate)} ({koDow(form.dueDate)})
+            {formatDateKo(form.dueDate)}
           </span>
         )}
         <label className="text-[10px] label-caps text-muted-foreground">Time</label>
