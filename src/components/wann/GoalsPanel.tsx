@@ -8,7 +8,7 @@ import {
   type IntentionStage,
   type ReviewInterval,
 } from "@/lib/wann-intentions";
-import { Plus, ChevronDown, ChevronRight, Trash2, RotateCcw, ArrowUpRight, ListChecks, Archive, CheckCircle2 } from "lucide-react";
+import { Plus, ChevronDown, ChevronRight, Trash2, RotateCcw, ArrowUpRight, ListChecks, CheckSquare, Archive, CheckCircle2 } from "lucide-react";
 
 const STAGES: IntentionStage[] = ["idea", "later", "goal"];
 const INTERVALS: ReviewInterval[] = ["never", "1_week", "1_month", "3_months", "6_months", "1_year"];
@@ -43,10 +43,12 @@ export type IntentionActions = {
   onSnooze: (intention: Intention, interval: ReviewInterval) => void;
   onPromote: (intention: Intention) => void;
   onStartProject: (intention: Intention) => void;
+  onStartTask: (intention: Intention) => void;
   onArchive: (intention: Intention) => void;
   onComplete: (intention: Intention) => void;
   onDelete: (id: string) => void;
   onOpenLinkedProject: (projectId: string) => void;
+  onOpenLinkedTask: (taskId: string) => void;
 };
 
 /** FAST CAPTURE — the whole point of the "+ IDEA" bar: title only, one Enter, done.
@@ -235,8 +237,26 @@ function IntentionRow({
               <button
                 onClick={() => actions.onStartProject(intention)}
                 className="border border-border px-2 py-1 label-caps text-[10px] hover:bg-muted flex items-center gap-1"
+                title="Project로 시작 — 여러 단계로 나눠 진행할 때"
               >
                 <ListChecks size={10} /> START PROJECT
+              </button>
+            )}
+
+            {intention.linked_task_id ? (
+              <button
+                onClick={() => actions.onOpenLinkedTask(intention.linked_task_id!)}
+                className="border border-border px-2 py-1 label-caps text-[10px] hover:bg-muted flex items-center gap-1"
+              >
+                <CheckSquare size={10} /> OPEN TASK
+              </button>
+            ) : (
+              <button
+                onClick={() => actions.onStartTask(intention)}
+                className="border border-border px-2 py-1 label-caps text-[10px] hover:bg-muted flex items-center gap-1"
+                title="Task로 시작 — 오늘 날짜로 바로 실행 항목이 될 때"
+              >
+                <CheckSquare size={10} /> START TASK
               </button>
             )}
 

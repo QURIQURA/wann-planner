@@ -897,6 +897,30 @@ export function useWannDashboard(
     onSuccess: () => { invalidate("intentions"); invalidate("multiple_tasks"); },
   });
 
+  const startTaskFromIntention = useMutation({
+    mutationFn: async (intention: Intention) => {
+      const { data, error } = await supabase
+        .from("planner_tasks")
+        .insert({
+          user_id: user.id,
+          title: intention.title,
+          notes: intention.notes,
+          category_id: intention.category_id,
+          category_ids: intention.category_id ? [intention.category_id] : [],
+          due_date: todayLocalStr(),
+        })
+        .select()
+        .single();
+      if (error) throw error;
+      const { error: linkErr } = await supabase
+        .from("planner_intentions")
+        .update({ linked_task_id: data.id, stage: "goal" })
+        .eq("id", intention.id);
+      if (linkErr) throw linkErr;
+    },
+    onSuccess: () => { invalidate("intentions"); invalidate("tasks"); },
+  });
+
   const archiveIntention = useMutation({
     mutationFn: async (id: string) => {
       const { error } = await supabase.from("planner_intentions").update({ status: "archived" }).eq("id", id);
@@ -1033,10 +1057,15 @@ export function useWannDashboard(
       onSnooze: (intention, interval) => snoozeIntention.mutate({ intention, interval }),
       onPromote: (intention) => promoteIntention.mutate(intention),
       onStartProject: (intention) => startProjectFromIntention.mutate(intention),
+      onStartTask: (intention) => startTaskFromIntention.mutate(intention),
       onArchive: (intention) => archiveIntention.mutate(intention.id),
       onComplete: (intention) => completeIntention.mutate(intention.id),
       onDelete: (id) => deleteIntention.mutate(id),
       onOpenLinkedProject: (projectId) => scrollToId(`mt-${projectId}`),
+      onOpenLinkedTask: (taskId) => {
+        const t = (tasksQ.data ?? []).find((x) => x.id === taskId);
+        if (t) setEditingTask(t);
+      },
     },
   };
 

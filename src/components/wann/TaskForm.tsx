@@ -96,7 +96,7 @@ export function TaskForm({
             ? [editingTask.category_id]
             : [],
         subtagId: editingTask.subtag_id,
-        dueDate: editingTask.due_date ?? null,
+        dueDate: editingTask.due_date ?? todayLocalStr(),
         dueTime: shortTime(editingTask.due_time) || null,
         endTime: shortTime(editingTask.end_time) || null,
         recurrence: editingTask.recurrence ?? "none",
@@ -150,6 +150,7 @@ export function TaskForm({
 
   const submit = () => {
     if (!form.title.trim()) return;
+    if (!form.dueDate) return; // 날짜 없는 항목은 Task가 아니라 Idea — Ideas & Goals에서 추가하세요.
     if (form.newProject && !form.newProject.name.trim()) return;
     const payload: TaskFormValues = {
       ...form,
@@ -199,25 +200,10 @@ export function TaskForm({
         <input
           type="date"
           value={form.dueDate ?? ""}
-          disabled={form.dueDate === null}
-          onChange={(e) => setForm({ ...form, dueDate: e.target.value || null })}
-          className="bg-transparent outline-none text-sm border-b border-border py-1 disabled:opacity-40"
+          required
+          onChange={(e) => setForm({ ...form, dueDate: e.target.value || todayLocalStr() })}
+          className="bg-transparent outline-none text-sm border-b border-border py-1"
         />
-        <label className="flex items-center gap-1 text-[10px] label-caps text-muted-foreground">
-          <input
-            type="checkbox"
-            checked={form.dueDate === null}
-            onChange={(e) =>
-              setForm(
-                e.target.checked
-                  ? { ...form, dueDate: null, dueTime: null, endTime: null, recurrence: "none" }
-                  : { ...form, dueDate: todayLocalStr() },
-              )
-            }
-            className="h-3 w-3 accent-foreground"
-          />
-          날짜 미정
-        </label>
         {form.dueDate && (
           <span className="text-[10px] text-muted-foreground tabular-nums">
             {formatDateKo(form.dueDate)} ({koDow(form.dueDate)})

@@ -1058,6 +1058,7 @@ export type Database = {
           id: string
           last_reviewed_at: string | null
           linked_project_id: string | null
+          linked_task_id: string | null
           next_review_date: string | null
           notes: string | null
           review_interval: string
@@ -1075,6 +1076,7 @@ export type Database = {
           id?: string
           last_reviewed_at?: string | null
           linked_project_id?: string | null
+          linked_task_id?: string | null
           next_review_date?: string | null
           notes?: string | null
           review_interval?: string
@@ -1092,6 +1094,7 @@ export type Database = {
           id?: string
           last_reviewed_at?: string | null
           linked_project_id?: string | null
+          linked_task_id?: string | null
           next_review_date?: string | null
           notes?: string | null
           review_interval?: string
@@ -1116,6 +1119,13 @@ export type Database = {
             columns: ["linked_project_id"]
             isOneToOne: false
             referencedRelation: "planner_multiple_tasks"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "planner_intentions_linked_task_id_fkey"
+            columns: ["linked_task_id"]
+            isOneToOne: false
+            referencedRelation: "planner_tasks"
             referencedColumns: ["id"]
           },
         ]
