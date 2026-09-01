@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import type { WidgetDef } from "@/lib/widget-registry";
 import type { Category, Intention } from "@/lib/wann-data";
 import {
@@ -56,10 +56,17 @@ export type IntentionActions = {
 export function FastCapture({ onAdd }: { onAdd: (title: string) => void }) {
   const [open, setOpen] = useState(false);
   const [value, setValue] = useState("");
+  // Guards against a double-add: unmounting the focused input from within
+  // submit() (via setOpen(false)) can itself trigger a second, stale blur
+  // callback, which would otherwise re-fire submit() a second time.
+  const submittedRef = useRef(false);
   if (!open) {
     return (
       <button
-        onClick={() => setOpen(true)}
+        onClick={() => {
+          submittedRef.current = false;
+          setOpen(true);
+        }}
         className="w-full flex items-center gap-2 border border-dashed border-border px-3 py-2 text-sm text-muted-foreground hover:text-foreground hover:border-foreground"
       >
         <Plus size={13} /> IDEA
@@ -67,6 +74,8 @@ export function FastCapture({ onAdd }: { onAdd: (title: string) => void }) {
     );
   }
   const submit = () => {
+    if (submittedRef.current) return;
+    submittedRef.current = true;
     const v = value.trim();
     if (v) onAdd(v);
     setValue("");
@@ -80,8 +89,14 @@ export function FastCapture({ onAdd }: { onAdd: (title: string) => void }) {
       onChange={(e) => setValue(e.target.value)}
       onBlur={submit}
       onKeyDown={(e) => {
-        if (e.key === "Enter") submit();
-        if (e.key === "Escape") { setValue(""); setOpen(false); }
+        // IME (Korean/Japanese/Chinese) composition-confirm Enter also
+        // bubbles as a keydown Enter — ignore it, only the real Enter submits.
+        if (e.key === "Enter" && !e.nativeEvent.isComposing) submit();
+        if (e.key === "Escape") {
+          submittedRef.current = true;
+          setValue("");
+          setOpen(false);
+        }
       }}
       className="w-full bg-transparent outline-none border border-foreground px-3 py-2 text-sm"
     />

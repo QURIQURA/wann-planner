@@ -376,7 +376,7 @@ export function EventEditor({
               placeholder="Name (e.g. Tax Payment)"
               value={newTypeName}
               onChange={(e) => setNewTypeName(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && submitNewType()}
+              onKeyDown={(e) => e.key === "Enter" && !e.nativeEvent.isComposing && submitNewType()}
               className="flex-1 min-w-[8rem] bg-transparent outline-none border-b border-border py-1 text-sm"
             />
             <ColorSwatchPicker value={newTypeColor} onChange={setNewTypeColor} />
@@ -705,7 +705,7 @@ function EventRecords({
               value={draft}
               onChange={(ev) => setDraft(ev.target.value)}
               onKeyDown={(ev) => {
-                if (ev.key === "Enter") submit();
+                if (ev.key === "Enter" && !ev.nativeEvent.isComposing) submit();
               }}
               className="flex-1 bg-transparent outline-none border-b border-border py-1 text-xs"
             />
@@ -727,7 +727,7 @@ function EventRecords({
                     value={editDraft}
                     onChange={(ev) => setEditDraft(ev.target.value)}
                     onKeyDown={(ev) => {
-                      if (ev.key === "Enter") {
+                      if (ev.key === "Enter" && !ev.nativeEvent.isComposing) {
                         onUpdateNote(n.id, editDraft.trim());
                         setEditingId(null);
                       }

@@ -882,7 +882,7 @@ function TimelineGrid({
             value={quickAddTitle}
             onChange={(e) => setQuickAddTitle(e.target.value)}
             onKeyDown={(e) => {
-              if (e.key === "Enter") commitQuickAdd();
+              if (e.key === "Enter" && !e.nativeEvent.isComposing) commitQuickAdd();
               else if (e.key === "Escape") {
                 quickAddSubmitted.current = true;
                 setQuickAddIdx(null);

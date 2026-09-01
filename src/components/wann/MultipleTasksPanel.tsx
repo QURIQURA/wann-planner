@@ -375,7 +375,7 @@ export function MultipleTasksPanel({
                       value={childInput[e.id] ?? ""}
                       onChange={(ev) => setChildInput({ ...childInput, [e.id]: ev.target.value })}
                       onKeyDown={(ev) => {
-                        if (ev.key === "Enter") {
+                        if (ev.key === "Enter" && !ev.nativeEvent.isComposing) {
                           const v = (childInput[e.id] ?? "").trim();
                           if (v) {
                             onAddItem(e.id, v, childDate[e.id] || e.date || null, childTime[e.id] || null);

@@ -200,7 +200,12 @@ export function TaskForm({
         value={form.title}
         onChange={(e) => setForm({ ...form, title: e.target.value })}
         onKeyDown={(e) => {
-          if (e.key === "Enter") submit();
+          // Korean/Japanese/Chinese IME: the Enter that confirms a composing
+          // syllable also bubbles as a keydown Enter. Without this guard that
+          // fires submit() mid-composition, then a second (post-composition)
+          // Enter submits again with just the trailing leftover text — the
+          // classic "extra task with one syllable" duplicate.
+          if (e.key === "Enter" && !e.nativeEvent.isComposing) submit();
         }}
         className="w-full bg-transparent outline-none text-sm border-b border-border py-1"
       />
