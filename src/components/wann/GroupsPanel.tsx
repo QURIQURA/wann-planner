@@ -5,6 +5,7 @@ import { Plus, Trash2, X, Pencil, ChevronDown, ChevronRight } from "lucide-react
 import { MultipleTasksPanel, MultipleTaskEditor, emptyMultipleTaskForm, SharedTaskList } from "./MultipleTasksPanel";
 import { TaskForm } from "./TaskForm";
 import type { WidgetContext } from "@/lib/widget-context";
+import { groupColor, GROUP_COLOR_PALETTE } from "@/lib/wann-groups";
 
 /**
  * Group = a generic context/batch entity above Project (e.g. a cake order
@@ -17,9 +18,9 @@ import type { WidgetContext } from "@/lib/widget-context";
  */
 export function GroupsPanel({ ctx }: { ctx: WidgetContext }) {
   const [creating, setCreating] = useState(false);
-  const [form, setForm] = useState<{ name: string; notes: string | null }>({ name: "", notes: null });
+  const [form, setForm] = useState<{ name: string; notes: string | null; color: string | null }>({ name: "", notes: null, color: null });
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [editForm, setEditForm] = useState<{ name: string; notes: string | null }>({ name: "", notes: null });
+  const [editForm, setEditForm] = useState<{ name: string; notes: string | null; color: string | null }>({ name: "", notes: null, color: null });
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [addingProjectFor, setAddingProjectFor] = useState<string | null>(null);
   const [projectForm, setProjectForm] = useState(emptyMultipleTaskForm());
@@ -29,7 +30,7 @@ export function GroupsPanel({ ctx }: { ctx: WidgetContext }) {
 
   const startEdit = (g: Group) => {
     setEditingId(g.id);
-    setEditForm({ name: g.name, notes: g.notes });
+    setEditForm({ name: g.name, notes: g.notes, color: g.color ?? null });
   };
 
   return (
@@ -62,9 +63,10 @@ export function GroupsPanel({ ctx }: { ctx: WidgetContext }) {
             onChange={(e) => setForm({ ...form, notes: e.target.value || null })}
             className="w-full bg-transparent outline-none text-sm border-b border-border py-1"
           />
+          <GroupColorPicker value={form.color} onChange={(c) => setForm({ ...form, color: c })} />
           <div className="flex justify-end gap-2">
             <button
-              onClick={() => { setCreating(false); setForm({ name: "", notes: null }); }}
+              onClick={() => { setCreating(false); setForm({ name: "", notes: null, color: null }); }}
               className="hover:text-destructive"
               aria-label="Cancel"
             >
@@ -74,8 +76,8 @@ export function GroupsPanel({ ctx }: { ctx: WidgetContext }) {
               onClick={() => {
                 const name = form.name.trim();
                 if (!name) return;
-                ctx.groupActions.onAdd({ name, notes: form.notes });
-                setForm({ name: "", notes: null });
+                ctx.groupActions.onAdd({ name, notes: form.notes, color: form.color });
+                setForm({ name: "", notes: null, color: null });
                 setCreating(false);
               }}
               className="border border-border px-3 py-1 label-caps hover:bg-muted flex items-center gap-1"
@@ -106,6 +108,10 @@ export function GroupsPanel({ ctx }: { ctx: WidgetContext }) {
                 >
                   {expanded ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
                 </button>
+                <span
+                  className="inline-block w-2 h-2 rounded-full flex-shrink-0"
+                  style={{ background: g.color || groupColor(g.id) }}
+                />
                 <button
                   onClick={() => setExpandedId(expanded ? null : g.id)}
                   className="text-sm flex-1 min-w-[6rem] text-left truncate hover:underline"
@@ -147,6 +153,7 @@ export function GroupsPanel({ ctx }: { ctx: WidgetContext }) {
                     onChange={(e) => setEditForm({ ...editForm, notes: e.target.value || null })}
                     className="w-full bg-transparent outline-none text-sm border-b border-border py-1"
                   />
+                  <GroupColorPicker value={editForm.color} onChange={(c) => setEditForm({ ...editForm, color: c })} />
                   <div className="flex justify-end gap-2">
                     <button onClick={() => setEditingId(null)} className="hover:text-destructive" aria-label="Cancel">
                       <X size={12} />
@@ -155,7 +162,7 @@ export function GroupsPanel({ ctx }: { ctx: WidgetContext }) {
                       onClick={() => {
                         const name = editForm.name.trim();
                         if (!name) return;
-                        ctx.groupActions.onUpdate(g.id, { name, notes: editForm.notes });
+                        ctx.groupActions.onUpdate(g.id, { name, notes: editForm.notes, color: editForm.color });
                         setEditingId(null);
                       }}
                       className="border border-border px-3 py-1 label-caps hover:bg-muted"
@@ -343,6 +350,41 @@ export function GroupsPanel({ ctx }: { ctx: WidgetContext }) {
             </div>
           );
         })}
+      </div>
+    </div>
+  );
+}
+
+function GroupColorPicker({ value, onChange }: { value: string | null; onChange: (v: string | null) => void }) {
+  return (
+    <div>
+      <p className="label-caps text-[10px] text-muted-foreground mb-1">Color (optional)</p>
+      <div className="flex items-center gap-1.5 flex-wrap">
+        <button
+          type="button"
+          onClick={() => onChange(null)}
+          className={`w-5 h-5 rounded-full border flex items-center justify-center ${!value ? "border-foreground" : "border-border"}`}
+          title="Auto"
+        >
+          <X size={10} className="text-muted-foreground" />
+        </button>
+        {GROUP_COLOR_PALETTE.map((c) => (
+          <button
+            key={c}
+            type="button"
+            onClick={() => onChange(c)}
+            className={`w-5 h-5 rounded-full border-2 ${value === c ? "border-foreground" : "border-transparent"}`}
+            style={{ background: c }}
+            title={c}
+          />
+        ))}
+        <input
+          type="color"
+          value={value ?? "#888888"}
+          onChange={(e) => onChange(e.target.value)}
+          className="w-5 h-5 cursor-pointer border-0 bg-transparent p-0"
+          title="Custom color"
+        />
       </div>
     </div>
   );

@@ -77,8 +77,8 @@ export type WidgetContext = {
   eventTypeActions: EventTypeActions;
 
   groupActions: {
-    onAdd: (v: { name: string; notes: string | null }) => void;
-    onUpdate: (id: string, patch: { name: string; notes: string | null }) => void;
+    onAdd: (v: { name: string; notes: string | null; color?: string | null }) => void;
+    onUpdate: (id: string, patch: { name: string; notes: string | null; color?: string | null }) => void;
     onDelete: (id: string) => void;
     /** Links an existing Project into a Group — a plain group_id update, the
      * Project keeps its id/Tasks/completions/progress untouched. Never

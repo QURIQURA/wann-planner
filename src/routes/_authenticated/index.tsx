@@ -290,7 +290,7 @@ function Dashboard() {
                     const activeSharedTasks = allSharedTasks.filter((t) => !t.completed);
                     const doneSharedTasks = allSharedTasks.filter((t) => t.completed);
                     const expanded = expandedGroupId === g.id;
-                    const color = groupColor(g.id);
+                    const color = g.color || groupColor(g.id);
                     return (
                       <div key={g.id} className="border-b border-border/50">
                         <button
@@ -319,7 +319,7 @@ function Dashboard() {
                               </p>
                             ) : (
                               <div
-                                className="rounded-lg border-2 p-2 space-y-2"
+                                className="rounded-lg border-2 border-dashed p-2 space-y-2"
                                 style={{ borderColor: color }}
                               >
                                 {activeProjects.length > 0 && (

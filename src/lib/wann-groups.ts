@@ -2,8 +2,10 @@
  * Group = a generic context/batch entity that Projects and standalone
  * ("Shared") Tasks can optionally belong to — e.g. a cake order made of
  * several Projects that all need "buy cream" once, a trip, a renovation.
- * Deliberately minimal: no date/end_date/color yet (see 2026-08-31 schema
- * discussion). Mirrors wann-events.ts's fetch pattern.
+ * Deliberately minimal: no date/end_date yet. Has an optional `color`
+ * column (nullable — user-set via the create/edit Group form); groupColor()
+ * below is the deterministic fallback for Groups without one. Mirrors
+ * wann-events.ts's fetch pattern.
  *
  * Hierarchy: GROUP (context/batch) > PROJECT (deliverable) > TASK (action).
  * A Task belongs to at most one of {multiple_task_id, group_id} — enforced
@@ -24,13 +26,14 @@ export async function fetchGroups(_userId: string): Promise<Group[]> {
 }
 
 /**
- * Deterministic, purely presentational colour for a Group — no DB column
- * (deliberately, see above), just a stable hash of the id into a small
+ * Deterministic, purely presentational fallback colour for a Group that
+ * hasn't set its own `color` — a stable hash of the id into a small
  * palette. Used to visually bracket a Group's Projects together wherever
  * they're listed side by side (e.g. the Dashboard's Groups card), so the
  * relationship reads at a glance instead of just being a plain list.
+ * Prefer `group.color ?? groupColor(group.id)` at call sites.
  */
-const GROUP_COLOR_PALETTE = [
+export const GROUP_COLOR_PALETTE = [
   "#F87171", "#FB923C", "#FBBF24", "#4ADE80",
   "#22D3EE", "#818CF8", "#F472B6", "#A78BFA",
 ];
