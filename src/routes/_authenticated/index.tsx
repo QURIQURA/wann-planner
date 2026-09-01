@@ -278,9 +278,15 @@ function Dashboard() {
                 <p className="text-xs text-muted-foreground italic">
                   여러 Project에 걸친 묶음(예: 케이크 주문, 여행)이 필요할 때 추가하세요.
                 </p>
-              ) : (
-                <div className="space-y-1">
-                  {(groupsQ.data ?? []).map((g) => {
+              ) : (() => {
+                // Newest-created Group first; a Group whose Projects and Shared
+                // Tasks are all done (and has at least one of either) moves into
+                // its own collapsed "완료됨" section, same pattern as the
+                // Projects/Tasks completed dropdowns elsewhere on this page.
+                const groupRows = (groupsQ.data ?? [])
+                  .slice()
+                  .sort((a, b) => (b.created_at ?? "").localeCompare(a.created_at ?? ""))
+                  .map((g) => {
                     const allGroupProjects = (multipleQ.data ?? []).filter((p) => p.group_id === g.id);
                     const activeProjects = allGroupProjects.filter((p) => pctOfProject(p) !== 100);
                     const doneProjects = allGroupProjects.filter((p) => pctOfProject(p) === 100);
@@ -289,9 +295,19 @@ function Dashboard() {
                     );
                     const activeSharedTasks = allSharedTasks.filter((t) => !t.completed);
                     const doneSharedTasks = allSharedTasks.filter((t) => t.completed);
-                    const expanded = expandedGroupId === g.id;
-                    const color = g.color || groupColor(g.id);
-                    return (
+                    const hasAny = allGroupProjects.length > 0 || allSharedTasks.length > 0;
+                    const isGroupDone = hasAny && activeProjects.length === 0 && activeSharedTasks.length === 0;
+                    return { g, allGroupProjects, activeProjects, doneProjects, allSharedTasks, activeSharedTasks, doneSharedTasks, isGroupDone };
+                  });
+                const activeGroupRows = groupRows.filter((r) => !r.isGroupDone);
+                const doneGroupRows = groupRows.filter((r) => r.isGroupDone);
+
+                const renderGroupRow = ({
+                  g, allGroupProjects, activeProjects, doneProjects, allSharedTasks, activeSharedTasks, doneSharedTasks,
+                }: (typeof groupRows)[number]) => {
+                  const expanded = expandedGroupId === g.id;
+                  const color = g.color || groupColor(g.id);
+                  return (
                       <div key={g.id} className="border-b border-border/50">
                         <button
                           onClick={() => setExpandedGroupId(expanded ? null : g.id)}
@@ -436,10 +452,27 @@ function Dashboard() {
                           </div>
                         )}
                       </div>
-                    );
-                  })}
-                </div>
-              )}
+                  );
+                };
+
+                return (
+                  <div className="space-y-1">
+                    {activeGroupRows.map(renderGroupRow)}
+                    {doneGroupRows.length > 0 && (
+                      <details className="group/donegroups mt-2 pt-2 border-t border-border/50">
+                        <summary className="text-[10px] label-caps text-muted-foreground hover:text-foreground cursor-pointer list-none flex items-center gap-1">
+                          <ChevronRight size={10} className="group-open/donegroups:hidden" />
+                          <ChevronDown size={10} className="hidden group-open/donegroups:inline" />
+                          완료됨 ({doneGroupRows.length})
+                        </summary>
+                        <div className="mt-1 space-y-1">
+                          {doneGroupRows.map(renderGroupRow)}
+                        </div>
+                      </details>
+                    )}
+                  </div>
+                );
+              })()}
             </section>
           );
 
