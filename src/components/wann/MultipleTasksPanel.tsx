@@ -1,7 +1,7 @@
 import type { WidgetDef } from "@/lib/widget-registry";
 import { useState } from "react";
 import type { Category, MultipleTask, MultipleTaskItem, Subtag, Task } from "@/lib/wann-data";
-import { todayLocalStr, taskSortKey, formatDateKo, koDow, shortTime, currentOccurrenceDate } from "@/lib/wann-data";
+import { todayLocalStr, taskSortKey, formatDateKo, koDow, shortTime, currentOccurrenceDate, isOccurrenceOverdue, hexToRgba } from "@/lib/wann-data";
 import type { Group } from "@/lib/wann-groups";
 import { Plus, Trash2, X, Pencil, ChevronDown, ChevronRight, AlertTriangle } from "lucide-react";
 import type { CategoryFilter } from "./TaskForm";
@@ -621,10 +621,13 @@ export function SharedTaskList({
   }
   return (
     <div className="space-y-1">
-      {tasks.map((t) => (
+      {tasks.map((t) => {
+        const overdue = !t.completed && isOccurrenceOverdue(currentOccurrenceDate(t), t.completed);
+        return (
         <div
           key={t.id}
-          className={`flex items-center gap-2 py-1 border-b border-border/50 group flex-wrap ${editingId === t.id ? "bg-muted" : ""}`}
+          className={`flex items-center gap-2 py-1 px-1 -mx-1 rounded-sm border-b border-border/50 group flex-wrap ${editingId === t.id ? "bg-muted" : ""}`}
+          style={overdue ? { background: hexToRgba("#F87171", 0.2) } : undefined}
         >
           <button
             onClick={() => onToggle(t, currentOccurrenceDate(t))}
@@ -633,13 +636,13 @@ export function SharedTaskList({
           />
           <button
             onClick={() => onEdit(t)}
-            className={`text-sm flex-1 min-w-[6rem] text-left truncate hover:underline ${t.completed ? "line-through text-muted-foreground" : ""}`}
+            className={`text-sm flex-1 min-w-[6rem] text-left truncate hover:underline ${t.completed ? "line-through text-muted-foreground" : overdue ? "text-destructive font-medium" : ""}`}
           >
             {t.title}
           </button>
           {t.is_critical && <AlertTriangle size={11} className="text-muted-foreground flex-shrink-0" />}
           {t.due_date && (
-            <span className="text-[10px] text-muted-foreground">
+            <span className={`text-[10px] tabular-nums ${overdue ? "text-destructive font-medium" : "text-muted-foreground"}`}>
               {t.due_date.slice(5)} ({koDow(t.due_date)})
             </span>
           )}
@@ -654,7 +657,8 @@ export function SharedTaskList({
             <Trash2 size={12} />
           </button>
         </div>
-      ))}
+        );
+      })}
     </div>
   );
 }

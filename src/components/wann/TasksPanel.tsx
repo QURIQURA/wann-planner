@@ -1,7 +1,7 @@
 import type { WidgetDef } from "@/lib/widget-registry";
 import { useState } from "react";
 import type { Category, MultipleTask, Subtag, Task, TaskCompletion } from "@/lib/wann-data";
-import { todayLocalStr, shortTime, isOccurrenceCompleted, currentOccurrenceDate, koDow, taskSortKey, diffDays, taskCategoryIds } from "@/lib/wann-data";
+import { todayLocalStr, shortTime, isOccurrenceCompleted, isOccurrenceOverdue, currentOccurrenceDate, koDow, taskSortKey, diffDays, taskCategoryIds, hexToRgba } from "@/lib/wann-data";
 import type { Group } from "@/lib/wann-groups";
 import { Trash2, ChevronDown, ChevronUp } from "lucide-react";
 import { CategoryFilterBar } from "./CategoryFilterBar";
@@ -192,10 +192,12 @@ function TaskList({
         const project = t.multiple_task_id ? projects.find((p) => p.id === t.multiple_task_id) : null;
         // Mutually exclusive with project — a Task belongs to at most one.
         const group = !project && t.group_id ? groups.find((g) => g.id === t.group_id) : null;
+        const overdue = !completed && isOccurrenceOverdue(currentOccurrenceDate(t), completed);
         return (
           <div
             key={t.id}
-            className={`flex items-center gap-2 py-1 border-b border-border/50 group flex-wrap ${editingId === t.id ? "bg-muted" : ""}`}
+            className={`flex items-center gap-2 py-1 px-1 -mx-1 rounded-sm border-b border-border/50 group flex-wrap ${editingId === t.id ? "bg-muted" : ""}`}
+            style={overdue ? { background: hexToRgba("#F87171", 0.2) } : undefined}
           >
             <button
               onClick={() => onToggle(t, currentOccurrenceDate(t))}
@@ -204,7 +206,7 @@ function TaskList({
             />
             <button
               onClick={() => onEdit(t)}
-              className={`text-sm flex-1 min-w-[6rem] text-left truncate hover:underline ${completed ? "line-through text-muted-foreground" : ""}`}
+              className={`text-sm flex-1 min-w-[6rem] text-left truncate hover:underline ${completed ? "line-through text-muted-foreground" : overdue ? "text-destructive font-medium" : ""}`}
             >
               {t.title}
               {(t.recurrence ?? "none") !== "none" && (
@@ -227,7 +229,7 @@ function TaskList({
               </span>
             ))}
             {t.due_date && (
-              <span className="text-[10px] text-muted-foreground">
+              <span className={`text-[10px] tabular-nums ${overdue ? "text-destructive font-medium" : "text-muted-foreground"}`}>
                 {t.due_date.slice(5)} ({koDow(t.due_date)})
               </span>
             )}
