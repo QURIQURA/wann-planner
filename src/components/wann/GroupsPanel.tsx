@@ -337,6 +337,7 @@ export function GroupsPanel({ ctx }: { ctx: WidgetContext }) {
                       editingTask={ctx.editingTask && ctx.editingTask.group_id === g.id ? ctx.editingTask : null}
                       onCancelEdit={ctx.taskActions.onCancelEdit}
                       onAddTask={ctx.taskActions.onAddTask}
+                      onAddTaskSeries={ctx.taskActions.onAddTaskSeries}
                       onUpdateTask={ctx.taskActions.onUpdateTask}
                       categories={ctx.categories}
                       subtags={ctx.subtags}

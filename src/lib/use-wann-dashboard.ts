@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 
 import { supabase } from "@/integrations/supabase/client";
@@ -17,6 +17,10 @@ import {
   fetchExceptions,
   fetchIntentions,
   fetchEventTypes,
+  fetchTaskSeries,
+  generateSeriesOccurrenceDates,
+  parseLocalDate,
+  formatLocalDate,
   daysUntilAnnual,
   isDPlusEvent,
   DPLUS_TYPE,
@@ -89,6 +93,7 @@ export function useWannDashboard(
   const exceptionsQ = useQuery({ queryKey: ["exceptions", user.id], queryFn: () => fetchExceptions(user.id) });
   const intentionsQ = useQuery({ queryKey: ["intentions", user.id], queryFn: () => fetchIntentions(user.id) });
   const groupsQ = useQuery({ queryKey: ["groups", user.id], queryFn: () => fetchGroups(user.id) });
+  const taskSeriesQ = useQuery({ queryKey: ["task_series", user.id], queryFn: () => fetchTaskSeries(user.id) });
 
   const habitRange = useMemo(() => {
     const fmt = (d: Date) =>
@@ -229,6 +234,109 @@ export function useWannDashboard(
       invalidate("tasks"); invalidate("multiple_tasks"); invalidate("multiple_task_items");
       qc.invalidateQueries({ queryKey: ["task-subitems"] });
     },
+  });
+
+  // A rolling window: a series always has real Task rows generated this far
+  // out, refilled (see topUpTaskSeries below) once it gets within
+  // SERIES_REFILL_THRESHOLD_DAYS of running out — so it keeps "auto-filling"
+  // indefinitely without a server-side cron job.
+  const SERIES_WINDOW_DAYS = 60;
+  const SERIES_REFILL_THRESHOLD_DAYS = 21;
+
+  /** Opt-in "독립 모드": materializes a recurring Task as real, fully
+   * independent per-date rows (recurrence: "none" on each) instead of one
+   * virtually-expanded row — so notes/time/completion are naturally separate
+   * per occurrence, with zero changes needed to Timeline/Month/Patterns. */
+  const addTaskSeries = useMutation({
+    mutationFn: async (input: TaskFormValues) => {
+      if (!input.dueDate) throw new Error("독립 모드에는 날짜가 필요해요.");
+      const primaryCategoryId = input.categoryIds[0] ?? null;
+      const generatedUntil = formatLocalDate(
+        (() => { const d = parseLocalDate(input.dueDate!); d.setDate(d.getDate() + SERIES_WINDOW_DAYS); return d; })(),
+      );
+      const { data: series, error: sErr } = await supabase
+        .from("planner_task_series")
+        .insert({
+          user_id: user.id,
+          title: input.title,
+          recurrence: input.recurrence,
+          anchor_date: input.dueDate,
+          due_time: input.dueTime,
+          end_time: input.dueTime ? input.endTime : null,
+          category_id: primaryCategoryId,
+          category_ids: input.categoryIds,
+          subtag_id: input.subtagId,
+          multiple_task_id: input.projectId,
+          group_id: input.projectId ? null : input.groupId,
+          is_critical: input.isCritical,
+          generated_until: generatedUntil,
+        })
+        .select("id")
+        .single();
+      if (sErr) throw sErr;
+      const dates = generateSeriesOccurrenceDates(
+        input.dueDate,
+        input.recurrence,
+        formatLocalDate((() => { const d = parseLocalDate(input.dueDate!); d.setDate(d.getDate() - 1); return d; })()),
+        generatedUntil,
+      );
+      const rows = dates.map((date) => ({
+        user_id: user.id,
+        title: input.title,
+        category_id: primaryCategoryId,
+        category_ids: input.categoryIds,
+        subtag_id: input.subtagId,
+        due_date: date,
+        due_time: input.dueTime,
+        end_time: input.dueTime ? input.endTime : null,
+        recurrence: "none",
+        multiple_task_id: input.projectId,
+        group_id: input.projectId ? null : input.groupId,
+        is_critical: input.isCritical,
+        series_id: series.id,
+      }));
+      if (rows.length > 0) {
+        const { error } = await supabase.from("planner_tasks").insert(rows);
+        if (error) throw error;
+      }
+    },
+    onSuccess: () => { invalidate("tasks"); invalidate("task_series"); },
+  });
+
+  /** Tops up one series' rolling window once it's running low — called from
+   * the effect below, once per loaded series. */
+  const topUpTaskSeries = useMutation({
+    mutationFn: async (series: { id: string; title: string; recurrence: string; anchor_date: string; due_time: string | null; end_time: string | null; category_id: string | null; category_ids: string[]; subtag_id: string | null; multiple_task_id: string | null; group_id: string | null; is_critical: boolean; generated_until: string }) => {
+      const newUntil = formatLocalDate((() => {
+        const d = new Date(); d.setDate(d.getDate() + SERIES_WINDOW_DAYS); return d;
+      })());
+      const dates = generateSeriesOccurrenceDates(series.anchor_date, series.recurrence, series.generated_until, newUntil);
+      if (dates.length > 0) {
+        const rows = dates.map((date) => ({
+          user_id: user.id,
+          title: series.title,
+          category_id: series.category_id,
+          category_ids: series.category_ids,
+          subtag_id: series.subtag_id,
+          due_date: date,
+          due_time: series.due_time,
+          end_time: series.end_time,
+          recurrence: "none",
+          multiple_task_id: series.multiple_task_id,
+          group_id: series.group_id,
+          is_critical: series.is_critical,
+          series_id: series.id,
+        }));
+        const { error } = await supabase.from("planner_tasks").insert(rows);
+        if (error) throw error;
+      }
+      const { error: updErr } = await supabase
+        .from("planner_task_series")
+        .update({ generated_until: newUntil })
+        .eq("id", series.id);
+      if (updErr) throw updErr;
+    },
+    onSuccess: () => { invalidate("tasks"); invalidate("task_series"); },
   });
 
   const updateTask = useMutation({
@@ -977,6 +1085,27 @@ export function useWannDashboard(
     document.title = "WANN Weekly OS";
   }, []);
 
+  // Keep every "독립 모드" series' rolling window topped up — runs once per
+  // session per series that's fallen within SERIES_REFILL_THRESHOLD_DAYS of
+  // its generated_until, so future occurrences keep appearing automatically
+  // without a server-side cron job.
+  const topUpAttempted = useRef(new Set<string>());
+  useEffect(() => {
+    const series = taskSeriesQ.data ?? [];
+    if (series.length === 0) return;
+    const today = todayLocalStr();
+    for (const s of series) {
+      if (topUpAttempted.current.has(s.id)) continue;
+      const daysLeft = Math.round(
+        (parseLocalDate(s.generated_until).getTime() - parseLocalDate(today).getTime()) / 86400000,
+      );
+      if (daysLeft <= SERIES_REFILL_THRESHOLD_DAYS) {
+        topUpAttempted.current.add(s.id);
+        topUpTaskSeries.mutate(s);
+      }
+    }
+  }, [taskSeriesQ.data]);
+
   const settings = settingsQ.data;
   const visibleWidgets = settings
     ? orderedWidgets(settings.widget_order).filter((w) => isWidgetVisible(w, settings.widget_visibility))
@@ -1003,6 +1132,7 @@ export function useWannDashboard(
       onAddCategory: (name, color) => addCategory.mutate({ name, color }),
       onAddSubtag: (categoryId, name) => addSubtag.mutate({ categoryId, name }),
       onAddTask: (v) => addTask.mutate(v),
+      onAddTaskSeries: (v) => addTaskSeries.mutate(v),
       onUpdateTask: (id, v) => updateTask.mutate({ id, input: v }),
       onToggleTask: (t, date) => toggleOccurrence.mutate({ task: t, date }),
       onEditTask: (t) => setEditingTask(t),
@@ -1090,6 +1220,7 @@ export function useWannDashboard(
     exceptionsQ,
     intentionsQ,
     groupsQ,
+    taskSeriesQ,
     habitsQ,
     habitCompQ,
     tapHabit,

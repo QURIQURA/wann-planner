@@ -1444,6 +1444,63 @@ export type Database = {
           },
         ]
       }
+      planner_task_series: {
+        Row: {
+          anchor_date: string
+          category_id: string | null
+          category_ids: string[]
+          created_at: string
+          due_time: string | null
+          end_time: string | null
+          generated_until: string
+          group_id: string | null
+          id: string
+          is_critical: boolean
+          multiple_task_id: string | null
+          recurrence: string
+          subtag_id: string | null
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          anchor_date: string
+          category_id?: string | null
+          category_ids?: string[]
+          created_at?: string
+          due_time?: string | null
+          end_time?: string | null
+          generated_until: string
+          group_id?: string | null
+          id?: string
+          is_critical?: boolean
+          multiple_task_id?: string | null
+          recurrence: string
+          subtag_id?: string | null
+          title: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          anchor_date?: string
+          category_id?: string | null
+          category_ids?: string[]
+          created_at?: string
+          due_time?: string | null
+          end_time?: string | null
+          generated_until?: string
+          group_id?: string | null
+          id?: string
+          is_critical?: boolean
+          multiple_task_id?: string | null
+          recurrence?: string
+          subtag_id?: string | null
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       planner_task_subitems: {
         Row: {
           completed: boolean
@@ -1533,6 +1590,7 @@ export type Database = {
           multiple_task_id: string | null
           notes: string | null
           recurrence: string
+          series_id: string | null
           subtag_id: string | null
           title: string
           updated_at: string
@@ -1553,6 +1611,7 @@ export type Database = {
           multiple_task_id?: string | null
           notes?: string | null
           recurrence?: string
+          series_id?: string | null
           subtag_id?: string | null
           title: string
           updated_at?: string
@@ -1573,6 +1632,7 @@ export type Database = {
           multiple_task_id?: string | null
           notes?: string | null
           recurrence?: string
+          series_id?: string | null
           subtag_id?: string | null
           title?: string
           updated_at?: string
@@ -1598,6 +1658,13 @@ export type Database = {
             columns: ["multiple_task_id"]
             isOneToOne: false
             referencedRelation: "planner_multiple_tasks"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "planner_tasks_series_id_fkey"
+            columns: ["series_id"]
+            isOneToOne: false
+            referencedRelation: "planner_task_series"
             referencedColumns: ["id"]
           },
           {

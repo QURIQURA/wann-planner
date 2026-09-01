@@ -24,6 +24,7 @@ export function TaskWorkspace({ ctx }: { ctx: WidgetContext }) {
         editingTask={ctx.editingTask}
         onCancelEdit={ctx.taskActions.onCancelEdit}
         onAddTask={ctx.taskActions.onAddTask}
+        onAddTaskSeries={ctx.taskActions.onAddTaskSeries}
         onUpdateTask={ctx.taskActions.onUpdateTask}
         categories={ctx.categories}
         subtags={ctx.subtags}

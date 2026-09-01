@@ -40,6 +40,7 @@ export function TaskForm({
   editingTask,
   onCancelEdit,
   onAddTask,
+  onAddTaskSeries,
   onUpdateTask,
   categories,
   subtags,
@@ -53,6 +54,10 @@ export function TaskForm({
   editingTask: Task | null;
   onCancelEdit: () => void;
   onAddTask: (v: TaskFormValues) => void;
+  /** Opt-in "독립 모드" — creates the recurring Task as real, independent
+   * per-date rows from the start instead of one virtually-expanded row.
+   * Only offered when adding (not editing) a recurring Task. */
+  onAddTaskSeries?: (v: TaskFormValues) => void;
   onUpdateTask: (id: string, v: TaskFormValues) => void;
   categories: Category[];
   subtags: Subtag[];
@@ -85,6 +90,7 @@ export function TaskForm({
   });
 
   const [form, setForm] = useState<TaskFormValues>(emptyForm);
+  const [independentMode, setIndependentMode] = useState(false);
 
   useEffect(() => {
     if (editingTask) {
@@ -165,9 +171,12 @@ export function TaskForm({
     if (editingTask) {
       onUpdateTask(editingTask.id, payload);
       onCancelEdit();
+    } else if (independentMode && payload.recurrence !== "none" && onAddTaskSeries) {
+      onAddTaskSeries(payload);
     } else {
       onAddTask(payload);
     }
+    setIndependentMode(false);
     resetForm();
   };
 
@@ -264,6 +273,20 @@ export function TaskForm({
           <option value="biweekly">biweekly</option>
           <option value="monthly">monthly</option>
         </select>
+        {!editingTask && onAddTaskSeries && form.recurrence !== "none" && (
+          <label
+            className="flex items-center gap-1 text-[10px] label-caps text-muted-foreground"
+            title="각 날짜가 완전히 독립된 항목으로 미리 생성돼요 — 메모/시간을 날짜별로 따로 수정할 수 있어요 (페이로그 등에 적합)"
+          >
+            <input
+              type="checkbox"
+              checked={independentMode}
+              onChange={(e) => setIndependentMode(e.target.checked)}
+              className="h-3 w-3 accent-foreground"
+            />
+            날짜별 독립 운용
+          </label>
+        )}
         {!hideProjectField && (
           <select
             value={form.newProject ? "__new__" : (form.projectId ?? "")}

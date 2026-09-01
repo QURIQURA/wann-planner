@@ -26,6 +26,10 @@ export type MultipleTaskItem = Task;
 
 export type EventEntry = Tables<"planner_events">;
 export type RecurringException = Tables<"planner_recurring_task_exceptions">;
+/** Template + pattern for an opt-in "독립 모드" recurring Task — see
+ * generateSeriesOccurrenceDates() below and use-wann-dashboard.ts's
+ * addTaskSeries/topUpTaskSeries. */
+export type TaskSeries = Tables<"planner_task_series">;
 
 /**
  * A Task may carry any number of categories (`category_ids`). `category_id`
@@ -222,6 +226,15 @@ export async function fetchTasks(_userId: string) {
   return data ?? [];
 }
 
+export async function fetchTaskSeries(_userId: string): Promise<TaskSeries[]> {
+  const { data, error } = await supabase
+    .from("planner_task_series")
+    .select("*")
+    .order("created_at", { ascending: true });
+  if (error) throw error;
+  return data ?? [];
+}
+
 export async function fetchMultipleTasks(_userId: string) {
   const { data, error } = await supabase
     .from("planner_multiple_tasks")
@@ -300,22 +313,56 @@ export async function fetchIntentions(_userId: string): Promise<Intention[]> {
 }
 
 /**
+ * Core recurrence pattern match: does `dateStr` line up with `recurrence`,
+ * phased off `anchorDateStr`? Shared by taskOccursOn() (single-date test, for
+ * virtual expansion) and generateSeriesOccurrenceDates() (range scan, for
+ * materializing a "독립 모드" series' real Task rows).
+ */
+function matchesRecurrencePattern(anchorDateStr: string, recurrence: string, dateStr: string): boolean {
+  const anchor = parseLocalDate(anchorDateStr);
+  const target = parseLocalDate(dateStr);
+  if (target < anchor) return false;
+  if (recurrence === "none") return anchorDateStr === dateStr;
+  const diffMs = target.getTime() - anchor.getTime();
+  const diffDays = Math.round(diffMs / 86400000);
+  if (recurrence === "daily") return true;
+  if (recurrence === "weekly") return diffDays % 7 === 0;
+  if (recurrence === "biweekly") return diffDays % 14 === 0;
+  if (recurrence === "monthly") return anchor.getDate() === target.getDate();
+  return false;
+}
+
+/**
  * Returns true if a task (recurring or one-off) occurs on the given local date.
  */
 export function taskOccursOn(task: Task, dateStr: string): boolean {
   if (!task.due_date) return false;
-  const anchor = parseLocalDate(task.due_date);
-  const target = parseLocalDate(dateStr);
-  if (target < anchor) return false;
-  const rec = task.recurrence ?? "none";
-  if (rec === "none") return task.due_date === dateStr;
-  const diffMs = target.getTime() - anchor.getTime();
-  const diffDays = Math.round(diffMs / 86400000);
-  if (rec === "daily") return true;
-  if (rec === "weekly") return diffDays % 7 === 0;
-  if (rec === "biweekly") return diffDays % 14 === 0;
-  if (rec === "monthly") return anchor.getDate() === target.getDate();
-  return false;
+  return matchesRecurrencePattern(task.due_date, task.recurrence ?? "none", dateStr);
+}
+
+/**
+ * All dates in (fromExclusiveStr, untilInclusiveStr] that match the given
+ * recurrence pattern phased off anchorDateStr. Used to materialize a
+ * "독립 모드" series' real Task rows — both on initial creation (from = the
+ * day before anchor, so the anchor date itself is included) and on later
+ * top-up (from = the series' current generated_until).
+ */
+export function generateSeriesOccurrenceDates(
+  anchorDateStr: string,
+  recurrence: string,
+  fromExclusiveStr: string,
+  untilInclusiveStr: string,
+): string[] {
+  const dates: string[] = [];
+  const cursor = parseLocalDate(fromExclusiveStr);
+  cursor.setDate(cursor.getDate() + 1);
+  const until = parseLocalDate(untilInclusiveStr);
+  while (cursor <= until) {
+    const ds = formatLocalDate(cursor);
+    if (matchesRecurrencePattern(anchorDateStr, recurrence, ds)) dates.push(ds);
+    cursor.setDate(cursor.getDate() + 1);
+  }
+  return dates;
 }
 
 export function tasksOnDate(tasks: Task[], dateStr: string): Task[] {

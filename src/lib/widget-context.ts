@@ -48,6 +48,10 @@ export type WidgetContext = {
     onAddCategory: (name: string, color: string) => void;
     onAddSubtag: (categoryId: string, name: string) => void;
     onAddTask: (v: TaskFormValues) => void;
+    /** Opt-in "독립 모드": materializes a recurring Task as real, independent
+     * per-date rows from the start (see use-wann-dashboard.ts's
+     * addTaskSeries) instead of one virtually-expanded row. */
+    onAddTaskSeries: (v: TaskFormValues) => void;
     onUpdateTask: (id: string, v: TaskFormValues) => void;
     onToggleTask: (t: Task, occurrenceDate: string) => void;
     onEditTask: (t: Task) => void;
