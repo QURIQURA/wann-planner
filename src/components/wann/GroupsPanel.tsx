@@ -339,6 +339,7 @@ export function GroupsPanel({ ctx }: { ctx: WidgetContext }) {
                       onAddTask={ctx.taskActions.onAddTask}
                       onAddTaskSeries={ctx.taskActions.onAddTaskSeries}
                       onUpdateTask={ctx.taskActions.onUpdateTask}
+                      onDeleteTask={ctx.taskActions.onDeleteTask}
                       categories={ctx.categories}
                       subtags={ctx.subtags}
                       projects={ctx.projects}

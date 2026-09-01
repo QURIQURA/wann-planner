@@ -42,6 +42,7 @@ export function TaskForm({
   onAddTask,
   onAddTaskSeries,
   onUpdateTask,
+  onDeleteTask,
   categories,
   subtags,
   projects,
@@ -59,6 +60,10 @@ export function TaskForm({
    * Only offered when adding (not editing) a recurring Task. */
   onAddTaskSeries?: (v: TaskFormValues) => void;
   onUpdateTask: (id: string, v: TaskFormValues) => void;
+  /** Only offered while editing — lets a Task be removed right from the
+   * same panel it's edited in, without hunting for its row's hover-only
+   * trash icon in a list (e.g. a Task opened straight from the Timeline). */
+  onDeleteTask?: (id: string) => void;
   categories: Category[];
   subtags: Subtag[];
   projects: MultipleTask[];
@@ -184,10 +189,23 @@ export function TaskForm({
     <div className="card-flat p-2 mb-3 space-y-2">
       <div className="flex items-center gap-2">
         <p className="label-caps text-[10px]">{editingTask ? "Edit task" : "New task"}</p>
+        {editingTask && onDeleteTask && (
+          <button
+            onClick={() => {
+              onDeleteTask(editingTask.id);
+              onCancelEdit();
+              resetForm();
+            }}
+            className="ml-auto flex items-center gap-1 text-[10px] label-caps text-muted-foreground hover:text-destructive"
+            aria-label="Delete task"
+          >
+            <Trash2 size={11} /> Delete
+          </button>
+        )}
         {editingTask && (
           <button
             onClick={() => { onCancelEdit(); resetForm(); }}
-            className="ml-auto hover:text-destructive"
+            className={onDeleteTask ? "hover:text-destructive" : "ml-auto hover:text-destructive"}
             aria-label="Cancel edit"
           >
             <X size={12} />
