@@ -303,7 +303,7 @@ function Dashboard() {
                 const doneGroupRows = groupRows.filter((r) => r.isGroupDone);
 
                 const renderGroupRow = ({
-                  g, allGroupProjects, activeProjects, doneProjects, allSharedTasks, activeSharedTasks, doneSharedTasks,
+                  g, allGroupProjects, activeProjects, doneProjects, allSharedTasks, activeSharedTasks, doneSharedTasks, isGroupDone,
                 }: (typeof groupRows)[number]) => {
                   const expanded = expandedGroupId === g.id;
                   const color = g.color || groupColor(g.id);
@@ -336,84 +336,120 @@ function Dashboard() {
                                 className="space-y-1 sm:border-r sm:border-dashed sm:pr-3"
                                 style={{ borderColor: color }}
                               >
-                                <p className="text-[9px] label-caps text-muted-foreground">Projects</p>
-                                {activeProjects.length === 0 ? (
-                                  <p className="text-xs text-muted-foreground italic">
-                                    {allGroupProjects.length === 0
-                                      ? "아직 Project가 없어요."
-                                      : "진행 중인 Project가 없어요."}
-                                  </p>
+                                {isGroupDone ? (
+                                  doneProjects.length > 0 && (
+                                    <>
+                                      <p className="text-[9px] label-caps text-muted-foreground">Projects</p>
+                                      {doneProjects.map((p) => (
+                                        <button
+                                          key={p.id}
+                                          onClick={() => openProject(p.id)}
+                                          className="w-full flex items-center gap-1.5 text-left hover:underline"
+                                        >
+                                          <span className="text-sm flex-1 min-w-0 truncate text-muted-foreground line-through">{p.name}</span>
+                                        </button>
+                                      ))}
+                                    </>
+                                  )
                                 ) : (
-                                  activeProjects.map((p) => {
-                                    const pct = pctOfProject(p);
-                                    return (
-                                      <button
-                                        key={p.id}
-                                        onClick={() => openProject(p.id)}
-                                        className="w-full flex items-center gap-1.5 text-left hover:underline"
-                                        title="Tasks & Projects에서 바로 보기"
-                                      >
-                                        <span className="text-sm flex-1 min-w-0 truncate">{p.name}</span>
-                                        {pct !== null && (
-                                          <span className="text-[10px] text-muted-foreground flex-shrink-0">{pct}%</span>
-                                        )}
-                                      </button>
-                                    );
-                                  })
+                                  <>
+                                    <p className="text-[9px] label-caps text-muted-foreground">Projects</p>
+                                    {activeProjects.length === 0 ? (
+                                      <p className="text-xs text-muted-foreground italic">
+                                        {allGroupProjects.length === 0
+                                          ? "아직 Project가 없어요."
+                                          : "진행 중인 Project가 없어요."}
+                                      </p>
+                                    ) : (
+                                      activeProjects.map((p) => {
+                                        const pct = pctOfProject(p);
+                                        return (
+                                          <button
+                                            key={p.id}
+                                            onClick={() => openProject(p.id)}
+                                            className="w-full flex items-center gap-1.5 text-left hover:underline"
+                                            title="Tasks & Projects에서 바로 보기"
+                                          >
+                                            <span className="text-sm flex-1 min-w-0 truncate">{p.name}</span>
+                                            {pct !== null && (
+                                              <span className="text-[10px] text-muted-foreground flex-shrink-0">{pct}%</span>
+                                            )}
+                                          </button>
+                                        );
+                                      })
+                                    )}
+                                  </>
                                 )}
                               </div>
                               <div className="space-y-1">
-                                <p className="text-[9px] label-caps text-muted-foreground">Shared Tasks</p>
-                                {/* Quick add — a pure Group-level Shared Task, never a
-                                    Project item, mirroring the "add Shared Task" flow
-                                    on /widgets. */}
-                                <div className="flex items-center gap-1">
-                                  <Plus size={12} className="text-muted-foreground flex-shrink-0" />
-                                  <input
-                                    type="text"
-                                    placeholder="Shared Task 빠른 추가"
-                                    value={quickSharedTaskInput[g.id] ?? ""}
-                                    onChange={(e) =>
-                                      setQuickSharedTaskInput({ ...quickSharedTaskInput, [g.id]: e.target.value })
-                                    }
-                                    onKeyDown={(e) => {
-                                      if (e.key !== "Enter") return;
-                                      const title = (quickSharedTaskInput[g.id] ?? "").trim();
-                                      if (!title) return;
-                                      widgetCtx.taskActions.onAddTask({
-                                        title,
-                                        categoryIds: [],
-                                        subtagId: null,
-                                        dueDate: todayLocalStr(),
-                                        dueTime: null,
-                                        endTime: null,
-                                        recurrence: "none",
-                                        projectId: null,
-                                        newProject: null,
-                                        groupId: g.id,
-                                        subitems: [],
-                                        isCritical: false,
-                                      });
-                                      setQuickSharedTaskInput({ ...quickSharedTaskInput, [g.id]: "" });
-                                    }}
-                                    className="flex-1 min-w-0 bg-transparent outline-none text-sm border-b border-border py-1"
-                                  />
-                                </div>
-                                {activeSharedTasks.length === 0 ? (
-                                  <p className="text-xs text-muted-foreground italic">진행 중인 Shared Task가 없어요.</p>
+                                {isGroupDone ? (
+                                  doneSharedTasks.length > 0 && (
+                                    <>
+                                      <p className="text-[9px] label-caps text-muted-foreground">Shared Tasks</p>
+                                      <SharedTaskList
+                                        tasks={doneSharedTasks}
+                                        editingId={widgetCtx.editingTask?.id ?? null}
+                                        onToggle={widgetCtx.taskActions.onToggleTask}
+                                        onEdit={widgetCtx.taskActions.onEditTask}
+                                        onDelete={widgetCtx.taskActions.onDeleteTask}
+                                      />
+                                    </>
+                                  )
                                 ) : (
-                                  <SharedTaskList
-                                    tasks={activeSharedTasks}
-                                    editingId={widgetCtx.editingTask?.id ?? null}
-                                    onToggle={widgetCtx.taskActions.onToggleTask}
-                                    onEdit={widgetCtx.taskActions.onEditTask}
-                                    onDelete={widgetCtx.taskActions.onDeleteTask}
-                                  />
+                                  <>
+                                    <p className="text-[9px] label-caps text-muted-foreground">Shared Tasks</p>
+                                    {/* Quick add — a pure Group-level Shared Task, never a
+                                        Project item, mirroring the "add Shared Task" flow
+                                        on /widgets. */}
+                                    <div className="flex items-center gap-1">
+                                      <Plus size={12} className="text-muted-foreground flex-shrink-0" />
+                                      <input
+                                        type="text"
+                                        placeholder="Shared Task 빠른 추가"
+                                        value={quickSharedTaskInput[g.id] ?? ""}
+                                        onChange={(e) =>
+                                          setQuickSharedTaskInput({ ...quickSharedTaskInput, [g.id]: e.target.value })
+                                        }
+                                        onKeyDown={(e) => {
+                                          if (e.key !== "Enter") return;
+                                          const title = (quickSharedTaskInput[g.id] ?? "").trim();
+                                          if (!title) return;
+                                          widgetCtx.taskActions.onAddTask({
+                                            title,
+                                            categoryIds: [],
+                                            subtagId: null,
+                                            dueDate: todayLocalStr(),
+                                            dueTime: null,
+                                            endTime: null,
+                                            recurrence: "none",
+                                            projectId: null,
+                                            newProject: null,
+                                            groupId: g.id,
+                                            subitems: [],
+                                            isCritical: false,
+                                          });
+                                          setQuickSharedTaskInput({ ...quickSharedTaskInput, [g.id]: "" });
+                                        }}
+                                        className="flex-1 min-w-0 bg-transparent outline-none text-sm border-b border-border py-1"
+                                      />
+                                    </div>
+                                    {activeSharedTasks.length === 0 ? (
+                                      <p className="text-xs text-muted-foreground italic">진행 중인 Shared Task가 없어요.</p>
+                                    ) : (
+                                      <SharedTaskList
+                                        tasks={activeSharedTasks}
+                                        editingId={widgetCtx.editingTask?.id ?? null}
+                                        onToggle={widgetCtx.taskActions.onToggleTask}
+                                        onEdit={widgetCtx.taskActions.onEditTask}
+                                        onDelete={widgetCtx.taskActions.onDeleteTask}
+                                      />
+                                    )}
+                                  </>
                                 )}
                               </div>
                             </div>
 
-                            {(doneProjects.length > 0 || doneSharedTasks.length > 0) && (
+                            {!isGroupDone && (doneProjects.length > 0 || doneSharedTasks.length > 0) && (
                               <details className="group/done">
                                 <summary className="text-[10px] label-caps text-muted-foreground hover:text-foreground cursor-pointer list-none flex items-center gap-1">
                                   <ChevronRight size={10} className="group-open/done:hidden" />
