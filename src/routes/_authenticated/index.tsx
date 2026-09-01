@@ -3,12 +3,14 @@ import { useState } from "react";
 import { Settings as SettingsIcon, LogOut, BookOpen, LineChart, CalendarDays, LayoutGrid, ChevronDown, ChevronRight } from "lucide-react";
 
 import { supabase } from "@/integrations/supabase/client";
-import { isDPlusEvent, dPlusLabel } from "@/lib/wann-data";
+import { isDPlusEvent, dPlusLabel, todayLocalStr } from "@/lib/wann-data";
+import { groupColor } from "@/lib/wann-groups";
 import { useWannDashboard } from "@/lib/use-wann-dashboard";
 import { WeekRotation } from "@/components/wann/WeekRotation";
 import { SettingsPanel } from "@/components/wann/SettingsPanel";
 import { QuickAdd } from "@/components/wann/QuickAdd";
 import { TaskWorkspace } from "@/components/wann/TaskWorkspace";
+import { Plus } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/")({
   component: Dashboard,
@@ -38,6 +40,7 @@ function Dashboard() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [reviewPromptDismissed, setReviewPromptDismissed] = useState(false);
   const [expandedGroupId, setExpandedGroupId] = useState<string | null>(null);
+  const [quickSharedTaskInput, setQuickSharedTaskInput] = useState<Record<string, string>>({});
 
   const {
     anchor,
@@ -196,9 +199,16 @@ function Dashboard() {
         </div>
       )}
 
-      <main className="max-w-5xl mx-auto px-3 sm:px-6 py-6 space-y-6">
-        <QuickAdd ctx={widgetCtx} />
+      <main className="px-3 sm:px-6 py-6 space-y-6">
+        <div className="max-w-5xl mx-auto">
+          <QuickAdd ctx={widgetCtx} />
+        </div>
 
+        {/* Timeline alone gets a much wider container than the rest of the
+            Dashboard — it's the view most starved for horizontal room
+            (event/task/project-bar titles truncating), while QuickAdd and
+            Tasks & Projects/Groups read better at the original column width. */}
+        <div className="max-w-[1800px] mx-auto">
         <WeekRotation
           anchorDate={anchor}
           onAnchorChange={setAnchor}
@@ -230,7 +240,9 @@ function Dashboard() {
           onOpenIntention={(id) => openGoalsWidget(id)}
           reviewHighlightColor={settings.review_highlight_color}
         />
+        </div>
 
+        <div className="max-w-5xl mx-auto">
         {/* Original combined layout restored: one shared category filter,
             Projects left / Tasks right — the exact same TaskWorkspace used
             on /widgets' "Tasks & Projects" widget, same ctx.taskActions/
@@ -239,11 +251,17 @@ function Dashboard() {
         {(() => {
           const taskWorkspaceSection = <TaskWorkspace key="task_workspace" ctx={widgetCtx} />;
 
-          // Compact summary only — full Group detail (Projects/Shared Tasks
-          // lists, add flows) lives on /widgets so Dashboard doesn't grow
+          // Compact summary only — full Group detail (add-existing-project
+          // flow, editing) lives on /widgets so Dashboard doesn't grow
           // complex again. Always rendered (even with 0 groups) so the
           // feature has a visible entry point — a card that only ever
           // appears once you already have a Group is undiscoverable.
+          const pctOfProject = (p: { id: string }) => {
+            const items = (multipleItemsQ.data ?? []).filter((i) => i.multiple_task_id === p.id);
+            return items.length > 0
+              ? Math.round((items.filter((i) => i.completed).length / items.length) * 100)
+              : null;
+          };
           const groupsSection = (
             <section key="groups" className="card-flat p-4">
               <div className="flex items-center justify-between mb-3">
@@ -262,11 +280,14 @@ function Dashboard() {
               ) : (
                 <div className="space-y-1">
                   {(groupsQ.data ?? []).map((g) => {
-                    const groupProjects = (multipleQ.data ?? []).filter((p) => p.group_id === g.id);
+                    const allGroupProjects = (multipleQ.data ?? []).filter((p) => p.group_id === g.id);
+                    const activeProjects = allGroupProjects.filter((p) => pctOfProject(p) !== 100);
+                    const doneProjects = allGroupProjects.filter((p) => pctOfProject(p) === 100);
                     const nShared = (tasksQ.data ?? []).filter(
                       (t) => t.group_id === g.id && !t.multiple_task_id,
                     ).length;
                     const expanded = expandedGroupId === g.id;
+                    const color = groupColor(g.id);
                     return (
                       <div key={g.id} className="border-b border-border/50">
                         <button
@@ -274,34 +295,114 @@ function Dashboard() {
                           className="w-full flex items-center gap-2 py-1 text-left hover:bg-muted"
                         >
                           {expanded ? <ChevronDown size={12} className="text-muted-foreground flex-shrink-0" /> : <ChevronRight size={12} className="text-muted-foreground flex-shrink-0" />}
+                          <span className="inline-block h-2 w-2 flex-shrink-0" style={{ background: color }} />
                           <span className="text-sm flex-1 min-w-0 truncate">{g.name}</span>
                           <span className="text-[10px] text-muted-foreground whitespace-nowrap">
-                            {groupProjects.length} Projects · {nShared} Shared Tasks
+                            {allGroupProjects.length} Projects · {nShared} Shared Tasks
                           </span>
                         </button>
                         {expanded && (
-                          <div className="pl-5 pb-2 space-y-1">
-                            {groupProjects.length === 0 ? (
+                          <div className="pl-5 pb-2 space-y-2">
+                            {/* A single coloured rail brackets every Project that belongs to
+                                this Group, so the relationship reads visually instead of
+                                being just another plain list. */}
+                            {activeProjects.length === 0 ? (
                               <p className="text-xs text-muted-foreground italic">
-                                아직 이 Group에 속한 Project가 없어요.
+                                {allGroupProjects.length === 0
+                                  ? "아직 이 Group에 속한 Project가 없어요."
+                                  : "진행 중인 Project가 없어요 (모두 완료됨)."}
                               </p>
                             ) : (
-                              groupProjects.map((p) => (
-                                <button
-                                  key={p.id}
-                                  onClick={() => openProject(p.id)}
-                                  className="w-full flex items-center gap-2 text-left hover:underline"
-                                  title="Tasks & Projects에서 바로 보기"
-                                >
-                                  <span className="text-sm flex-1 min-w-0 truncate">{p.name}</span>
-                                </button>
-                              ))
+                              <div className="relative pl-3">
+                                <div
+                                  className="absolute left-0 top-1 bottom-1 w-[2px]"
+                                  style={{ background: color }}
+                                />
+                                <div className="space-y-1">
+                                  {activeProjects.map((p) => {
+                                    const pct = pctOfProject(p);
+                                    return (
+                                      <div key={p.id} className="relative">
+                                        <span
+                                          className="absolute -left-3 top-1/2 -translate-y-1/2 w-3 h-[2px]"
+                                          style={{ background: color }}
+                                        />
+                                        <button
+                                          onClick={() => openProject(p.id)}
+                                          className="w-full flex items-center gap-1.5 text-left hover:underline"
+                                          title="Tasks & Projects에서 바로 보기"
+                                        >
+                                          <span className="text-sm flex-1 min-w-0 truncate">{p.name}</span>
+                                          {pct !== null && (
+                                            <span className="text-[10px] text-muted-foreground flex-shrink-0">{pct}%</span>
+                                          )}
+                                        </button>
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+                              </div>
                             )}
+                            {doneProjects.length > 0 && (
+                              <details className="group/done">
+                                <summary className="text-[10px] label-caps text-muted-foreground hover:text-foreground cursor-pointer list-none flex items-center gap-1">
+                                  <ChevronRight size={10} className="group-open/done:hidden" />
+                                  <ChevronDown size={10} className="hidden group-open/done:inline" />
+                                  완료됨 ({doneProjects.length})
+                                </summary>
+                                <div className="mt-1 space-y-1 pl-1">
+                                  {doneProjects.map((p) => (
+                                    <button
+                                      key={p.id}
+                                      onClick={() => openProject(p.id)}
+                                      className="w-full flex items-center gap-1.5 text-left hover:underline"
+                                    >
+                                      <span className="text-sm flex-1 min-w-0 truncate text-muted-foreground line-through">{p.name}</span>
+                                    </button>
+                                  ))}
+                                </div>
+                              </details>
+                            )}
+
+                            {/* Quick add — a pure Group-level Shared Task, never a Project
+                                item, mirroring the "add Shared Task" flow on /widgets. */}
+                            <div className="flex items-center gap-1 pt-1 border-t border-border/50">
+                              <Plus size={12} className="text-muted-foreground flex-shrink-0" />
+                              <input
+                                type="text"
+                                placeholder="Shared Task 빠른 추가"
+                                value={quickSharedTaskInput[g.id] ?? ""}
+                                onChange={(e) =>
+                                  setQuickSharedTaskInput({ ...quickSharedTaskInput, [g.id]: e.target.value })
+                                }
+                                onKeyDown={(e) => {
+                                  if (e.key !== "Enter") return;
+                                  const title = (quickSharedTaskInput[g.id] ?? "").trim();
+                                  if (!title) return;
+                                  widgetCtx.taskActions.onAddTask({
+                                    title,
+                                    categoryIds: [],
+                                    subtagId: null,
+                                    dueDate: todayLocalStr(),
+                                    dueTime: null,
+                                    endTime: null,
+                                    recurrence: "none",
+                                    projectId: null,
+                                    newProject: null,
+                                    groupId: g.id,
+                                    subitems: [],
+                                    isCritical: false,
+                                  });
+                                  setQuickSharedTaskInput({ ...quickSharedTaskInput, [g.id]: "" });
+                                }}
+                                className="flex-1 min-w-0 bg-transparent outline-none text-sm border-b border-border py-1"
+                              />
+                            </div>
                             <button
                               onClick={() => openGroupsWidget(g.id)}
                               className="label-caps text-[10px] text-muted-foreground hover:text-foreground"
                             >
-                              그룹 상세 · Shared Tasks 보기
+                              그룹 상세 · Shared Tasks {nShared}개 보기
                             </button>
                           </div>
                         )}
@@ -327,6 +428,7 @@ function Dashboard() {
             ? <>{groupsSection}{taskWorkspaceSection}</>
             : <>{taskWorkspaceSection}{groupsSection}</>;
         })()}
+        </div>
       </main>
 
       {settingsOpen && (

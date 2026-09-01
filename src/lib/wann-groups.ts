@@ -22,3 +22,21 @@ export async function fetchGroups(_userId: string): Promise<Group[]> {
   if (error) throw error;
   return data ?? [];
 }
+
+/**
+ * Deterministic, purely presentational colour for a Group — no DB column
+ * (deliberately, see above), just a stable hash of the id into a small
+ * palette. Used to visually bracket a Group's Projects together wherever
+ * they're listed side by side (e.g. the Dashboard's Groups card), so the
+ * relationship reads at a glance instead of just being a plain list.
+ */
+const GROUP_COLOR_PALETTE = [
+  "#F87171", "#FB923C", "#FBBF24", "#4ADE80",
+  "#22D3EE", "#818CF8", "#F472B6", "#A78BFA",
+];
+
+export function groupColor(id: string): string {
+  let h = 0;
+  for (let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) >>> 0;
+  return GROUP_COLOR_PALETTE[h % GROUP_COLOR_PALETTE.length];
+}
