@@ -35,6 +35,7 @@ import {
   isOccurrenceOverdue,
 } from "@/lib/wann-data";
 import { resolveEventColor, eventTypeLabel } from "@/lib/wann-events";
+import type { TaskFormValues } from "./TaskForm";
 
 import {
   DndContext,
@@ -144,6 +145,7 @@ export function WeekRotation({
   onOpenMultiple,
   onToggleOccurrence,
   onEditTask,
+  onAddTask,
   onMoveTask,
   onMoveProject,
   onMoveEvent,
@@ -168,6 +170,10 @@ export function WeekRotation({
   onOpenMultiple: (id: string) => void;
   onToggleOccurrence: (task: Task, date: string) => void;
   onEditTask: (t: Task) => void;
+  /** Notion-style quick add: clicking an empty Timeline slot creates a plain
+   * Task at that date/time with just a title, using the same onAddTask
+   * mutation as the full TaskForm. */
+  onAddTask: (v: TaskFormValues) => void;
   onMoveTask: (args: MoveTaskArgs) => void;
   onMoveProject: (args: MoveProjectArgs) => void;
   onMoveEvent: (event: EventEntry, newDate: string) => void;
@@ -283,6 +289,27 @@ export function WeekRotation({
   };
 
 
+  /** Notion-style quick add — an empty Timeline slot click creates a plain,
+   * non-recurring Task with just a title at that date/time. */
+  const handleQuickAdd = (dateKey: string, time: string, title: string) => {
+    const trimmed = title.trim();
+    if (!trimmed) return;
+    onAddTask({
+      title: trimmed,
+      categoryIds: [],
+      subtagId: null,
+      dueDate: dateKey,
+      dueTime: time,
+      endTime: null,
+      recurrence: "none",
+      projectId: null,
+      newProject: null,
+      groupId: null,
+      subitems: [],
+      isCritical: false,
+    });
+  };
+
   const todayStr = todayLocalStr();
   const dayKeys = days.map((d) => formatLocalDate(d));
   const anchorKey = formatLocalDate(anchorDate);
@@ -369,6 +396,7 @@ export function WeekRotation({
         projMap={projMap}
         onToggle={onToggleOccurrence}
         onEdit={onEditTask}
+        onQuickAdd={handleQuickAdd}
         onOpenMultiple={onOpenMultiple}
         isDragging={!!dragging}
       />
@@ -560,6 +588,7 @@ function DayCard({
   projMap,
   onToggle,
   onEdit,
+  onQuickAdd,
   onOpenMultiple,
   isDragging,
 }: {
@@ -588,6 +617,7 @@ function DayCard({
   projMap: Record<string, string>;
   onToggle: (task: Task, date: string) => void;
   onEdit: (t: Task) => void;
+  onQuickAdd: (dateKey: string, time: string, title: string) => void;
   onOpenMultiple: (id: string) => void;
   isDragging: boolean;
 }) {
@@ -720,6 +750,7 @@ function DayCard({
           projMap={projMap}
           onToggle={onToggle}
           onEdit={onEdit}
+          onQuickAdd={onQuickAdd}
           isDragging={isDragging}
         />
       </div>
@@ -738,6 +769,7 @@ function TimelineGrid({
   projMap,
   onToggle,
   onEdit,
+  onQuickAdd,
   isDragging,
 }: {
   dateKey: string;
@@ -750,8 +782,30 @@ function TimelineGrid({
   projMap: Record<string, string>;
   onToggle: (task: Task, date: string) => void;
   onEdit: (t: Task) => void;
+  onQuickAdd: (dateKey: string, time: string, title: string) => void;
   isDragging: boolean;
 }) {
+  // Notion-style quick add: clicking an empty slot opens a tiny inline title
+  // input right there, pinned to that slot; Enter creates the Task, Escape
+  // (or blur) cancels. Scoped per-day since each TimelineGrid is one day column.
+  const [quickAddIdx, setQuickAddIdx] = useState<number | null>(null);
+  const [quickAddTitle, setQuickAddTitle] = useState("");
+  // Removing a focused input from the DOM (as commitQuickAdd's own state
+  // update does) can itself trigger a second, stale "blur" callback — this
+  // ref makes commit idempotent so that never double-submits the Task.
+  const quickAddSubmitted = useRef(false);
+  const openQuickAdd = (idx: number) => {
+    quickAddSubmitted.current = false;
+    setQuickAddIdx(idx);
+    setQuickAddTitle("");
+  };
+  const commitQuickAdd = () => {
+    if (quickAddSubmitted.current) return;
+    quickAddSubmitted.current = true;
+    if (quickAddIdx != null) onQuickAdd(dateKey, timeFromSlotIndex(quickAddIdx), quickAddTitle);
+    setQuickAddIdx(null);
+    setQuickAddTitle("");
+  };
   // Layout model:
   // - A task with a duration renders TWO full-width single-slot rows: one at its
   //   start time ("[start]") and one at its end time ("[end]"), plus a thin
@@ -807,10 +861,40 @@ function TimelineGrid({
       className="relative"
       style={{ height: SLOT_COUNT * SLOT_HEIGHT }}
     >
-      {/* Slot droppables (grid background) */}
+      {/* Slot droppables (grid background) — click an empty one to quick-add */}
       {Array.from({ length: SLOT_COUNT }, (_, i) => (
-        <SlotCell key={i} dateKey={dateKey} idx={i} isDragging={isDragging} />
+        <SlotCell
+          key={i}
+          dateKey={dateKey}
+          idx={i}
+          isDragging={isDragging}
+          onClick={isDragging ? undefined : () => openQuickAdd(i)}
+        />
       ))}
+
+      {quickAddIdx != null && (
+        <div
+          className="absolute left-0 right-0 z-10 px-0.5"
+          style={{ top: quickAddIdx * SLOT_HEIGHT, height: SLOT_HEIGHT }}
+        >
+          <input
+            autoFocus
+            value={quickAddTitle}
+            onChange={(e) => setQuickAddTitle(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") commitQuickAdd();
+              else if (e.key === "Escape") {
+                quickAddSubmitted.current = true;
+                setQuickAddIdx(null);
+                setQuickAddTitle("");
+              }
+            }}
+            onBlur={commitQuickAdd}
+            placeholder={`+ ${timeFromSlotIndex(quickAddIdx)}`}
+            className="w-full h-full bg-background border border-foreground rounded-sm px-1.5 text-xs outline-none"
+          />
+        </div>
+      )}
 
       {/* Thin progress rails for tasks that span time */}
       {rails.map((r, i) => {
@@ -990,7 +1074,18 @@ function HabitLine({ habit, count, onTap }: { habit: Habit; count: number; onTap
   );
 }
 
-function SlotCell({ dateKey, idx, isDragging }: { dateKey: string; idx: number; isDragging: boolean }) {
+function SlotCell({
+  dateKey,
+  idx,
+  isDragging,
+  onClick,
+}: {
+  dateKey: string;
+  idx: number;
+  isDragging: boolean;
+  /** Notion-style quick add — undefined while a drag is in progress. */
+  onClick?: () => void;
+}) {
   const { isOver, setNodeRef } = useDroppable({
     id: `slot|${dateKey}|${idx}`,
     data: { kind: "slot", date: dateKey, slot: idx },
@@ -1000,8 +1095,9 @@ function SlotCell({ dateKey, idx, isDragging }: { dateKey: string; idx: number; 
   return (
     <div
       ref={setNodeRef}
+      onClick={onClick}
       className={`absolute left-0 right-0 ${onHour ? "border-t border-border/40" : ""} ${
-        isDragging ? "hover:bg-muted/50" : ""
+        isDragging ? "hover:bg-muted/50" : onClick ? "cursor-pointer hover:bg-muted/40" : ""
       } ${isOver ? "bg-muted" : ""}`}
       style={{ top: idx * SLOT_HEIGHT, height: SLOT_HEIGHT }}
     >

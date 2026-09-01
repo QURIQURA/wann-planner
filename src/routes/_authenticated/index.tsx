@@ -237,6 +237,7 @@ function Dashboard() {
           onOpenMultiple={(id) => openProject(id)}
           onToggleOccurrence={(task, date) => toggleOccurrence.mutate({ task, date })}
           onEditTask={(t) => widgetCtx.taskActions.onEditTask(t)}
+          onAddTask={(v) => widgetCtx.taskActions.onAddTask(v)}
           intentions={(intentionsQ.data ?? []).filter((i) => i.status === "active")}
           onOpenIntention={(id) => openGoalsWidget(id)}
           reviewHighlightColor={settings.review_highlight_color}
