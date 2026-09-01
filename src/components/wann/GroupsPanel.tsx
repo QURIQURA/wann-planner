@@ -182,10 +182,13 @@ export function GroupsPanel({ ctx }: { ctx: WidgetContext }) {
                       Dashboard's Groups card, so the two views read as one
                       consistent pattern. */}
                   <div
-                    className="rounded-lg border-2 border-dashed p-3 space-y-4 min-w-0"
+                    className="rounded-lg border-2 border-dashed p-3 grid grid-cols-1 sm:grid-cols-2 gap-4 min-w-0"
                     style={{ borderColor: g.color || groupColor(g.id) }}
                   >
-                  <div className="min-w-0">
+                  <div
+                    className="min-w-0 sm:border-r sm:border-dashed sm:pr-4"
+                    style={{ borderColor: g.color || groupColor(g.id) }}
+                  >
                     <p className="label-caps text-[10px] text-muted-foreground mb-2">Projects</p>
                     <MultipleTasksPanel
                       entries={groupProjects}
@@ -328,29 +331,29 @@ export function GroupsPanel({ ctx }: { ctx: WidgetContext }) {
                     </div>
                   </div>
 
-                  <div className="min-w-0 border-t border-border pt-3">
+                  <div className="min-w-0">
                     <p className="label-caps text-[10px] text-muted-foreground mb-2">Shared Tasks</p>
-                    <SharedTaskList
-                      tasks={sharedTasks}
-                      onToggle={ctx.taskActions.onToggleTask}
-                      onEdit={ctx.taskActions.onEditTask}
-                      onDelete={ctx.taskActions.onDeleteTask}
-                      editingId={ctx.editingTask?.id ?? null}
+                    <TaskForm
+                      editingTask={ctx.editingTask && ctx.editingTask.group_id === g.id ? ctx.editingTask : null}
+                      onCancelEdit={ctx.taskActions.onCancelEdit}
+                      onAddTask={ctx.taskActions.onAddTask}
+                      onUpdateTask={ctx.taskActions.onUpdateTask}
+                      categories={ctx.categories}
+                      subtags={ctx.subtags}
+                      projects={ctx.projects}
+                      projectItems={ctx.projectItems}
+                      groups={ctx.groups}
+                      forcedGroupId={g.id}
+                      hideProjectField
+                      filter={{ categoryId: null, subtagId: null }}
                     />
-                    <div className="mt-2">
-                      <TaskForm
-                        editingTask={ctx.editingTask && ctx.editingTask.group_id === g.id ? ctx.editingTask : null}
-                        onCancelEdit={ctx.taskActions.onCancelEdit}
-                        onAddTask={ctx.taskActions.onAddTask}
-                        onUpdateTask={ctx.taskActions.onUpdateTask}
-                        categories={ctx.categories}
-                        subtags={ctx.subtags}
-                        projects={ctx.projects}
-                        projectItems={ctx.projectItems}
-                        groups={ctx.groups}
-                        forcedGroupId={g.id}
-                        hideProjectField
-                        filter={{ categoryId: null, subtagId: null }}
+                    <div className="mt-3">
+                      <SharedTaskList
+                        tasks={sharedTasks}
+                        onToggle={ctx.taskActions.onToggleTask}
+                        onEdit={ctx.taskActions.onEditTask}
+                        onDelete={ctx.taskActions.onDeleteTask}
+                        editingId={ctx.editingTask?.id ?? null}
                       />
                     </div>
                   </div>
