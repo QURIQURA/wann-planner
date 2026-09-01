@@ -10,6 +10,7 @@ import { WeekRotation } from "@/components/wann/WeekRotation";
 import { SettingsPanel } from "@/components/wann/SettingsPanel";
 import { QuickAdd } from "@/components/wann/QuickAdd";
 import { TaskWorkspace } from "@/components/wann/TaskWorkspace";
+import { SharedTaskList } from "@/components/wann/MultipleTasksPanel";
 import { Plus } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/")({
@@ -283,9 +284,11 @@ function Dashboard() {
                     const allGroupProjects = (multipleQ.data ?? []).filter((p) => p.group_id === g.id);
                     const activeProjects = allGroupProjects.filter((p) => pctOfProject(p) !== 100);
                     const doneProjects = allGroupProjects.filter((p) => pctOfProject(p) === 100);
-                    const nShared = (tasksQ.data ?? []).filter(
+                    const allSharedTasks = (tasksQ.data ?? []).filter(
                       (t) => t.group_id === g.id && !t.multiple_task_id,
-                    ).length;
+                    );
+                    const activeSharedTasks = allSharedTasks.filter((t) => !t.completed);
+                    const doneSharedTasks = allSharedTasks.filter((t) => t.completed);
                     const expanded = expandedGroupId === g.id;
                     const color = groupColor(g.id);
                     return (
@@ -298,36 +301,35 @@ function Dashboard() {
                           <span className="inline-block h-2 w-2 flex-shrink-0" style={{ background: color }} />
                           <span className="text-sm flex-1 min-w-0 truncate">{g.name}</span>
                           <span className="text-[10px] text-muted-foreground whitespace-nowrap">
-                            {allGroupProjects.length} Projects · {nShared} Shared Tasks
+                            {allGroupProjects.length} Projects · {allSharedTasks.length} Shared Tasks
                           </span>
                         </button>
                         {expanded && (
                           <div className="pl-5 pb-2 space-y-2">
-                            {/* A single coloured rail brackets every Project that belongs to
-                                this Group, so the relationship reads visually instead of
-                                being just another plain list. */}
-                            {activeProjects.length === 0 ? (
+                            {/* Everything currently "live" in this Group — active Projects
+                                and active Shared Tasks — sits inside one rounded box in the
+                                Group's colour, so the bundle reads as one unit at a glance
+                                rather than a plain list. Finished items move outside/below
+                                it, out of the way but still one click from view. */}
+                            {activeProjects.length === 0 && activeSharedTasks.length === 0 ? (
                               <p className="text-xs text-muted-foreground italic">
-                                {allGroupProjects.length === 0
-                                  ? "아직 이 Group에 속한 Project가 없어요."
-                                  : "진행 중인 Project가 없어요 (모두 완료됨)."}
+                                {allGroupProjects.length === 0 && allSharedTasks.length === 0
+                                  ? "아직 이 Group에 속한 Project/Shared Task가 없어요."
+                                  : "진행 중인 항목이 없어요 (모두 완료됨)."}
                               </p>
                             ) : (
-                              <div className="relative pl-3">
-                                <div
-                                  className="absolute left-0 top-1 bottom-1 w-[2px]"
-                                  style={{ background: color }}
-                                />
-                                <div className="space-y-1">
-                                  {activeProjects.map((p) => {
-                                    const pct = pctOfProject(p);
-                                    return (
-                                      <div key={p.id} className="relative">
-                                        <span
-                                          className="absolute -left-3 top-1/2 -translate-y-1/2 w-3 h-[2px]"
-                                          style={{ background: color }}
-                                        />
+                              <div
+                                className="rounded-lg border-2 p-2 space-y-2"
+                                style={{ borderColor: color }}
+                              >
+                                {activeProjects.length > 0 && (
+                                  <div className="space-y-1">
+                                    <p className="text-[9px] label-caps text-muted-foreground">Projects</p>
+                                    {activeProjects.map((p) => {
+                                      const pct = pctOfProject(p);
+                                      return (
                                         <button
+                                          key={p.id}
                                           onClick={() => openProject(p.id)}
                                           className="w-full flex items-center gap-1.5 text-left hover:underline"
                                           title="Tasks & Projects에서 바로 보기"
@@ -337,18 +339,31 @@ function Dashboard() {
                                             <span className="text-[10px] text-muted-foreground flex-shrink-0">{pct}%</span>
                                           )}
                                         </button>
-                                      </div>
-                                    );
-                                  })}
-                                </div>
+                                      );
+                                    })}
+                                  </div>
+                                )}
+                                {activeSharedTasks.length > 0 && (
+                                  <div className={activeProjects.length > 0 ? "border-t border-border/50 pt-2 space-y-1" : "space-y-1"}>
+                                    <p className="text-[9px] label-caps text-muted-foreground">Shared Tasks</p>
+                                    <SharedTaskList
+                                      tasks={activeSharedTasks}
+                                      editingId={widgetCtx.editingTask?.id ?? null}
+                                      onToggle={widgetCtx.taskActions.onToggleTask}
+                                      onEdit={widgetCtx.taskActions.onEditTask}
+                                      onDelete={widgetCtx.taskActions.onDeleteTask}
+                                    />
+                                  </div>
+                                )}
                               </div>
                             )}
-                            {doneProjects.length > 0 && (
+
+                            {(doneProjects.length > 0 || doneSharedTasks.length > 0) && (
                               <details className="group/done">
                                 <summary className="text-[10px] label-caps text-muted-foreground hover:text-foreground cursor-pointer list-none flex items-center gap-1">
                                   <ChevronRight size={10} className="group-open/done:hidden" />
                                   <ChevronDown size={10} className="hidden group-open/done:inline" />
-                                  완료됨 ({doneProjects.length})
+                                  완료됨 ({doneProjects.length + doneSharedTasks.length})
                                 </summary>
                                 <div className="mt-1 space-y-1 pl-1">
                                   {doneProjects.map((p) => (
@@ -360,6 +375,15 @@ function Dashboard() {
                                       <span className="text-sm flex-1 min-w-0 truncate text-muted-foreground line-through">{p.name}</span>
                                     </button>
                                   ))}
+                                  {doneSharedTasks.length > 0 && (
+                                    <SharedTaskList
+                                      tasks={doneSharedTasks}
+                                      editingId={widgetCtx.editingTask?.id ?? null}
+                                      onToggle={widgetCtx.taskActions.onToggleTask}
+                                      onEdit={widgetCtx.taskActions.onEditTask}
+                                      onDelete={widgetCtx.taskActions.onDeleteTask}
+                                    />
+                                  )}
                                 </div>
                               </details>
                             )}
@@ -402,7 +426,7 @@ function Dashboard() {
                               onClick={() => openGroupsWidget(g.id)}
                               className="label-caps text-[10px] text-muted-foreground hover:text-foreground"
                             >
-                              그룹 상세 · Shared Tasks {nShared}개 보기
+                              그룹 상세 보기
                             </button>
                           </div>
                         )}
