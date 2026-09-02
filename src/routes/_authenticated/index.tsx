@@ -7,6 +7,7 @@ import { isDPlusEvent, dPlusLabel, todayLocalStr } from "@/lib/wann-data";
 import { groupColor } from "@/lib/wann-groups";
 import { useWannDashboard } from "@/lib/use-wann-dashboard";
 import { WeekRotation } from "@/components/wann/WeekRotation";
+import { ShoppingListWidget } from "@/components/wann/ShoppingListWidget";
 import { SettingsPanel } from "@/components/wann/SettingsPanel";
 import { QuickAdd } from "@/components/wann/QuickAdd";
 import { TaskWorkspace } from "@/components/wann/TaskWorkspace";
@@ -203,6 +204,15 @@ function Dashboard() {
       <main className="px-3 sm:px-6 py-6 space-y-6">
         <div className="max-w-5xl mx-auto">
           <QuickAdd ctx={widgetCtx} />
+        </div>
+
+        <div className="max-w-5xl mx-auto">
+          <ShoppingListWidget
+            tasks={tasksQ.data ?? []}
+            completions={completionsQ.data ?? []}
+            onToggle={(t, date) => toggleOccurrence.mutate({ task: t, date })}
+            onEdit={(t) => widgetCtx.taskActions.onEditTask(t)}
+          />
         </div>
 
         {/* Timeline alone gets a much wider container than the rest of the
@@ -428,6 +438,7 @@ function Dashboard() {
                                             groupId: g.id,
                                             subitems: [],
                                             isCritical: false,
+                                            isShopping: false,
                                           });
                                           setQuickSharedTaskInput({ ...quickSharedTaskInput, [g.id]: "" });
                                         }}

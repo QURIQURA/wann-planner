@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import type { Category, MultipleTask, MultipleTaskItem, Subtag, Task } from "@/lib/wann-data";
 import { todayLocalStr, shortTime, formatDateKo } from "@/lib/wann-data";
 import type { Group } from "@/lib/wann-groups";
-import { Plus, Trash2, X, AlertTriangle } from "lucide-react";
+import { Plus, Trash2, X, AlertTriangle, ShoppingCart } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { fetchSubitemsForTask, type SubitemDraft } from "@/lib/wann-subitems";
 
@@ -34,6 +34,9 @@ export type TaskFormValues = {
   subitems: SubitemDraft[];
   /** "Can't miss this" marker — thicker border + icon wherever the task renders. */
   isCritical: boolean;
+  /** Marks this Task as a shopping-list item — surfaces it in the Shopping
+   * List widget above the Timeline, grouped by due date. */
+  isShopping: boolean;
 };
 
 export function TaskForm({
@@ -92,6 +95,7 @@ export function TaskForm({
     groupId: forcedGroupId ?? null,
     subitems: [],
     isCritical: false,
+    isShopping: false,
   });
 
   const [form, setForm] = useState<TaskFormValues>(emptyForm);
@@ -116,6 +120,7 @@ export function TaskForm({
         groupId: editingTask.group_id ?? null,
         subitems: [],
         isCritical: editingTask.is_critical ?? false,
+        isShopping: editingTask.is_shopping ?? false,
       });
     }
   }, [editingTask]);
@@ -363,6 +368,19 @@ export function TaskForm({
           />
           <AlertTriangle size={11} />
           Critical
+        </label>
+        <label
+          className={`flex items-center gap-1 text-[10px] label-caps ${form.isShopping ? "text-foreground" : "text-muted-foreground"}`}
+          title="Shopping List 위젯에 표시"
+        >
+          <input
+            type="checkbox"
+            checked={form.isShopping}
+            onChange={(e) => setForm({ ...form, isShopping: e.target.checked })}
+            className="h-3 w-3 accent-foreground"
+          />
+          <ShoppingCart size={11} />
+          Shopping
         </label>
         <button
           onClick={submit}
