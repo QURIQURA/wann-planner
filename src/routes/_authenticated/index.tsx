@@ -212,6 +212,23 @@ function Dashboard() {
             completions={completionsQ.data ?? []}
             onToggle={(t, date) => toggleOccurrence.mutate({ task: t, date })}
             onEdit={(t) => widgetCtx.taskActions.onEditTask(t)}
+            onAdd={(title) =>
+              widgetCtx.taskActions.onAddTask({
+                title,
+                categoryIds: [],
+                subtagId: null,
+                dueDate: todayLocalStr(),
+                dueTime: null,
+                endTime: null,
+                recurrence: "none",
+                projectId: null,
+                newProject: null,
+                groupId: null,
+                subitems: [],
+                isCritical: false,
+                isShopping: true,
+              })
+            }
           />
         </div>
 
