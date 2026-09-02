@@ -3,7 +3,7 @@ import { useState } from "react";
 import { Settings as SettingsIcon, LogOut, BookOpen, LineChart, CalendarDays, LayoutGrid, ChevronDown, ChevronRight } from "lucide-react";
 
 import { supabase } from "@/integrations/supabase/client";
-import { isDPlusEvent, dPlusLabel, todayLocalStr } from "@/lib/wann-data";
+import { isDPlusEvent, dPlusLabel, todayLocalStr, formatLocalDate } from "@/lib/wann-data";
 import { groupColor } from "@/lib/wann-groups";
 import { useWannDashboard } from "@/lib/use-wann-dashboard";
 import { WeekRotation } from "@/components/wann/WeekRotation";
@@ -206,38 +206,37 @@ function Dashboard() {
           <QuickAdd ctx={widgetCtx} />
         </div>
 
-        <div className="max-w-5xl mx-auto">
-          <ShoppingListWidget
-            tasks={tasksQ.data ?? []}
-            completions={completionsQ.data ?? []}
-            onToggle={(t, date) => toggleOccurrence.mutate({ task: t, date })}
-            onEdit={(t) => widgetCtx.taskActions.onEditTask(t)}
-            onAdd={(title) =>
-              widgetCtx.taskActions.onAddTask({
-                title,
-                categoryIds: [],
-                subtagId: null,
-                dueDate: todayLocalStr(),
-                dueTime: null,
-                endTime: null,
-                recurrence: "none",
-                projectId: null,
-                newProject: null,
-                groupId: null,
-                subitems: [],
-                isCritical: false,
-                isShopping: true,
-              })
-            }
-            onReorder={(ids) => widgetCtx.taskActions.onReorderShopping(ids)}
-          />
-        </div>
-
-        {/* Timeline alone gets a much wider container than the rest of the
-            Dashboard — it's the view most starved for horizontal room
-            (event/task/project-bar titles truncating), while QuickAdd and
-            Tasks & Projects/Groups read better at the original column width. */}
-        <div className="max-w-[1800px] mx-auto">
+        {/* Timeline (and the Shopping List above it) alone get a much wider
+            container than the rest of the Dashboard — it's the view most
+            starved for horizontal room (event/task/project-bar titles
+            truncating), while QuickAdd and Tasks & Projects/Groups read
+            better at the original column width. */}
+        <div className="max-w-[1800px] mx-auto space-y-4">
+        <ShoppingListWidget
+          anchorKey={formatLocalDate(anchor)}
+          tasks={tasksQ.data ?? []}
+          completions={completionsQ.data ?? []}
+          onToggle={(t, date) => toggleOccurrence.mutate({ task: t, date })}
+          onEdit={(t) => widgetCtx.taskActions.onEditTask(t)}
+          onAdd={(title, date) =>
+            widgetCtx.taskActions.onAddTask({
+              title,
+              categoryIds: [],
+              subtagId: null,
+              dueDate: date,
+              dueTime: null,
+              endTime: null,
+              recurrence: "none",
+              projectId: null,
+              newProject: null,
+              groupId: null,
+              subitems: [],
+              isCritical: false,
+              isShopping: true,
+            })
+          }
+          onReorder={(ids) => widgetCtx.taskActions.onReorderShopping(ids)}
+        />
         <WeekRotation
           anchorDate={anchor}
           onAnchorChange={setAnchor}
