@@ -1,17 +1,17 @@
 import { useState } from "react";
 import type { Task, TaskCompletion } from "@/lib/wann-data";
-import { currentOccurrenceDate, isOccurrenceCompleted, koDow, shortTime } from "@/lib/wann-data";
-import { Plus, ShoppingCart } from "lucide-react";
+import { currentOccurrenceDate, isOccurrenceCompleted, shortTime, todayLocalStr } from "@/lib/wann-data";
+import { GripVertical, Plus, ShoppingCart } from "lucide-react";
 
 /**
- * Every Task with `is_shopping` set, grouped by due date (soonest first),
- * shown above the Timeline. A plain flat checklist — checking an item off
- * reuses the same completion mutation as everywhere else, so it stays in
- * sync with the Task itself (Timeline, Task list, etc.).
+ * A "daily" box, like the Timeline: only shows Tasks with `is_shopping` due
+ * *today*. Nothing is ever deleted to make an item go away — a day's items
+ * simply stop showing once due_date is no longer today, the same way the
+ * Timeline's own "Today" card moves forward on its own every day.
  *
- * The quick-add box only takes a title — it creates a real Task (due today,
- * no category) that can be opened via onEdit afterwards to fill in category,
- * time, notes, etc., same as any other Task.
+ * Drag to reorder (native HTML5 DnD — a plain list within one day doesn't
+ * need @dnd-kit's cross-column machinery); the new order is persisted to
+ * each Task's `shopping_order`.
  */
 export function ShoppingListWidget({
   tasks,
@@ -19,6 +19,7 @@ export function ShoppingListWidget({
   onToggle,
   onEdit,
   onAdd,
+  onReorder,
 }: {
   tasks: Task[];
   completions: TaskCompletion[];
@@ -26,8 +27,13 @@ export function ShoppingListWidget({
   onEdit: (t: Task) => void;
   /** Quick-add — title only; category/time/notes are filled in later via onEdit. */
   onAdd: (title: string) => void;
+  /** Full new top-to-bottom id order after a drag-reorder. */
+  onReorder: (orderedIds: string[]) => void;
 }) {
   const [draft, setDraft] = useState("");
+  const [dragId, setDragId] = useState<string | null>(null);
+  const [overId, setOverId] = useState<string | null>(null);
+
   const submit = () => {
     const title = draft.trim();
     if (!title) return;
@@ -35,14 +41,35 @@ export function ShoppingListWidget({
     setDraft("");
   };
 
-  const shopping = tasks.filter((t) => t.is_shopping);
-  const byDate = new Map<string, Task[]>();
-  for (const t of shopping) {
-    const key = t.due_date ?? "날짜 없음";
-    if (!byDate.has(key)) byDate.set(key, []);
-    byDate.get(key)!.push(t);
-  }
-  const dates = [...byDate.keys()].sort((a, b) => a.localeCompare(b));
+  const today = todayLocalStr();
+  const items = tasks
+    .filter((t) => t.is_shopping && t.due_date === today)
+    .slice()
+    .sort((a, b) => {
+      const so = (a.shopping_order ?? 0) - (b.shopping_order ?? 0);
+      if (so !== 0) return so;
+      return (a.due_time ?? "").localeCompare(b.due_time ?? "") || a.created_at.localeCompare(b.created_at);
+    });
+
+  const handleDrop = (targetId: string) => {
+    if (!dragId || dragId === targetId) {
+      setDragId(null);
+      setOverId(null);
+      return;
+    }
+    const ids = items.map((t) => t.id);
+    const from = ids.indexOf(dragId);
+    const to = ids.indexOf(targetId);
+    if (from === -1 || to === -1) {
+      setDragId(null);
+      setOverId(null);
+      return;
+    }
+    ids.splice(to, 0, ids.splice(from, 1)[0]);
+    onReorder(ids);
+    setDragId(null);
+    setOverId(null);
+  };
 
   return (
     <section className="card-flat p-4">
@@ -68,44 +95,49 @@ export function ShoppingListWidget({
         />
       </div>
 
-      {dates.length > 0 && (
-        <div className="space-y-3">
-          {dates.map((date) => {
-            const items = byDate
-              .get(date)!
-              .slice()
-              .sort((a, b) => (a.due_time ?? "").localeCompare(b.due_time ?? ""));
+      {items.length > 0 && (
+        <div className="space-y-1">
+          {items.map((t) => {
+            const occ = currentOccurrenceDate(t, today);
+            const done = isOccurrenceCompleted(t, occ, completions);
             return (
-              <div key={date}>
-                <p className="label-caps text-[10px] text-muted-foreground mb-1">
-                  {date === "날짜 없음" ? date : `${date.slice(5)} (${koDow(date)})`}
-                </p>
-                <div className="space-y-1">
-                  {items.map((t) => {
-                    const occ = currentOccurrenceDate(t, date);
-                    const done = isOccurrenceCompleted(t, occ, completions);
-                    return (
-                      <div key={t.id} className="flex items-center gap-2 text-sm">
-                        <button
-                          onClick={() => onToggle(t, occ)}
-                          aria-label="Toggle"
-                          className={`h-3 w-3 border border-border flex-shrink-0 ${done ? "bg-foreground" : ""}`}
-                        />
-                        <button
-                          onClick={() => onEdit(t)}
-                          className={`flex-1 min-w-0 text-left truncate hover:underline ${done ? "line-through text-muted-foreground" : ""}`}
-                        >
-                          {t.title}
-                        </button>
-                        {t.due_time && (
-                          <span className="text-[10px] text-muted-foreground tabular-nums flex-shrink-0">
-                            {shortTime(t.due_time)}
-                          </span>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
+              <div
+                key={t.id}
+                draggable
+                onDragStart={() => setDragId(t.id)}
+                onDragOver={(e) => {
+                  e.preventDefault();
+                  if (overId !== t.id) setOverId(t.id);
+                }}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  handleDrop(t.id);
+                }}
+                onDragEnd={() => {
+                  setDragId(null);
+                  setOverId(null);
+                }}
+                className={`flex items-center gap-2 text-sm rounded-sm ${
+                  overId === t.id && dragId && dragId !== t.id ? "border-t-2 border-foreground" : ""
+                } ${dragId === t.id ? "opacity-40" : ""}`}
+              >
+                <GripVertical size={12} className="text-muted-foreground flex-shrink-0 cursor-grab" />
+                <button
+                  onClick={() => onToggle(t, occ)}
+                  aria-label="Toggle"
+                  className={`h-3 w-3 border border-border flex-shrink-0 ${done ? "bg-foreground" : ""}`}
+                />
+                <button
+                  onClick={() => onEdit(t)}
+                  className={`flex-1 min-w-0 text-left truncate hover:underline ${done ? "line-through text-muted-foreground" : ""}`}
+                >
+                  {t.title}
+                </button>
+                {t.due_time && (
+                  <span className="text-[10px] text-muted-foreground tabular-nums flex-shrink-0">
+                    {shortTime(t.due_time)}
+                  </span>
+                )}
               </div>
             );
           })}

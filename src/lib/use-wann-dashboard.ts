@@ -520,6 +520,35 @@ export function useWannDashboard(
     onSuccess: () => invalidate("tasks"),
   });
 
+  /** Persists a drag-reorder of the Shopping List widget — `orderedIds` is
+   * the full new top-to-bottom order for whichever day's items were
+   * reordered; each gets its list index written as shopping_order. */
+  const reorderShopping = useMutation({
+    mutationFn: async (orderedIds: string[]) => {
+      await Promise.all(
+        orderedIds.map((id, i) =>
+          supabase.from("planner_tasks").update({ shopping_order: i }).eq("id", id),
+        ),
+      );
+    },
+    onMutate: async (orderedIds) => {
+      await qc.cancelQueries({ queryKey: ["tasks", user.id] });
+      const prevTasks = qc.getQueryData<Task[]>(["tasks", user.id]);
+      if (prevTasks) {
+        const rank = new Map(orderedIds.map((id, i) => [id, i]));
+        qc.setQueryData<Task[]>(
+          ["tasks", user.id],
+          prevTasks.map((t) => (rank.has(t.id) ? { ...t, shopping_order: rank.get(t.id)! } : t)),
+        );
+      }
+      return { prevTasks };
+    },
+    onError: (_e, _v, ctx) => {
+      if (ctx?.prevTasks) qc.setQueryData(["tasks", user.id], ctx.prevTasks);
+    },
+    onSettled: () => invalidate("tasks"),
+  });
+
   // --- Multiple Tasks ---
   const addMultiple = useMutation({
     mutationFn: async (v: MultipleTaskForm) => {
@@ -1149,6 +1178,7 @@ export function useWannDashboard(
       onUpdateCategory: (id, name, color) => updateCategory.mutate({ id, name, color }),
       onUpdateSubtag: (id, name) => updateSubtag.mutate({ id, name }),
       onDeleteSubtag: (id) => deleteSubtag.mutate(id),
+      onReorderShopping: (orderedIds) => reorderShopping.mutate(orderedIds),
     },
     projectActions: {
       onAdd: (v) => addMultiple.mutate(v),

@@ -1595,6 +1595,7 @@ export type Database = {
           notes: string | null
           recurrence: string
           series_id: string | null
+          shopping_order: number
           subtag_id: string | null
           title: string
           updated_at: string
@@ -1617,6 +1618,7 @@ export type Database = {
           notes?: string | null
           recurrence?: string
           series_id?: string | null
+          shopping_order?: number
           subtag_id?: string | null
           title: string
           updated_at?: string
@@ -1639,6 +1641,7 @@ export type Database = {
           notes?: string | null
           recurrence?: string
           series_id?: string | null
+          shopping_order?: number
           subtag_id?: string | null
           title?: string
           updated_at?: string

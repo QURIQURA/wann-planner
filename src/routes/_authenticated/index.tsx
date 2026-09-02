@@ -229,6 +229,7 @@ function Dashboard() {
                 isShopping: true,
               })
             }
+            onReorder={(ids) => widgetCtx.taskActions.onReorderShopping(ids)}
           />
         </div>
 

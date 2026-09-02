@@ -60,6 +60,9 @@ export type WidgetContext = {
     onUpdateCategory: (id: string, name: string, color: string) => void;
     onUpdateSubtag: (id: string, name: string) => void;
     onDeleteSubtag: (id: string) => void;
+    /** Persists a drag-reorder in the Shopping List widget — the full new
+     * top-to-bottom id order for the day's items being reordered. */
+    onReorderShopping: (orderedIds: string[]) => void;
   };
 
   projectActions: {
