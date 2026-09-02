@@ -412,7 +412,7 @@ function Dashboard() {
                                           setQuickSharedTaskInput({ ...quickSharedTaskInput, [g.id]: e.target.value })
                                         }
                                         onKeyDown={(e) => {
-                                          if (e.key !== "Enter") return;
+                                          if (e.key !== "Enter" || e.nativeEvent.isComposing) return;
                                           const title = (quickSharedTaskInput[g.id] ?? "").trim();
                                           if (!title) return;
                                           widgetCtx.taskActions.onAddTask({
