@@ -4,7 +4,7 @@ import { Settings as SettingsIcon, LogOut, BookOpen, LineChart, CalendarDays, La
 
 import { supabase } from "@/integrations/supabase/client";
 import { isDPlusEvent, dPlusLabel, todayLocalStr, formatLocalDate, projectSpan } from "@/lib/wann-data";
-import { groupColor } from "@/lib/wann-groups";
+import { groupColor, compareGroupsRecency } from "@/lib/wann-groups";
 import { useWannDashboard } from "@/lib/use-wann-dashboard";
 import { WeekRotation } from "@/components/wann/WeekRotation";
 import { ShoppingListWidget } from "@/components/wann/ShoppingListWidget";
@@ -302,7 +302,14 @@ function Dashboard() {
                   tasks={tasksQ.data ?? []}
                   onOpenGroup={(id) => {
                     setExpandedGroupId(id);
-                    document.getElementById(`group-${id}`)?.scrollIntoView({ behavior: "smooth", block: "center" });
+                    const el = document.getElementById(`group-${id}`);
+                    // A done Group's row lives inside the collapsed "완료됨"
+                    // <details> — its content stays un-rendered until the
+                    // <details> itself is opened, so scrollIntoView alone is
+                    // a no-op for it. Force that ancestor open first.
+                    const details = el?.closest("details");
+                    if (details && !details.open) details.open = true;
+                    el?.scrollIntoView({ behavior: "smooth", block: "center" });
                   }}
                 />
               )}
@@ -348,12 +355,12 @@ function Dashboard() {
                     const latestDate = [...projectDates, ...taskDates].sort().at(-1) ?? null;
                     return { g, allGroupProjects, activeProjects, doneProjects, allSharedTasks, activeSharedTasks, doneSharedTasks, isGroupDone, latestDate };
                   })
-                  .sort((a, b) => {
-                    const da = a.latestDate ?? "0000-00-00";
-                    const db = b.latestDate ?? "0000-00-00";
-                    if (da !== db) return db.localeCompare(da);
-                    return (b.g.created_at ?? "").localeCompare(a.g.created_at ?? "");
-                  });
+                  .sort((a, b) =>
+                    compareGroupsRecency(
+                      { name: a.g.name, created_at: a.g.created_at, latestDate: a.latestDate },
+                      { name: b.g.name, created_at: b.g.created_at, latestDate: b.latestDate },
+                    ),
+                  );
                 const activeGroupRows = groupRows.filter((r) => !r.isGroupDone);
                 const doneGroupRows = groupRows.filter((r) => r.isGroupDone);
 

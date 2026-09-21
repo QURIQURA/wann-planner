@@ -64,3 +64,36 @@ export function groupColor(id: string): string {
   for (let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) >>> 0;
   return GROUP_COLOR_PALETTE[h % GROUP_COLOR_PALETTE.length];
 }
+
+/**
+ * Extracts "N" out of a name like "CAKE WEEK5" / "week 5" — deliberately
+ * requires the literal word "week" so it never misfires on an unrelated
+ * group whose name happens to contain a digit (e.g. an order for a
+ * 2-tier cake). Returns null when the name doesn't match.
+ */
+export function weekNumber(name: string): number | null {
+  const m = name.match(/week\s*(\d+)/i);
+  return m ? parseInt(m[1], 10) : null;
+}
+
+/**
+ * Shared ordering for "recent Group first": recurring weekly instances
+ * (whose name embeds a week number) sort by that number — the label the
+ * business actually thinks in — since generated dates on backfilled/test
+ * data don't reliably track it. Anything else falls back to its latest
+ * linked date, then created_at.
+ */
+export function compareGroupsRecency(
+  a: { name: string; created_at: string; latestDate: string | null },
+  b: { name: string; created_at: string; latestDate: string | null },
+): number {
+  const wa = weekNumber(a.name);
+  const wb = weekNumber(b.name);
+  if (wa !== null && wb !== null && wa !== wb) return wb - wa;
+  if (wa !== null && wb === null) return -1;
+  if (wa === null && wb !== null) return 1;
+  const da = a.latestDate ?? "0000-00-00";
+  const db = b.latestDate ?? "0000-00-00";
+  if (da !== db) return db.localeCompare(da);
+  return (b.created_at ?? "").localeCompare(a.created_at ?? "");
+}

@@ -1,5 +1,5 @@
 import type { Group } from "@/lib/wann-groups";
-import { PRODUCT_LINES } from "@/lib/wann-groups";
+import { PRODUCT_LINES, compareGroupsRecency, weekNumber } from "@/lib/wann-groups";
 import type { MultipleTask, Task } from "@/lib/wann-data";
 import { projectSpan, todayLocalStr } from "@/lib/wann-data";
 import { ChevronRight } from "lucide-react";
@@ -74,13 +74,17 @@ export function ProductLineCards({
 
         return { g, isDone, latestDate, progress, nextAction, nextDate };
       })
-      .sort((a, b) => {
-        const da = a.latestDate ?? "0000-00-00";
-        const db = b.latestDate ?? "0000-00-00";
-        if (da !== db) return db.localeCompare(da);
-        return (b.g.created_at ?? "").localeCompare(a.g.created_at ?? "");
-      });
+      .sort((a, b) =>
+        compareGroupsRecency(
+          { name: a.g.name, created_at: a.g.created_at, latestDate: a.latestDate },
+          { name: b.g.name, created_at: b.g.created_at, latestDate: b.latestDate },
+        ),
+      );
 
+    // The current instance is the highest-numbered (or most recent) one
+    // that isn't fully done yet — an empty just-created "Week 5" with no
+    // items linked yet still counts as current, not "done", so it never
+    // gets skipped in favour of an already-finished earlier week.
     const current = lineGroups.find((r) => !r.isDone) ?? lineGroups[0] ?? null;
 
     return { line, current, groupCount: lineGroups.length };
@@ -89,7 +93,7 @@ export function ProductLineCards({
   return (
     <section className="grid grid-cols-1 sm:grid-cols-3 gap-3">
       {cards.map(({ line, current, groupCount }) => {
-        const weekMatch = current?.g.name.match(/(\d+)/);
+        const week = current ? weekNumber(current.g.name) : null;
         const daysToLaunch = line.launchDate
           ? Math.ceil(
               (new Date(line.launchDate + "T00:00:00").getTime() - new Date(today + "T00:00:00").getTime()) /
@@ -123,7 +127,7 @@ export function ProductLineCards({
               >
                 <div className="flex items-baseline justify-between gap-2">
                   <span className="text-lg font-semibold truncate group-hover:underline">
-                    {weekMatch ? `Week ${weekMatch[1]}` : current.g.name}
+                    {week !== null ? `Week ${week}` : current.g.name}
                   </span>
                   {current.progress !== null && (
                     <span className="text-xs text-muted-foreground tabular-nums flex-shrink-0">
