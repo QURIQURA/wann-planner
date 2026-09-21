@@ -1462,6 +1462,7 @@ export type Database = {
           is_shopping: boolean
           multiple_task_id: string | null
           recurrence: string
+          stage: string | null
           subtag_id: string | null
           title: string
           updated_at: string
@@ -1481,6 +1482,7 @@ export type Database = {
           is_shopping?: boolean
           multiple_task_id?: string | null
           recurrence: string
+          stage?: string | null
           subtag_id?: string | null
           title: string
           updated_at?: string
@@ -1500,6 +1502,7 @@ export type Database = {
           is_shopping?: boolean
           multiple_task_id?: string | null
           recurrence?: string
+          stage?: string | null
           subtag_id?: string | null
           title?: string
           updated_at?: string
@@ -1599,6 +1602,7 @@ export type Database = {
           recurrence: string
           series_id: string | null
           shopping_order: number
+          stage: string | null
           subtag_id: string | null
           title: string
           updated_at: string
@@ -1622,6 +1626,7 @@ export type Database = {
           recurrence?: string
           series_id?: string | null
           shopping_order?: number
+          stage?: string | null
           subtag_id?: string | null
           title: string
           updated_at?: string
@@ -1645,6 +1650,7 @@ export type Database = {
           recurrence?: string
           series_id?: string | null
           shopping_order?: number
+          stage?: string | null
           subtag_id?: string | null
           title?: string
           updated_at?: string

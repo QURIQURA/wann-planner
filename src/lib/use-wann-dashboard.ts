@@ -227,6 +227,7 @@ export function useWannDashboard(
         group_id: projectId ? null : input.groupId,
         is_critical: input.isCritical,
         is_shopping: input.isShopping,
+        stage: input.stage,
       }).select("id").single();
       if (error) throw error;
       if (input.subitems?.length) await replaceSubitems(created.id, input.subitems);
@@ -271,6 +272,7 @@ export function useWannDashboard(
           group_id: input.projectId ? null : input.groupId,
           is_critical: input.isCritical,
           is_shopping: input.isShopping,
+          stage: input.stage,
           generated_until: generatedUntil,
         })
         .select("id")
@@ -296,6 +298,7 @@ export function useWannDashboard(
         group_id: input.projectId ? null : input.groupId,
         is_critical: input.isCritical,
         is_shopping: input.isShopping,
+        stage: input.stage,
         series_id: series.id,
       }));
       if (rows.length > 0) {
@@ -309,7 +312,7 @@ export function useWannDashboard(
   /** Tops up one series' rolling window once it's running low — called from
    * the effect below, once per loaded series. */
   const topUpTaskSeries = useMutation({
-    mutationFn: async (series: { id: string; title: string; recurrence: string; anchor_date: string; due_time: string | null; end_time: string | null; category_id: string | null; category_ids: string[]; subtag_id: string | null; multiple_task_id: string | null; group_id: string | null; is_critical: boolean; is_shopping: boolean; generated_until: string }) => {
+    mutationFn: async (series: { id: string; title: string; recurrence: string; anchor_date: string; due_time: string | null; end_time: string | null; category_id: string | null; category_ids: string[]; subtag_id: string | null; multiple_task_id: string | null; group_id: string | null; is_critical: boolean; is_shopping: boolean; stage: string | null; generated_until: string }) => {
       const newUntil = formatLocalDate((() => {
         const d = new Date(); d.setDate(d.getDate() + SERIES_WINDOW_DAYS); return d;
       })());
@@ -329,6 +332,7 @@ export function useWannDashboard(
           group_id: series.group_id,
           is_critical: series.is_critical,
           is_shopping: series.is_shopping,
+          stage: series.stage,
           series_id: series.id,
         }));
         const { error } = await supabase.from("planner_tasks").insert(rows);
@@ -376,6 +380,7 @@ export function useWannDashboard(
         group_id: projectId ? null : input.groupId,
         is_critical: input.isCritical,
         is_shopping: input.isShopping,
+        stage: input.stage,
       }).eq("id", id);
       if (error) throw error;
       await replaceSubitems(id, input.subitems ?? []);

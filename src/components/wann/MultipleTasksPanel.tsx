@@ -5,6 +5,7 @@ import { todayLocalStr, taskSortKey, formatDateKo, koDow, shortTime, currentOccu
 import type { Group } from "@/lib/wann-groups";
 import { Plus, Trash2, X, Pencil, ChevronDown, ChevronRight, AlertTriangle } from "lucide-react";
 import type { CategoryFilter } from "./TaskForm";
+import { StageTracker } from "./StageTracker";
 
 
 export type MultipleTaskForm = {
@@ -223,6 +224,11 @@ export function MultipleTasksPanel({
             group && allTasks
               ? allTasks.filter((t) => t.group_id === group.id && !t.multiple_task_id)
               : [];
+          // Stage tracker only makes sense for Projects that belong to a
+          // Group — it reads the Tasks belonging to this Project (not the
+          // lightweight checklist `items`), since that's where the stage
+          // dropdown lives.
+          const projectTasks = group && allTasks ? allTasks.filter((t) => t.multiple_task_id === e.id) : [];
 
           return (
             <div key={e.id} id={`mt-${e.id}`} className="border-b border-border/50 rounded-sm transition-shadow">
@@ -287,6 +293,8 @@ export function MultipleTasksPanel({
                   <div className="h-full bg-foreground" style={{ width: `${pct}%` }} />
                 </div>
               )}
+
+              {group && <StageTracker tasks={projectTasks} />}
 
               {editing && (
                 <div className="mb-2">

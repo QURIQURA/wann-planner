@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import type { Category, MultipleTask, MultipleTaskItem, Subtag, Task } from "@/lib/wann-data";
 import { todayLocalStr, shortTime, formatDateKo } from "@/lib/wann-data";
 import type { Group } from "@/lib/wann-groups";
+import { CAKE_STAGES } from "@/lib/wann-stages";
 import { Plus, Trash2, X, AlertTriangle, ShoppingCart } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { fetchSubitemsForTask, type SubitemDraft } from "@/lib/wann-subitems";
@@ -37,6 +38,10 @@ export type TaskFormValues = {
   /** Marks this Task as a shopping-list item — surfaces it in the Shopping
    * List widget above the Timeline, grouped by due date. */
   isShopping: boolean;
+  /** Explicit weekly-cake production stage tag (see wann-stages.ts) — only
+   * shown/settable when this Task belongs to a Group (directly, or via a
+   * Project that belongs to a Group). Never inferred from dates/titles. */
+  stage: string | null;
 };
 
 export function TaskForm({
@@ -96,6 +101,7 @@ export function TaskForm({
     subitems: [],
     isCritical: false,
     isShopping: false,
+    stage: null,
   });
 
   const [form, setForm] = useState<TaskFormValues>(emptyForm);
@@ -121,6 +127,7 @@ export function TaskForm({
         subitems: [],
         isCritical: editingTask.is_critical ?? false,
         isShopping: editingTask.is_shopping ?? false,
+        stage: editingTask.stage ?? null,
       });
     }
   }, [editingTask]);
@@ -164,6 +171,14 @@ export function TaskForm({
     return items.some((i) => !i.completed);
   });
 
+  /** A Task's production-stage dropdown only makes sense once it's tied to a
+   * Group (directly as a Shared Task, or via a Project that belongs to one)
+   * — the stage tracker is a Group-scoped feature. A new/unsaved Project
+   * can't be checked yet, so it's excluded here. */
+  const stageApplies =
+    !!form.groupId ||
+    (!!form.projectId && !!projects.find((p) => p.id === form.projectId)?.group_id);
+
   const submit = () => {
     if (!form.title.trim()) return;
     if (!form.dueDate) return; // 날짜 없는 항목은 Task가 아니라 Idea — Ideas & Goals에서 추가하세요.
@@ -177,6 +192,7 @@ export function TaskForm({
       newProject: form.newProject
         ? { ...form.newProject, name: form.newProject.name.trim() }
         : null,
+      stage: stageApplies ? form.stage : null,
     };
     if (editingTask) {
       onUpdateTask(editingTask.id, payload);
@@ -353,6 +369,19 @@ export function TaskForm({
             <option value="">그룹 없음</option>
             {groups.map((g) => (
               <option key={g.id} value={g.id}>{g.name}</option>
+            ))}
+          </select>
+        )}
+        {stageApplies && (
+          <select
+            value={form.stage ?? ""}
+            onChange={(e) => setForm({ ...form, stage: e.target.value || null })}
+            title="생산 단계 — 신호등 표시에 사용돼요"
+            className="bg-transparent outline-none text-sm border-b border-border py-1"
+          >
+            <option value="">단계 없음</option>
+            {CAKE_STAGES.map((s) => (
+              <option key={s.key} value={s.key}>{s.label}</option>
             ))}
           </select>
         )}
