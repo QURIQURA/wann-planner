@@ -69,8 +69,13 @@ export function ProductLineCards({
         // active item, so a card always points at something concrete.
         const dated = activeItems.filter((i) => i.date).sort((a, b) => a.date!.localeCompare(b.date!));
         const nextAction = dated[0] ?? activeItems[0] ?? null;
+        // "다음 픽업" is the cycle's final/delivery date, not just whichever
+        // linked date happens to come soonest — an intermediate bake/prep
+        // task dated earlier than the actual Delivery task would otherwise
+        // win here. The group's own latest linked date is the best proxy
+        // for "when does this week's order actually go out."
         const upcomingDates = allDates.filter((d) => d >= today).sort();
-        const nextDate = upcomingDates[0] ?? latestDate;
+        const nextDate = upcomingDates.at(-1) ?? latestDate;
 
         return { g, isDone, latestDate, progress, nextAction, nextDate };
       })
