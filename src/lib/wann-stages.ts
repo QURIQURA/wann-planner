@@ -1,51 +1,44 @@
 /**
- * Weekly cake production workflow — an explicit, ordered list of stages a
- * Task can be tagged with (via a dropdown in TaskForm.tsx, or the compact
- * StageDot picker on a Project's checklist items — see StageTracker.tsx).
+ * Weekly cake production workflow — an ordered, per-user, fully editable
+ * list of stages a Task can be tagged with (via a dropdown in TaskForm.tsx,
+ * or the compact StageDot picker on a Project's checklist items — see
+ * StageTracker.tsx). Managed from Settings > 단계 (see StageSettingsTab in
+ * SettingsPanel.tsx) — add/rename/recolor/reorder/delete, all persisted to
+ * the planner_cake_stages table.
+ *
+ * A Task's `stage` column stores a planner_cake_stages.id (uuid), never a
+ * hardcoded key — so renaming or recoloring a stage never orphans already-
+ * tagged Tasks, and deleting a stage is a real, visible action (Tasks
+ * tagged with it just show "단계 없음" once it's gone).
  *
  * Deliberately NOT inferred from due dates or task titles: some content gets
  * posted later than the cycle it belongs to, and some ingredients get
  * ordered a week ahead, so date order and stage order can diverge. The
  * stage is always a deliberate choice made when the Task is created/edited.
- *
- * Each stage has a fixed colour so its dot in the per-Project "traffic
- * light" row and the dot next to a tagged Task's title always match —
- * scanning the two together shows at a glance which stage a line is and
- * which stages have nothing tagged yet.
  */
-export type StageDef = {
-  key: string;
-  label: string;
-  color: string;
-};
+import { supabase } from "@/integrations/supabase/client";
+import type { Tables } from "@/integrations/supabase/types";
 
-export const CAKE_STAGES: StageDef[] = [
-  { key: "cake_design", label: "케이크 디자인", color: "#F472B6" },
-  { key: "material_order", label: "재료주문", color: "#FB923C" },
-  { key: "material_weigh", label: "재료계량", color: "#FBBF24" },
-  { key: "production", label: "생산", color: "#4ADE80" },
-  { key: "assemble", label: "조립", color: "#34D399" },
-  { key: "decoration", label: "장식/마무리", color: "#22D3EE" },
-  { key: "photo_shoot", label: "촬영", color: "#818CF8" },
-  { key: "delivery", label: "배달", color: "#F87171" },
-  { key: "content_making", label: "콘텐츠 제작", color: "#A78BFA" },
-  { key: "content_release", label: "콘텐츠 업로드", color: "#38BDF8" },
-];
+export type Stage = Tables<"planner_cake_stages">;
 
-export function stageLabel(key: string | null | undefined): string | null {
-  if (!key) return null;
-  return CAKE_STAGES.find((s) => s.key === key)?.label ?? key;
+export async function fetchStages(_userId: string): Promise<Stage[]> {
+  const { data, error } = await supabase
+    .from("planner_cake_stages")
+    .select("*")
+    .order("sort_order", { ascending: true });
+  if (error) throw error;
+  return data ?? [];
 }
 
-export function stageIndex(key: string | null | undefined): number {
-  if (!key) return -1;
-  return CAKE_STAGES.findIndex((s) => s.key === key);
+export function stageLabel(stages: Stage[], id: string | null | undefined): string | null {
+  if (!id) return null;
+  return stages.find((s) => s.id === id)?.label ?? null;
 }
 
-/** Falls back to a neutral grey for an unset/unrecognized stage — callers
- * should generally check for null first (no dot at all) rather than render
- * this, but it keeps color lookups total. */
-export function stageColor(key: string | null | undefined): string {
-  if (!key) return "#9CA3AF";
-  return CAKE_STAGES.find((s) => s.key === key)?.color ?? "#9CA3AF";
+/** Falls back to a neutral grey for an unset/deleted stage — callers should
+ * generally check for null first (no dot at all) rather than render this,
+ * but it keeps color lookups total. */
+export function stageColorOf(stages: Stage[], id: string | null | undefined): string {
+  if (!id) return "#9CA3AF";
+  return stages.find((s) => s.id === id)?.color ?? "#9CA3AF";
 }

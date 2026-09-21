@@ -6,7 +6,8 @@ import type { Group } from "@/lib/wann-groups";
 import { Plus, Trash2, X, Pencil, ChevronDown, ChevronRight, AlertTriangle } from "lucide-react";
 import type { CategoryFilter } from "./TaskForm";
 import { StageTracker, StageDot } from "./StageTracker";
-import { stageColor, stageLabel } from "@/lib/wann-stages";
+import type { Stage } from "@/lib/wann-stages";
+import { stageColorOf, stageLabel } from "@/lib/wann-stages";
 
 
 export type MultipleTaskForm = {
@@ -55,6 +56,7 @@ export function MultipleTasksPanel({
   onEditTask,
   onDeleteTask,
   hideGroupSharedTasks,
+  stages = [],
 }: {
 
   entries: MultipleTask[];
@@ -97,6 +99,9 @@ export function MultipleTasksPanel({
    * Shared Tasks once, as its own section, so repeating them inside every
    * expanded Project would just be a duplicate view. */
   hideGroupSharedTasks?: boolean;
+  /** Editable per-user production stage list (Settings > 단계) — passed down
+   * to the stage tracker/dot picker. Empty until the caller wires it up. */
+  stages?: Stage[];
 }) {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState<MultipleTaskForm>(emptyMultipleTaskForm());
@@ -295,7 +300,7 @@ export function MultipleTasksPanel({
                 </div>
               )}
 
-              {group && <StageTracker tasks={projectTasks} />}
+              {group && <StageTracker stages={stages} tasks={projectTasks} />}
 
               {editing && (
                 <div className="mb-2">
@@ -324,6 +329,7 @@ export function MultipleTasksPanel({
                     <div key={it.id} className="flex items-center gap-2 flex-wrap group/child">
                       {group && (
                         <StageDot
+                          stages={stages}
                           value={it.stage}
                           onChange={(stage) => onUpdateItem(it.id, { stage })}
                         />
@@ -429,6 +435,7 @@ export function MultipleTasksPanel({
                       {onToggleTask && onEditTask && onDeleteTask ? (
                         <SharedTaskList
                           tasks={groupSharedTasks}
+                          stages={stages}
                           editingId={editingTaskId ?? null}
                           onToggle={onToggleTask}
                           onEdit={onEditTask}
@@ -620,12 +627,16 @@ export function MultipleTaskEditor({
  * file's per-Project "Group Shared Tasks" section. */
 export function SharedTaskList({
   tasks,
+  stages = [],
   editingId,
   onToggle,
   onEdit,
   onDelete,
 }: {
   tasks: Task[];
+  /** Editable per-user production stage list — only used to color-match
+   * whichever stage was set on a Task via TaskForm. */
+  stages?: Stage[];
   editingId: string | null;
   onToggle: (t: Task, occurrenceDate: string) => void;
   onEdit: (t: Task) => void;
@@ -652,8 +663,8 @@ export function SharedTaskList({
           {t.stage && (
             <span
               className="h-2.5 w-2.5 rounded-full flex-shrink-0"
-              style={{ background: stageColor(t.stage), border: `1.5px solid ${stageColor(t.stage)}` }}
-              title={`단계: ${stageLabel(t.stage)}`}
+              style={{ background: stageColorOf(stages, t.stage), border: `1.5px solid ${stageColorOf(stages, t.stage)}` }}
+              title={`단계: ${stageLabel(stages, t.stage) ?? t.stage}`}
             />
           )}
           <button
@@ -696,6 +707,7 @@ export const multipleTasksWidget: WidgetDef = {
         categories={ctx.categories}
         subtags={ctx.subtags}
         groups={ctx.groups}
+        stages={ctx.stages}
         allTasks={ctx.tasks}
         editingTaskId={ctx.editingTask?.id ?? null}
         onToggleTask={ctx.taskActions.onToggleTask}

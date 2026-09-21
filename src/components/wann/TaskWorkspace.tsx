@@ -32,6 +32,7 @@ export function TaskWorkspace({ ctx }: { ctx: WidgetContext }) {
         projects={ctx.projects}
         projectItems={ctx.projectItems}
         groups={ctx.groups}
+        stages={ctx.stages}
         filter={filter}
       />
 
@@ -57,6 +58,7 @@ export function TaskWorkspace({ ctx }: { ctx: WidgetContext }) {
             categories={ctx.categories}
             subtags={ctx.subtags}
             groups={ctx.groups}
+            stages={ctx.stages}
             allTasks={ctx.tasks}
             editingTaskId={ctx.editingTask?.id ?? null}
             onToggleTask={ctx.taskActions.onToggleTask}

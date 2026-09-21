@@ -2,7 +2,8 @@ import { useEffect, useRef, useState } from "react";
 import type { Category, MultipleTask, MultipleTaskItem, Subtag, Task } from "@/lib/wann-data";
 import { todayLocalStr, shortTime, formatDateKo } from "@/lib/wann-data";
 import type { Group } from "@/lib/wann-groups";
-import { CAKE_STAGES, stageColor } from "@/lib/wann-stages";
+import type { Stage } from "@/lib/wann-stages";
+import { stageColorOf } from "@/lib/wann-stages";
 import { Plus, Trash2, X, AlertTriangle, ShoppingCart } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { fetchSubitemsForTask, type SubitemDraft } from "@/lib/wann-subitems";
@@ -56,6 +57,7 @@ export function TaskForm({
   projects,
   projectItems,
   groups = [],
+  stages = [],
   forcedGroupId,
   hideProjectField,
   filter,
@@ -78,6 +80,8 @@ export function TaskForm({
   projectItems: MultipleTaskItem[];
   /** Groups a new/edited Task can be assigned to directly as a Shared Task. */
   groups?: Group[];
+  /** Editable per-user production stage list (Settings > 단계). */
+  stages?: Stage[];
   /** Pre-selects (and defaults new tasks to) this Group — used by the "Add
    * Shared Task" flow inside a Group's detail view. */
   forcedGroupId?: string;
@@ -372,13 +376,13 @@ export function TaskForm({
             ))}
           </select>
         )}
-        {stageApplies && (
+        {stageApplies && stages.length > 0 && (
           <label className="flex items-center gap-1.5">
             <span
               className="h-2.5 w-2.5 rounded-full flex-shrink-0"
               style={
                 form.stage
-                  ? { background: stageColor(form.stage), border: `1.5px solid ${stageColor(form.stage)}` }
+                  ? { background: stageColorOf(stages, form.stage), border: `1.5px solid ${stageColorOf(stages, form.stage)}` }
                   : { background: "transparent", border: "1.5px dashed var(--border)" }
               }
             />
@@ -389,8 +393,8 @@ export function TaskForm({
               className="bg-transparent outline-none text-sm border-b border-border py-1"
             >
               <option value="">단계 없음</option>
-              {CAKE_STAGES.map((s) => (
-                <option key={s.key} value={s.key}>{s.label}</option>
+              {stages.map((s) => (
+                <option key={s.id} value={s.id}>{s.label}</option>
               ))}
             </select>
           </label>

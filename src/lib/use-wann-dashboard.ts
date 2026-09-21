@@ -41,6 +41,7 @@ import {
 } from "@/lib/wann-intentions";
 
 import { fetchGroups } from "@/lib/wann-groups";
+import { fetchStages, type Stage } from "@/lib/wann-stages";
 
 import {
   fetchHabits,
@@ -93,6 +94,7 @@ export function useWannDashboard(
   const exceptionsQ = useQuery({ queryKey: ["exceptions", user.id], queryFn: () => fetchExceptions(user.id) });
   const intentionsQ = useQuery({ queryKey: ["intentions", user.id], queryFn: () => fetchIntentions(user.id) });
   const groupsQ = useQuery({ queryKey: ["groups", user.id], queryFn: () => fetchGroups(user.id) });
+  const stagesQ = useQuery({ queryKey: ["cake_stages", user.id], queryFn: () => fetchStages(user.id) });
   const taskSeriesQ = useQuery({ queryKey: ["task_series", user.id], queryFn: () => fetchTaskSeries(user.id) });
 
   const habitRange = useMemo(() => {
@@ -688,6 +690,69 @@ export function useWannDashboard(
     onSuccess: () => { invalidate("groups"); invalidate("multiple_tasks"); invalidate("tasks"); },
   });
 
+  // --- Cake production stages (Settings > 단계) — a per-user, fully
+  // editable, ordered list. A Task's `stage` column stores one of these
+  // rows' id, never a hardcoded key, so renaming/recoloring a stage never
+  // orphans already-tagged Tasks. Deleting a stage leaves tagged Tasks with
+  // a dangling id (shown as "단계 없음" — the stage lookups all treat an
+  // unmatched id as unset), which is deliberate: it's a real, visible
+  // consequence of deleting a stage rather than a silent cascade.
+  const addStage = useMutation({
+    mutationFn: async (v: { label: string; color: string }) => {
+      const nextOrder = (stagesQ.data ?? []).reduce((max, s) => Math.max(max, s.sort_order), -1) + 1;
+      const { error } = await supabase.from("planner_cake_stages").insert({
+        user_id: user.id,
+        label: v.label,
+        color: v.color,
+        sort_order: nextOrder,
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => invalidate("cake_stages"),
+  });
+
+  const updateStage = useMutation({
+    mutationFn: async ({ id, patch }: { id: string; patch: { label?: string; color?: string } }) => {
+      const { error } = await supabase.from("planner_cake_stages").update(patch).eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => invalidate("cake_stages"),
+  });
+
+  const deleteStage = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from("planner_cake_stages").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => invalidate("cake_stages"),
+  });
+
+  const reorderStages = useMutation({
+    mutationFn: async (orderedIds: string[]) => {
+      await Promise.all(
+        orderedIds.map((id, i) =>
+          supabase.from("planner_cake_stages").update({ sort_order: i }).eq("id", id),
+        ),
+      );
+    },
+    onMutate: async (orderedIds) => {
+      await qc.cancelQueries({ queryKey: ["cake_stages", user.id] });
+      const prev = qc.getQueryData<Stage[]>(["cake_stages", user.id]);
+      if (prev) {
+        const rank = new Map(orderedIds.map((id, i) => [id, i]));
+        qc.setQueryData<Stage[]>(
+          ["cake_stages", user.id],
+          [...prev].sort((a, b) => (rank.get(a.id) ?? a.sort_order) - (rank.get(b.id) ?? b.sort_order)),
+        );
+      }
+      return { prev };
+    },
+    onError: (_e, _v, ctx) => {
+      if (ctx?.prev) qc.setQueryData(["cake_stages", user.id], ctx.prev);
+    },
+    onSettled: () => invalidate("cake_stages"),
+  });
+
   // Links/unlinks an EXISTING Project to a Group — a single-column group_id
   // update, same shape as moveProject's targeted date/end_date update. Never
   // touches the Project's name/category/date/tasks, so its id, Tasks,
@@ -1171,6 +1236,7 @@ export function useWannDashboard(
     editingTask,
     intentions: intentionsQ.data ?? [],
     groups: groupsQ.data ?? [],
+    stages: stagesQ.data ?? [],
     taskActions: {
       onCancelEdit: () => setEditingTask(null),
       onAddCategory: (name, color) => addCategory.mutate({ name, color }),
@@ -1242,6 +1308,12 @@ export function useWannDashboard(
         if (t) setEditingTask(t);
       },
     },
+    stageActions: {
+      onAdd: (v) => addStage.mutate(v),
+      onUpdate: (id, patch) => updateStage.mutate({ id, patch }),
+      onDelete: (id) => deleteStage.mutate(id),
+      onReorder: (orderedIds) => reorderStages.mutate(orderedIds),
+    },
   };
 
   return {
@@ -1265,6 +1337,7 @@ export function useWannDashboard(
     exceptionsQ,
     intentionsQ,
     groupsQ,
+    stagesQ,
     taskSeriesQ,
     habitsQ,
     habitCompQ,

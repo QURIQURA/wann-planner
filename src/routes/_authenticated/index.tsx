@@ -684,6 +684,11 @@ function Dashboard() {
           settings={settings}
           onChange={(patch) => settingsMutation.mutate(patch)}
           onClose={() => setSettingsOpen(false)}
+          stages={widgetCtx.stages}
+          onAddStage={widgetCtx.stageActions.onAdd}
+          onUpdateStage={widgetCtx.stageActions.onUpdate}
+          onDeleteStage={widgetCtx.stageActions.onDelete}
+          onReorderStages={widgetCtx.stageActions.onReorder}
         />
       )}
     </div>

@@ -203,6 +203,7 @@ export function GroupsPanel({ ctx }: { ctx: WidgetContext }) {
                       categories={ctx.categories}
                       subtags={ctx.subtags}
                       groups={ctx.groups}
+                      stages={ctx.stages}
                       allTasks={ctx.tasks}
                       editingTaskId={ctx.editingTask?.id ?? null}
                       onToggleTask={ctx.taskActions.onToggleTask}
@@ -352,6 +353,7 @@ export function GroupsPanel({ ctx }: { ctx: WidgetContext }) {
                       projects={ctx.projects}
                       projectItems={ctx.projectItems}
                       groups={ctx.groups}
+                      stages={ctx.stages}
                       forcedGroupId={g.id}
                       hideProjectField
                       filter={{ categoryId: null, subtagId: null }}
@@ -359,6 +361,7 @@ export function GroupsPanel({ ctx }: { ctx: WidgetContext }) {
                     <div className="mt-3">
                       <SharedTaskList
                         tasks={sharedTasks}
+                        stages={ctx.stages}
                         onToggle={ctx.taskActions.onToggleTask}
                         onEdit={ctx.taskActions.onEditTask}
                         onDelete={ctx.taskActions.onDeleteTask}

@@ -1,7 +1,8 @@
 import { useState } from "react";
-import { X, GripVertical } from "lucide-react";
+import { X, GripVertical, Plus, Trash2 } from "lucide-react";
 import type { UserSettings } from "@/lib/wann-data";
 import { orderedWidgets, isWidgetVisible } from "@/lib/widgets";
+import type { Stage } from "@/lib/wann-stages";
 
 const PRESETS = [
   { name: "Stone", bg: "#F5F4F1", border: "#D4D3CE", text: "#1A1A18" },
@@ -22,12 +23,25 @@ export function SettingsPanel({
   settings,
   onChange,
   onClose,
+  stages,
+  onAddStage,
+  onUpdateStage,
+  onDeleteStage,
+  onReorderStages,
 }: {
   settings: UserSettings;
   onChange: (patch: Partial<UserSettings>) => void;
   onClose: () => void;
+  /** Weekly-cake production stage list — Groups' Project traffic-light
+   * tracker reads whatever's here (see StageTracker.tsx). Optional so this
+   * panel still works for a caller that hasn't wired stages up. */
+  stages?: Stage[];
+  onAddStage?: (v: { label: string; color: string }) => void;
+  onUpdateStage?: (id: string, patch: { label?: string; color?: string }) => void;
+  onDeleteStage?: (id: string) => void;
+  onReorderStages?: (orderedIds: string[]) => void;
 }) {
-  const [tab, setTab] = useState<"colors" | "font" | "widgets">("colors");
+  const [tab, setTab] = useState<"colors" | "font" | "widgets" | "stages">("colors");
 
   return (
     <div className="fixed inset-0 z-50 flex justify-end bg-foreground/10">
@@ -38,7 +52,7 @@ export function SettingsPanel({
         </div>
 
         <div className="flex border-b border-border">
-          {(["colors", "font", "widgets"] as const).map((t) => (
+          {(["colors", "font", "widgets", "stages"] as const).map((t) => (
             <button
               key={t}
               onClick={() => setTab(t)}
@@ -100,6 +114,16 @@ export function SettingsPanel({
 
         {tab === "widgets" && <WidgetsTab settings={settings} onChange={onChange} />}
 
+        {tab === "stages" && (
+          <StagesTab
+            stages={stages ?? []}
+            onAdd={onAddStage}
+            onUpdate={onUpdateStage}
+            onDelete={onDeleteStage}
+            onReorder={onReorderStages}
+          />
+        )}
+
       </div>
     </div>
   );
@@ -117,6 +141,134 @@ function ColorRow({ label, value, onChange }: { label: string; value: string; on
           onChange={(e) => onChange(e.target.value)}
           className="flex-1 bg-transparent outline-none text-sm"
         />
+      </div>
+    </div>
+  );
+}
+
+const NEW_STAGE_DEFAULT_COLOR = "#9CA3AF";
+
+/**
+ * Edit the weekly-cake production stage list — add/rename/recolor/reorder/
+ * delete, all persisted to planner_cake_stages. Only Groups' Projects read
+ * this list (see StageTracker.tsx), and a Task's `stage` stores a stage's
+ * id, so renaming or recoloring never orphans a tagged Task. Deleting one
+ * does leave any Tasks tagged with it showing "단계 없음" — a deliberate,
+ * visible consequence rather than a silent cascade.
+ */
+function StagesTab({
+  stages,
+  onAdd,
+  onUpdate,
+  onDelete,
+  onReorder,
+}: {
+  stages: Stage[];
+  onAdd?: (v: { label: string; color: string }) => void;
+  onUpdate?: (id: string, patch: { label?: string; color?: string }) => void;
+  onDelete?: (id: string) => void;
+  onReorder?: (orderedIds: string[]) => void;
+}) {
+  const [newLabel, setNewLabel] = useState("");
+  const [newColor, setNewColor] = useState(NEW_STAGE_DEFAULT_COLOR);
+  const [dragId, setDragId] = useState<string | null>(null);
+  const [overId, setOverId] = useState<string | null>(null);
+
+  const sorted = [...stages].sort((a, b) => a.sort_order - b.sort_order);
+
+  const commitOrder = (fromId: string, toId: string) => {
+    if (fromId === toId || !onReorder) return;
+    const ids = sorted.map((s) => s.id);
+    const from = ids.indexOf(fromId);
+    const to = ids.indexOf(toId);
+    if (from < 0 || to < 0) return;
+    ids.splice(to, 0, ids.splice(from, 1)[0]);
+    onReorder(ids);
+  };
+
+  const submitNew = () => {
+    const label = newLabel.trim();
+    if (!label || !onAdd) return;
+    onAdd({ label, color: newColor });
+    setNewLabel("");
+    setNewColor(NEW_STAGE_DEFAULT_COLOR);
+  };
+
+  return (
+    <div className="p-6 space-y-4">
+      <p className="text-[11px] text-muted-foreground">
+        그룹에 속한 프로젝트의 신호등 단계예요. 순서는 드래그로, 색은 아래에서 바로 바꿀 수 있어요.
+      </p>
+
+      <div className="space-y-2">
+        {sorted.length === 0 && (
+          <p className="text-xs text-muted-foreground italic">아직 단계가 없어요.</p>
+        )}
+        {sorted.map((s) => (
+          <div
+            key={s.id}
+            draggable
+            onDragStart={() => setDragId(s.id)}
+            onDragEnd={() => { setDragId(null); setOverId(null); }}
+            onDragOver={(e) => { e.preventDefault(); setOverId(s.id); }}
+            onDrop={(e) => {
+              e.preventDefault();
+              if (dragId) commitOrder(dragId, s.id);
+              setDragId(null);
+              setOverId(null);
+            }}
+            className={`flex items-center gap-2 border border-border p-2 bg-background ${
+              overId === s.id && dragId && dragId !== s.id ? "border-foreground" : ""
+            } ${dragId === s.id ? "opacity-50" : ""}`}
+          >
+            <GripVertical size={14} className="cursor-grab text-muted-foreground shrink-0" />
+            <input
+              type="color"
+              value={s.color}
+              onChange={(e) => onUpdate?.(s.id, { color: e.target.value })}
+              className="h-6 w-8 cursor-pointer flex-shrink-0"
+              aria-label={`${s.label} 색`}
+            />
+            <input
+              type="text"
+              value={s.label}
+              onChange={(e) => onUpdate?.(s.id, { label: e.target.value })}
+              className="flex-1 min-w-0 bg-transparent outline-none text-sm border-b border-transparent focus:border-border py-0.5"
+            />
+            <button
+              onClick={() => onDelete?.(s.id)}
+              aria-label={`${s.label} 삭제`}
+              title="삭제 — 이 단계로 태그된 Task는 '단계 없음'이 돼요"
+              className="text-muted-foreground hover:text-destructive flex-shrink-0"
+            >
+              <Trash2 size={13} />
+            </button>
+          </div>
+        ))}
+      </div>
+
+      <div className="flex items-center gap-2 border-t border-border pt-3">
+        <input
+          type="color"
+          value={newColor}
+          onChange={(e) => setNewColor(e.target.value)}
+          className="h-7 w-9 cursor-pointer flex-shrink-0"
+          aria-label="새 단계 색"
+        />
+        <input
+          type="text"
+          placeholder="새 단계 이름"
+          value={newLabel}
+          onChange={(e) => setNewLabel(e.target.value)}
+          onKeyDown={(e) => { if (e.key === "Enter" && !e.nativeEvent.isComposing) submitNew(); }}
+          className="flex-1 min-w-0 bg-transparent outline-none text-sm border-b border-border py-1"
+        />
+        <button
+          onClick={submitNew}
+          className="border border-border px-3 py-1 label-caps hover:bg-muted flex items-center gap-1 flex-shrink-0"
+        >
+          <Plus size={12} /> Add
+        </button>
       </div>
     </div>
   );

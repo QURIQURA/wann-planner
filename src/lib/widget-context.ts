@@ -11,6 +11,7 @@ import type {
   Intention,
 } from "@/lib/wann-data";
 import type { Group } from "@/lib/wann-groups";
+import type { Stage } from "@/lib/wann-stages";
 import type { TaskFormValues } from "@/components/wann/TaskForm";
 import type { MultipleTaskForm } from "@/components/wann/MultipleTasksPanel";
 import type { EventForm, EventNoteActions, EventTypeActions } from "@/components/wann/EventsPanel";
@@ -42,6 +43,9 @@ export type WidgetContext = {
   /** Generic context/batch entity above Project (e.g. a cake order made of
    * several Projects, or a "Shared Task" belonging directly to the Group). */
   groups: Group[];
+  /** User-editable weekly-cake production stage list (Settings > 단계) — a
+   * Task's `stage` column stores one of these rows' id. */
+  stages: Stage[];
 
   taskActions: {
     onCancelEdit: () => void;
@@ -97,4 +101,13 @@ export type WidgetContext = {
   };
 
   intentionActions: IntentionActions;
+
+  stageActions: {
+    onAdd: (v: { label: string; color: string }) => void;
+    onUpdate: (id: string, patch: { label?: string; color?: string }) => void;
+    onDelete: (id: string) => void;
+    /** Persists a drag-reorder of the stage list — the full new top-to-
+     * bottom id order. */
+    onReorder: (orderedIds: string[]) => void;
+  };
 };
