@@ -8,6 +8,7 @@ import { groupColor } from "@/lib/wann-groups";
 import { useWannDashboard } from "@/lib/use-wann-dashboard";
 import { WeekRotation } from "@/components/wann/WeekRotation";
 import { ShoppingListWidget } from "@/components/wann/ShoppingListWidget";
+import { ProductLineCards } from "@/components/wann/ProductLineCards";
 import { SettingsPanel } from "@/components/wann/SettingsPanel";
 import { QuickAdd } from "@/components/wann/QuickAdd";
 import { TaskWorkspace } from "@/components/wann/TaskWorkspace";
@@ -292,7 +293,20 @@ function Dashboard() {
               : null;
           };
           const groupsSection = (
-            <section key="groups" className="card-flat p-4">
+            <section key="groups" className="space-y-3">
+              {(groupsQ.data ?? []).some((g) => g.product_line) && (
+                <ProductLineCards
+                  groups={groupsQ.data ?? []}
+                  projects={multipleQ.data ?? []}
+                  projectItems={multipleItemsQ.data ?? []}
+                  tasks={tasksQ.data ?? []}
+                  onOpenGroup={(id) => {
+                    setExpandedGroupId(id);
+                    document.getElementById(`group-${id}`)?.scrollIntoView({ behavior: "smooth", block: "center" });
+                  }}
+                />
+              )}
+              <div className="card-flat p-4">
               <div className="flex items-center justify-between mb-3">
                 <p className="label-caps">Groups</p>
                 <button
@@ -349,7 +363,7 @@ function Dashboard() {
                   const expanded = expandedGroupId === g.id;
                   const color = g.color || groupColor(g.id);
                   return (
-                      <div key={g.id} className="border-b border-border/50">
+                      <div key={g.id} id={`group-${g.id}`} className="border-b border-border/50">
                         <button
                           onClick={() => setExpandedGroupId(expanded ? null : g.id)}
                           className="w-full flex items-center gap-2 py-1 text-left hover:bg-muted"
@@ -551,6 +565,7 @@ function Dashboard() {
                   </div>
                 );
               })()}
+              </div>
             </section>
           );
 

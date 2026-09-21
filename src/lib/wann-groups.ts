@@ -16,6 +16,27 @@ import type { Tables } from "@/integrations/supabase/types";
 
 export type Group = Tables<"planner_groups">;
 
+/**
+ * Fixed product lines for the Dashboard's Product Line cards. Manually
+ * tagged onto a Group via its `product_line` column (see GroupsPanel's
+ * create/edit form) — deliberately not inferred from the name, so
+ * ambiguous/renamed groups don't silently jump lines.
+ */
+export type ProductLine = {
+  key: string;
+  label: string;
+  /** First real week/launch date — used for the countdown before any Group
+   * exists yet for this line. Weekly Surprise Cake is already running, so
+   * it has none. */
+  launchDate: string | null;
+};
+
+export const PRODUCT_LINES: ProductLine[] = [
+  { key: "weekly_cake", label: "Weekly Surprise Cake", launchDate: null },
+  { key: "chiffon", label: "딸기·카카오 시폰 케이크", launchDate: "2026-11-14" },
+  { key: "confectionery", label: "컨펙셔너리 박스", launchDate: "2026-12-12" },
+];
+
 export async function fetchGroups(_userId: string): Promise<Group[]> {
   const { data, error } = await supabase
     .from("planner_groups")

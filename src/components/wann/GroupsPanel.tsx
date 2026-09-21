@@ -5,7 +5,7 @@ import { Plus, Trash2, X, Pencil, ChevronDown, ChevronRight } from "lucide-react
 import { MultipleTasksPanel, MultipleTaskEditor, emptyMultipleTaskForm, SharedTaskList } from "./MultipleTasksPanel";
 import { TaskForm } from "./TaskForm";
 import type { WidgetContext } from "@/lib/widget-context";
-import { groupColor, GROUP_COLOR_PALETTE } from "@/lib/wann-groups";
+import { groupColor, GROUP_COLOR_PALETTE, PRODUCT_LINES } from "@/lib/wann-groups";
 
 /**
  * Group = a generic context/batch entity above Project (e.g. a cake order
@@ -18,9 +18,9 @@ import { groupColor, GROUP_COLOR_PALETTE } from "@/lib/wann-groups";
  */
 export function GroupsPanel({ ctx }: { ctx: WidgetContext }) {
   const [creating, setCreating] = useState(false);
-  const [form, setForm] = useState<{ name: string; notes: string | null; color: string | null }>({ name: "", notes: null, color: null });
+  const [form, setForm] = useState<{ name: string; notes: string | null; color: string | null; productLine: string | null }>({ name: "", notes: null, color: null, productLine: null });
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [editForm, setEditForm] = useState<{ name: string; notes: string | null; color: string | null }>({ name: "", notes: null, color: null });
+  const [editForm, setEditForm] = useState<{ name: string; notes: string | null; color: string | null; productLine: string | null }>({ name: "", notes: null, color: null, productLine: null });
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [addingProjectFor, setAddingProjectFor] = useState<string | null>(null);
   const [projectForm, setProjectForm] = useState(emptyMultipleTaskForm());
@@ -30,7 +30,7 @@ export function GroupsPanel({ ctx }: { ctx: WidgetContext }) {
 
   const startEdit = (g: Group) => {
     setEditingId(g.id);
-    setEditForm({ name: g.name, notes: g.notes, color: g.color ?? null });
+    setEditForm({ name: g.name, notes: g.notes, color: g.color ?? null, productLine: g.product_line ?? null });
   };
 
   return (
@@ -64,9 +64,10 @@ export function GroupsPanel({ ctx }: { ctx: WidgetContext }) {
             className="w-full bg-transparent outline-none text-sm border-b border-border py-1"
           />
           <GroupColorPicker value={form.color} onChange={(c) => setForm({ ...form, color: c })} />
+          <ProductLinePicker value={form.productLine} onChange={(v) => setForm({ ...form, productLine: v })} />
           <div className="flex justify-end gap-2">
             <button
-              onClick={() => { setCreating(false); setForm({ name: "", notes: null, color: null }); }}
+              onClick={() => { setCreating(false); setForm({ name: "", notes: null, color: null, productLine: null }); }}
               className="hover:text-destructive"
               aria-label="Cancel"
             >
@@ -76,8 +77,8 @@ export function GroupsPanel({ ctx }: { ctx: WidgetContext }) {
               onClick={() => {
                 const name = form.name.trim();
                 if (!name) return;
-                ctx.groupActions.onAdd({ name, notes: form.notes, color: form.color });
-                setForm({ name: "", notes: null, color: null });
+                ctx.groupActions.onAdd({ name, notes: form.notes, color: form.color, productLine: form.productLine });
+                setForm({ name: "", notes: null, color: null, productLine: null });
                 setCreating(false);
               }}
               className="border border-border px-3 py-1 label-caps hover:bg-muted flex items-center gap-1"
@@ -118,6 +119,11 @@ export function GroupsPanel({ ctx }: { ctx: WidgetContext }) {
                 >
                   {g.name}
                 </button>
+                {g.product_line && (
+                  <span className="text-[9px] label-caps border border-border rounded-full px-1.5 py-0.5 text-muted-foreground whitespace-nowrap">
+                    {PRODUCT_LINES.find((l) => l.key === g.product_line)?.label ?? g.product_line}
+                  </span>
+                )}
                 <span className="text-[10px] text-muted-foreground whitespace-nowrap">
                   {groupProjects.length} Projects · {sharedTasks.length} Shared Tasks
                 </span>
@@ -154,6 +160,7 @@ export function GroupsPanel({ ctx }: { ctx: WidgetContext }) {
                     className="w-full bg-transparent outline-none text-sm border-b border-border py-1"
                   />
                   <GroupColorPicker value={editForm.color} onChange={(c) => setEditForm({ ...editForm, color: c })} />
+                  <ProductLinePicker value={editForm.productLine} onChange={(v) => setEditForm({ ...editForm, productLine: v })} />
                   <div className="flex justify-end gap-2">
                     <button onClick={() => setEditingId(null)} className="hover:text-destructive" aria-label="Cancel">
                       <X size={12} />
@@ -162,7 +169,7 @@ export function GroupsPanel({ ctx }: { ctx: WidgetContext }) {
                       onClick={() => {
                         const name = editForm.name.trim();
                         if (!name) return;
-                        ctx.groupActions.onUpdate(g.id, { name, notes: editForm.notes, color: editForm.color });
+                        ctx.groupActions.onUpdate(g.id, { name, notes: editForm.notes, color: editForm.color, productLine: editForm.productLine });
                         setEditingId(null);
                       }}
                       className="border border-border px-3 py-1 label-caps hover:bg-muted"
@@ -401,6 +408,24 @@ function GroupColorPicker({ value, onChange }: { value: string | null; onChange:
           title="Custom color"
         />
       </div>
+    </div>
+  );
+}
+
+function ProductLinePicker({ value, onChange }: { value: string | null; onChange: (v: string | null) => void }) {
+  return (
+    <div>
+      <p className="label-caps text-[10px] text-muted-foreground mb-1">Product Line (optional)</p>
+      <select
+        value={value ?? ""}
+        onChange={(e) => onChange(e.target.value || null)}
+        className="w-full bg-transparent outline-none text-sm border-b border-border py-1"
+      >
+        <option value="">—</option>
+        {PRODUCT_LINES.map((l) => (
+          <option key={l.key} value={l.key}>{l.label}</option>
+        ))}
+      </select>
     </div>
   );
 }

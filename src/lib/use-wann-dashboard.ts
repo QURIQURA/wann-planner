@@ -647,12 +647,13 @@ export function useWannDashboard(
   // NULL) but CASCADE-deletes its direct Shared Tasks (ON DELETE CASCADE),
   // matching the existing multiple_task_id CASCADE precedent. */
   const addGroup = useMutation({
-    mutationFn: async (v: { name: string; notes: string | null; color?: string | null }) => {
+    mutationFn: async (v: { name: string; notes: string | null; color?: string | null; productLine?: string | null }) => {
       const { error } = await supabase.from("planner_groups").insert({
         user_id: user.id,
         name: v.name,
         notes: v.notes,
         color: v.color ?? null,
+        product_line: v.productLine ?? null,
       });
       if (error) throw error;
     },
@@ -660,11 +661,12 @@ export function useWannDashboard(
   });
 
   const updateGroup = useMutation({
-    mutationFn: async ({ id, patch }: { id: string; patch: { name: string; notes: string | null; color?: string | null } }) => {
+    mutationFn: async ({ id, patch }: { id: string; patch: { name: string; notes: string | null; color?: string | null; productLine?: string | null } }) => {
       const { error } = await supabase.from("planner_groups").update({
         name: patch.name,
         notes: patch.notes,
         color: patch.color ?? null,
+        product_line: patch.productLine ?? null,
       }).eq("id", id);
       if (error) throw error;
     },
