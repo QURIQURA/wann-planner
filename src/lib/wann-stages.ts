@@ -16,6 +16,7 @@ export type StageDef = {
 };
 
 export const CAKE_STAGES: StageDef[] = [
+  { key: "cake_design", label: "케이크 디자인" },
   { key: "material_order", label: "재료주문" },
   { key: "material_weigh", label: "재료계량" },
   { key: "production", label: "생산" },
