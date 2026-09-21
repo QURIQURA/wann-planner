@@ -44,6 +44,9 @@ function Dashboard() {
   const [reviewPromptDismissed, setReviewPromptDismissed] = useState(false);
   const [expandedGroupId, setExpandedGroupId] = useState<string | null>(null);
   const [quickSharedTaskInput, setQuickSharedTaskInput] = useState<Record<string, string>>({});
+  const [addingExistingProjectFor, setAddingExistingProjectFor] = useState<string | null>(null);
+  const [existingCategoryFilter, setExistingCategoryFilter] = useState("");
+  const [existingProjectId, setExistingProjectId] = useState("");
 
   const {
     anchor,
@@ -439,6 +442,87 @@ function Dashboard() {
                                           </button>
                                         );
                                       })
+                                    )}
+
+                                    {addingExistingProjectFor === g.id ? (
+                                      <div className="mt-2 space-y-1.5 border-t border-dashed pt-2" style={{ borderColor: color }}>
+                                        <select
+                                          value={existingCategoryFilter}
+                                          onChange={(e) => {
+                                            setExistingCategoryFilter(e.target.value);
+                                            setExistingProjectId("");
+                                          }}
+                                          className="w-full bg-transparent outline-none text-[11px] border-b border-border py-1"
+                                        >
+                                          <option value="">전체 카테고리</option>
+                                          <option value="uncategorized">미분류</option>
+                                          {widgetCtx.categories.map((c) => (
+                                            <option key={c.id} value={c.id}>{c.name}</option>
+                                          ))}
+                                        </select>
+                                        <select
+                                          value={existingProjectId}
+                                          onChange={(e) => setExistingProjectId(e.target.value)}
+                                          className="w-full bg-transparent outline-none text-[11px] border-b border-border py-1"
+                                        >
+                                          <option value="">Project 선택…</option>
+                                          {(multipleQ.data ?? [])
+                                            .filter((p) => {
+                                              if (p.group_id === g.id) return false;
+                                              if (existingCategoryFilter === "uncategorized") return p.category_id === null;
+                                              if (existingCategoryFilter) return p.category_id === existingCategoryFilter;
+                                              return true;
+                                            })
+                                            .map((p) => {
+                                              const inOtherGroup = p.group_id != null && p.group_id !== g.id;
+                                              const otherGroupName = inOtherGroup
+                                                ? (groupsQ.data ?? []).find((x) => x.id === p.group_id)?.name
+                                                : null;
+                                              return (
+                                                <option key={p.id} value={p.id} disabled={inOtherGroup}>
+                                                  {p.name}
+                                                  {inOtherGroup ? ` (${otherGroupName ?? "다른 그룹"}에 있음)` : ""}
+                                                </option>
+                                              );
+                                            })}
+                                        </select>
+                                        <div className="flex justify-end gap-2">
+                                          <button
+                                            onClick={() => {
+                                              setAddingExistingProjectFor(null);
+                                              setExistingCategoryFilter("");
+                                              setExistingProjectId("");
+                                            }}
+                                            className="text-[10px] label-caps border border-border px-2 py-1 hover:bg-muted"
+                                          >
+                                            취소
+                                          </button>
+                                          <button
+                                            onClick={() => {
+                                              if (!existingProjectId) return;
+                                              widgetCtx.groupActions.onAddExistingProjectToGroup(existingProjectId, g.id);
+                                              setAddingExistingProjectFor(null);
+                                              setExistingCategoryFilter("");
+                                              setExistingProjectId("");
+                                            }}
+                                            disabled={!existingProjectId}
+                                            className="text-[10px] label-caps border border-border px-2 py-1 hover:bg-muted disabled:opacity-40"
+                                          >
+                                            추가
+                                          </button>
+                                        </div>
+                                      </div>
+                                    ) : (
+                                      <button
+                                        onClick={() => {
+                                          setAddingExistingProjectFor(g.id);
+                                          setExistingCategoryFilter("");
+                                          setExistingProjectId("");
+                                        }}
+                                        className="mt-1 w-full flex items-center gap-1.5 text-[11px] text-muted-foreground hover:text-foreground border border-dashed border-border px-2 py-1"
+                                      >
+                                        <Plus size={11} /> 기존 Project 추가
+                                      </button>
                                     )}
                                   </>
                                 )}
