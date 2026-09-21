@@ -70,7 +70,7 @@ export type WidgetContext = {
     onUpdate: (id: string, patch: MultipleTaskForm) => void;
     onDelete: (id: string) => void;
     onAddItem: (parentId: string, title: string, date: string | null, time: string | null) => void;
-    onUpdateItem: (id: string, patch: { title?: string; date?: string | null; time?: string | null }) => void;
+    onUpdateItem: (id: string, patch: { title?: string; date?: string | null; time?: string | null; stage?: string | null }) => void;
     onToggleItem: (item: MultipleTaskItem) => void;
     onDeleteItem: (id: string) => void;
   };

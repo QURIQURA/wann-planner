@@ -736,16 +736,18 @@ export function useWannDashboard(
       title,
       date,
       time,
-    }: { id: string; title?: string; date?: string | null; time?: string | null }) => {
-      const patch: { title?: string; due_date?: string | null; due_time?: string | null } = {};
+      stage,
+    }: { id: string; title?: string; date?: string | null; time?: string | null; stage?: string | null }) => {
+      const patch: { title?: string; due_date?: string | null; due_time?: string | null; stage?: string | null } = {};
       if (title !== undefined) patch.title = title;
       if (date !== undefined) patch.due_date = date;
       if (time !== undefined) patch.due_time = time;
+      if (stage !== undefined) patch.stage = stage;
       const { error } = await supabase.from("planner_tasks").update(patch).eq("id", id);
 
       if (error) throw error;
     },
-    onMutate: async ({ id, title, date, time }) => {
+    onMutate: async ({ id, title, date, time, stage }) => {
       await qc.cancelQueries({ queryKey: ["multiple_task_items", user.id] });
       await qc.cancelQueries({ queryKey: ["tasks", user.id] });
       const prevItems = qc.getQueryData<Task[]>(["multiple_task_items", user.id]);
@@ -757,6 +759,7 @@ export function useWannDashboard(
               ...(title !== undefined ? { title } : {}),
               ...(date !== undefined ? { due_date: date } : {}),
               ...(time !== undefined ? { due_time: time } : {}),
+              ...(stage !== undefined ? { stage } : {}),
             }
           : t;
       if (prevItems) qc.setQueryData<Task[]>(["multiple_task_items", user.id], prevItems.map(apply));

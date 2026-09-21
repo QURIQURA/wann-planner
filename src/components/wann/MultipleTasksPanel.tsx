@@ -5,7 +5,8 @@ import { todayLocalStr, taskSortKey, formatDateKo, koDow, shortTime, currentOccu
 import type { Group } from "@/lib/wann-groups";
 import { Plus, Trash2, X, Pencil, ChevronDown, ChevronRight, AlertTriangle } from "lucide-react";
 import type { CategoryFilter } from "./TaskForm";
-import { StageTracker } from "./StageTracker";
+import { StageTracker, StageDot } from "./StageTracker";
+import { stageColor, stageLabel } from "@/lib/wann-stages";
 
 
 export type MultipleTaskForm = {
@@ -70,7 +71,7 @@ export function MultipleTasksPanel({
    * filtered Project list, where onDelete is wired to unlink instead). */
   deleteLabel?: string;
   onAddItem: (parentId: string, title: string, date: string | null, time: string | null) => void;
-  onUpdateItem: (id: string, patch: { title?: string; date?: string | null; time?: string | null }) => void;
+  onUpdateItem: (id: string, patch: { title?: string; date?: string | null; time?: string | null; stage?: string | null }) => void;
   onToggleItem: (item: MultipleTaskItem) => void;
 
   onDeleteItem: (id: string) => void;
@@ -321,6 +322,12 @@ export function MultipleTasksPanel({
                   )}
                   {children.map((it) => (
                     <div key={it.id} className="flex items-center gap-2 flex-wrap group/child">
+                      {group && (
+                        <StageDot
+                          value={it.stage}
+                          onChange={(stage) => onUpdateItem(it.id, { stage })}
+                        />
+                      )}
                       <button
                         onClick={() => onToggleItem(it)}
                         aria-label="Toggle"
@@ -642,6 +649,13 @@ export function SharedTaskList({
             aria-label="Toggle"
             className={`h-3 w-3 border border-border flex-shrink-0 ${t.completed ? "bg-foreground" : ""}`}
           />
+          {t.stage && (
+            <span
+              className="h-2.5 w-2.5 rounded-full flex-shrink-0"
+              style={{ background: stageColor(t.stage), border: `1.5px solid ${stageColor(t.stage)}` }}
+              title={`단계: ${stageLabel(t.stage)}`}
+            />
+          )}
           <button
             onClick={() => onEdit(t)}
             className={`text-sm flex-1 min-w-[6rem] text-left truncate hover:underline ${t.completed ? "line-through text-muted-foreground" : overdue ? "text-destructive font-medium" : ""}`}

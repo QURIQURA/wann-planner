@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import type { Category, MultipleTask, MultipleTaskItem, Subtag, Task } from "@/lib/wann-data";
 import { todayLocalStr, shortTime, formatDateKo } from "@/lib/wann-data";
 import type { Group } from "@/lib/wann-groups";
-import { CAKE_STAGES } from "@/lib/wann-stages";
+import { CAKE_STAGES, stageColor } from "@/lib/wann-stages";
 import { Plus, Trash2, X, AlertTriangle, ShoppingCart } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { fetchSubitemsForTask, type SubitemDraft } from "@/lib/wann-subitems";
@@ -373,17 +373,27 @@ export function TaskForm({
           </select>
         )}
         {stageApplies && (
-          <select
-            value={form.stage ?? ""}
-            onChange={(e) => setForm({ ...form, stage: e.target.value || null })}
-            title="생산 단계 — 신호등 표시에 사용돼요"
-            className="bg-transparent outline-none text-sm border-b border-border py-1"
-          >
-            <option value="">단계 없음</option>
-            {CAKE_STAGES.map((s) => (
-              <option key={s.key} value={s.key}>{s.label}</option>
-            ))}
-          </select>
+          <label className="flex items-center gap-1.5">
+            <span
+              className="h-2.5 w-2.5 rounded-full flex-shrink-0"
+              style={
+                form.stage
+                  ? { background: stageColor(form.stage), border: `1.5px solid ${stageColor(form.stage)}` }
+                  : { background: "transparent", border: "1.5px dashed var(--border)" }
+              }
+            />
+            <select
+              value={form.stage ?? ""}
+              onChange={(e) => setForm({ ...form, stage: e.target.value || null })}
+              title="생산 단계 — 신호등 표시에 사용돼요"
+              className="bg-transparent outline-none text-sm border-b border-border py-1"
+            >
+              <option value="">단계 없음</option>
+              {CAKE_STAGES.map((s) => (
+                <option key={s.key} value={s.key}>{s.label}</option>
+              ))}
+            </select>
+          </label>
         )}
         <label
           className={`flex items-center gap-1 text-[10px] label-caps ${form.isCritical ? "text-foreground" : "text-muted-foreground"}`}
