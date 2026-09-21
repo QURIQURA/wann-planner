@@ -3,7 +3,7 @@ import { useState } from "react";
 import { Settings as SettingsIcon, LogOut, BookOpen, LineChart, CalendarDays, LayoutGrid, ChevronDown, ChevronRight } from "lucide-react";
 
 import { supabase } from "@/integrations/supabase/client";
-import { isDPlusEvent, dPlusLabel, todayLocalStr, formatLocalDate } from "@/lib/wann-data";
+import { isDPlusEvent, dPlusLabel, todayLocalStr, formatLocalDate, projectSpan } from "@/lib/wann-data";
 import { groupColor } from "@/lib/wann-groups";
 import { useWannDashboard } from "@/lib/use-wann-dashboard";
 import { WeekRotation } from "@/components/wann/WeekRotation";
@@ -307,13 +307,15 @@ function Dashboard() {
                   여러 Project에 걸친 묶음(예: 케이크 주문, 여행)이 필요할 때 추가하세요.
                 </p>
               ) : (() => {
-                // Newest-created Group first; a Group whose Projects and Shared
-                // Tasks are all done (and has at least one of either) moves into
-                // its own collapsed "완료됨" section, same pattern as the
-                // Projects/Tasks completed dropdowns elsewhere on this page.
+                // Most-recent-by-actual-schedule Group first — the latest date
+                // among its Projects/Shared Tasks (not raw created_at, which
+                // just reflects click order and can invert the real week
+                // sequence). A dateless Group falls back to created_at so it
+                // still sorts somewhere sensible. A Group whose Projects and
+                // Shared Tasks are all done (and has at least one of either)
+                // moves into its own collapsed "완료됨" section, same pattern
+                // as the Projects/Tasks completed dropdowns elsewhere here.
                 const groupRows = (groupsQ.data ?? [])
-                  .slice()
-                  .sort((a, b) => (b.created_at ?? "").localeCompare(a.created_at ?? ""))
                   .map((g) => {
                     const allGroupProjects = (multipleQ.data ?? []).filter((p) => p.group_id === g.id);
                     const activeProjects = allGroupProjects.filter((p) => pctOfProject(p) !== 100);
@@ -325,7 +327,18 @@ function Dashboard() {
                     const doneSharedTasks = allSharedTasks.filter((t) => t.completed);
                     const hasAny = allGroupProjects.length > 0 || allSharedTasks.length > 0;
                     const isGroupDone = hasAny && activeProjects.length === 0 && activeSharedTasks.length === 0;
-                    return { g, allGroupProjects, activeProjects, doneProjects, allSharedTasks, activeSharedTasks, doneSharedTasks, isGroupDone };
+                    const projectDates = allGroupProjects
+                      .map((p) => projectSpan(p)?.end ?? null)
+                      .filter((d): d is string => !!d);
+                    const taskDates = allSharedTasks.map((t) => t.due_date).filter((d): d is string => !!d);
+                    const latestDate = [...projectDates, ...taskDates].sort().at(-1) ?? null;
+                    return { g, allGroupProjects, activeProjects, doneProjects, allSharedTasks, activeSharedTasks, doneSharedTasks, isGroupDone, latestDate };
+                  })
+                  .sort((a, b) => {
+                    const da = a.latestDate ?? "0000-00-00";
+                    const db = b.latestDate ?? "0000-00-00";
+                    if (da !== db) return db.localeCompare(da);
+                    return (b.g.created_at ?? "").localeCompare(a.g.created_at ?? "");
                   });
                 const activeGroupRows = groupRows.filter((r) => !r.isGroupDone);
                 const doneGroupRows = groupRows.filter((r) => r.isGroupDone);
