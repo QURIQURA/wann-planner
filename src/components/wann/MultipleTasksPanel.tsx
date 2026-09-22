@@ -3,7 +3,7 @@ import { useState } from "react";
 import type { Category, MultipleTask, MultipleTaskItem, Subtag, Task } from "@/lib/wann-data";
 import { todayLocalStr, taskSortKey, formatDateKo, koDow, shortTime, currentOccurrenceDate, isOccurrenceOverdue, hexToRgba } from "@/lib/wann-data";
 import type { Group } from "@/lib/wann-groups";
-import { Plus, Trash2, X, Pencil, ChevronDown, ChevronRight, AlertTriangle, Link2 } from "lucide-react";
+import { Plus, Trash2, X, Pencil, ChevronDown, ChevronRight, AlertTriangle, Link2, Check } from "lucide-react";
 import type { CategoryFilter } from "./TaskForm";
 import { StageTracker, StageDot } from "./StageTracker";
 import type { Stage } from "@/lib/wann-stages";
@@ -73,7 +73,7 @@ export function MultipleTasksPanel({
    * filtered Project list, where onDelete is wired to unlink instead). */
   deleteLabel?: string;
   onAddItem: (parentId: string, title: string, date: string | null, time: string | null) => void;
-  onUpdateItem: (id: string, patch: { title?: string; date?: string | null; time?: string | null; stage?: string | null }) => void;
+  onUpdateItem: (id: string, patch: { title?: string; date?: string | null; time?: string | null; stage?: string | null; link?: string | null }) => void;
   onToggleItem: (item: MultipleTaskItem) => void;
 
   onDeleteItem: (id: string) => void;
@@ -114,6 +114,12 @@ export function MultipleTasksPanel({
 
   const [editingItemId, setEditingItemId] = useState<string | null>(null);
   const [editingItemTitle, setEditingItemTitle] = useState("");
+  /** Separate edit mode for a linked item's title+link, opened via its Edit
+   * (pencil) button — kept apart from editingItemId/editingItemTitle since a
+   * linked item's title renders as a live <a>, not a click-to-edit button. */
+  const [editingLinkId, setEditingLinkId] = useState<string | null>(null);
+  const [editingLinkTitle, setEditingLinkTitle] = useState("");
+  const [editingLinkUrl, setEditingLinkUrl] = useState("");
   const [localFilter, setLocalFilter] = useState<CategoryFilter>({
     categoryId: null,
     subtagId: null,
@@ -134,6 +140,18 @@ export function MultipleTasksPanel({
     });
   };
 
+
+  /** Commits the pencil-triggered name+link edit — only sends the fields
+   * that actually changed. */
+  const saveLinkEdit = (it: MultipleTaskItem) => {
+    const patch: { title?: string; link?: string | null } = {};
+    const trimmedTitle = editingLinkTitle.trim();
+    if (trimmedTitle && trimmedTitle !== it.title) patch.title = trimmedTitle;
+    const trimmedUrl = editingLinkUrl.trim();
+    if (trimmedUrl !== (it.link_url ?? "")) patch.link = trimmedUrl || null;
+    if (Object.keys(patch).length > 0) onUpdateItem(it.id, patch);
+    setEditingLinkId(null);
+  };
 
   const filterSubtags = filter.categoryId
     ? subtags.filter((s) => s.category_id === filter.categoryId)
@@ -359,19 +377,58 @@ export function MultipleTasksPanel({
                           }}
                           className="flex-1 min-w-[6rem] bg-transparent outline-none border-b border-border py-0.5 text-sm"
                         />
+                      ) : editingLinkId === it.id ? (
+                        // Full edit — name + link together — opened via the
+                        // Edit (pencil) button. Kept separate from the plain
+                        // rename input above since it needs two fields.
+                        <div className="flex-1 flex items-center gap-1 min-w-[10rem] flex-wrap">
+                          <input
+                            autoFocus
+                            value={editingLinkTitle}
+                            placeholder="이름"
+                            onChange={(ev) => setEditingLinkTitle(ev.target.value)}
+                            onKeyDown={(ev) => {
+                              if (ev.key === "Enter") saveLinkEdit(it);
+                              if (ev.key === "Escape") setEditingLinkId(null);
+                            }}
+                            className="flex-1 min-w-[5rem] bg-transparent outline-none border-b border-border py-0.5 text-sm"
+                          />
+                          <input
+                            type="url"
+                            value={editingLinkUrl}
+                            placeholder="링크 (선택)"
+                            onChange={(ev) => setEditingLinkUrl(ev.target.value)}
+                            onKeyDown={(ev) => {
+                              if (ev.key === "Enter") saveLinkEdit(it);
+                              if (ev.key === "Escape") setEditingLinkId(null);
+                            }}
+                            className="flex-1 min-w-[7rem] bg-transparent outline-none border-b border-border py-0.5 text-xs text-muted-foreground"
+                          />
+                          <button
+                            onClick={() => saveLinkEdit(it)}
+                            aria-label="Save"
+                            className="hover:text-foreground flex-shrink-0"
+                          >
+                            <Check size={12} />
+                          </button>
+                          <button
+                            onClick={() => setEditingLinkId(null)}
+                            aria-label="Cancel"
+                            className="hover:text-destructive flex-shrink-0"
+                          >
+                            <X size={12} />
+                          </button>
+                        </div>
                       ) : it.link_url ? (
                         // A linked item (e.g. a Figma moodboard) shows its
-                        // title as an actual hyperlink — clicking opens the
-                        // link directly; double-click still renames it.
+                        // title as an actual hyperlink — clicking opens it
+                        // directly; use the Edit button to rename or change
+                        // the link (a second click handler here would open
+                        // the link twice).
                         <a
                           href={it.link_url}
                           target="_blank"
                           rel="noopener noreferrer"
-                          onDoubleClick={(ev) => {
-                            ev.preventDefault();
-                            setEditingItemId(it.id);
-                            setEditingItemTitle(it.title);
-                          }}
                           title={it.link_url}
                           className={`text-sm flex-1 min-w-[6rem] truncate text-blue-600 dark:text-blue-400 underline decoration-blue-600/50 dark:decoration-blue-400/50 hover:text-blue-700 dark:hover:text-blue-300 ${it.completed ? "line-through opacity-60" : ""}`}
                         >
@@ -385,7 +442,7 @@ export function MultipleTasksPanel({
                           {it.title}
                         </button>
                       )}
-                      {!it.link_url && (
+                      {!it.link_url && editingLinkId !== it.id && (
                         <>
                           <input
                             type="date"
@@ -405,6 +462,20 @@ export function MultipleTasksPanel({
                             className="bg-transparent border-b border-border text-[10px] text-muted-foreground w-[64px]"
                           />
                         </>
+                      )}
+                      {editingLinkId !== it.id && (
+                        <button
+                          onClick={() => {
+                            setEditingLinkId(it.id);
+                            setEditingLinkTitle(it.title);
+                            setEditingLinkUrl(it.link_url ?? "");
+                          }}
+                          aria-label="Edit"
+                          title="이름/링크 수정"
+                          className="opacity-0 group-hover/child:opacity-100 hover:text-foreground flex-shrink-0"
+                        >
+                          <Pencil size={11} />
+                        </button>
                       )}
                       <button
                         onClick={() => onDeleteItem(it.id)}

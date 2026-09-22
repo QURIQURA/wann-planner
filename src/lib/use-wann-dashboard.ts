@@ -812,12 +812,14 @@ export function useWannDashboard(
       date,
       time,
       stage,
-    }: { id: string; title?: string; date?: string | null; time?: string | null; stage?: string | null }) => {
-      const patch: { title?: string; due_date?: string | null; due_time?: string | null; stage?: string | null } = {};
+      link,
+    }: { id: string; title?: string; date?: string | null; time?: string | null; stage?: string | null; link?: string | null }) => {
+      const patch: { title?: string; due_date?: string | null; due_time?: string | null; stage?: string | null; link_url?: string | null } = {};
       if (title !== undefined) patch.title = title;
       if (date !== undefined) patch.due_date = date;
       if (time !== undefined) patch.due_time = time;
       if (stage !== undefined) patch.stage = stage;
+      if (link !== undefined) patch.link_url = link;
       const { error } = await supabase.from("planner_tasks").update(patch).eq("id", id);
 
       if (error) throw error;
