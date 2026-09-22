@@ -216,6 +216,10 @@ export function MultipleTasksPanel({
             .filter((i) => i.multiple_task_id === e.id)
             .slice()
             .sort((a, b) => {
+              // Linked items (moodboard/reference links) always pin to the
+              // top of the checklist, ahead of date-sorted items.
+              const linkRank = (b.link_url ? 1 : 0) - (a.link_url ? 1 : 0);
+              if (linkRank !== 0) return linkRank;
               const k = taskSortKey(a).localeCompare(taskSortKey(b));
               return k !== 0 ? k : a.title.localeCompare(b.title);
             });
@@ -355,6 +359,24 @@ export function MultipleTasksPanel({
                           }}
                           className="flex-1 min-w-[6rem] bg-transparent outline-none border-b border-border py-0.5 text-sm"
                         />
+                      ) : it.link_url ? (
+                        // A linked item (e.g. a Figma moodboard) shows its
+                        // title as an actual hyperlink — clicking opens the
+                        // link directly; double-click still renames it.
+                        <a
+                          href={it.link_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          onDoubleClick={(ev) => {
+                            ev.preventDefault();
+                            setEditingItemId(it.id);
+                            setEditingItemTitle(it.title);
+                          }}
+                          title={it.link_url}
+                          className={`text-sm flex-1 min-w-[6rem] truncate text-blue-600 dark:text-blue-400 underline decoration-blue-600/50 dark:decoration-blue-400/50 hover:text-blue-700 dark:hover:text-blue-300 ${it.completed ? "line-through opacity-60" : ""}`}
+                        >
+                          {it.title}
+                        </a>
                       ) : (
                         <button
                           onClick={() => { setEditingItemId(it.id); setEditingItemTitle(it.title); }}
@@ -363,35 +385,27 @@ export function MultipleTasksPanel({
                           {it.title}
                         </button>
                       )}
-                      {it.link_url && (
-                        <a
-                          href={it.link_url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          onClick={(ev) => ev.stopPropagation()}
-                          title={it.link_url}
-                          className="text-muted-foreground hover:text-foreground flex-shrink-0"
-                        >
-                          <Link2 size={11} />
-                        </a>
+                      {!it.link_url && (
+                        <>
+                          <input
+                            type="date"
+                            value={it.due_date ?? ""}
+                            onChange={(ev) => onUpdateItem(it.id, { date: ev.target.value || null })}
+                            aria-label="Item date"
+                            className="bg-transparent border-b border-border text-[10px] text-muted-foreground w-[92px]"
+                          />
+                          {it.due_date && (
+                            <span className="text-[10px] text-muted-foreground w-4">({koDow(it.due_date)})</span>
+                          )}
+                          <input
+                            type="time"
+                            value={it.due_time ? it.due_time.slice(0, 5) : ""}
+                            onChange={(ev) => onUpdateItem(it.id, { time: ev.target.value || null })}
+                            aria-label="Item time"
+                            className="bg-transparent border-b border-border text-[10px] text-muted-foreground w-[64px]"
+                          />
+                        </>
                       )}
-                      <input
-                        type="date"
-                        value={it.due_date ?? ""}
-                        onChange={(ev) => onUpdateItem(it.id, { date: ev.target.value || null })}
-                        aria-label="Item date"
-                        className="bg-transparent border-b border-border text-[10px] text-muted-foreground w-[92px]"
-                      />
-                      {it.due_date && (
-                        <span className="text-[10px] text-muted-foreground w-4">({koDow(it.due_date)})</span>
-                      )}
-                      <input
-                        type="time"
-                        value={it.due_time ? it.due_time.slice(0, 5) : ""}
-                        onChange={(ev) => onUpdateItem(it.id, { time: ev.target.value || null })}
-                        aria-label="Item time"
-                        className="bg-transparent border-b border-border text-[10px] text-muted-foreground w-[64px]"
-                      />
                       <button
                         onClick={() => onDeleteItem(it.id)}
                         aria-label="Delete item"
