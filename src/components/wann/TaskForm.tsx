@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import type { Category, MultipleTask, MultipleTaskItem, Subtag, Task } from "@/lib/wann-data";
 import { todayLocalStr, shortTime, formatDateKo } from "@/lib/wann-data";
 import type { Group } from "@/lib/wann-groups";
+import { PRODUCT_LINES } from "@/lib/wann-groups";
 import type { Stage } from "@/lib/wann-stages";
 import { stageColorOf } from "@/lib/wann-stages";
 import { Plus, Trash2, X, AlertTriangle, ShoppingCart } from "lucide-react";
@@ -43,6 +44,12 @@ export type TaskFormValues = {
    * shown/settable when this Task belongs to a Group (directly, or via a
    * Project that belongs to a Group). Never inferred from dates/titles. */
   stage: string | null;
+  /** Direct Product Line tag for a Task that isn't part of any specific
+   * Group/Project cycle — e.g. next week's prep started early, before that
+   * week's Group even exists yet. Mutually exclusive with projectId/
+   * newProject/groupId — a Task in a Project or Group takes its product
+   * line from there instead (see wann-groups.ts's PRODUCT_LINES). */
+  productLine: string | null;
 };
 
 export function TaskForm({
@@ -106,6 +113,7 @@ export function TaskForm({
     isCritical: false,
     isShopping: false,
     stage: null,
+    productLine: null,
   });
 
   const [form, setForm] = useState<TaskFormValues>(emptyForm);
@@ -132,6 +140,7 @@ export function TaskForm({
         isCritical: editingTask.is_critical ?? false,
         isShopping: editingTask.is_shopping ?? false,
         stage: editingTask.stage ?? null,
+        productLine: editingTask.product_line ?? null,
       });
     }
   }, [editingTask]);
@@ -183,6 +192,13 @@ export function TaskForm({
     !!form.groupId ||
     (!!form.projectId && !!projects.find((p) => p.id === form.projectId)?.group_id);
 
+  /** A Product Line can only be tagged directly onto a Task that isn't part
+   * of any specific Project/Group cycle — e.g. next week's prep started
+   * before that week's Group even exists. A Task inside a Project or Group
+   * takes its product line from there instead (see PRODUCT_LINES in
+   * wann-groups.ts), so this only applies to a genuinely standalone Task. */
+  const productLineApplies = !form.projectId && !form.newProject && !form.groupId;
+
   const submit = () => {
     if (!form.title.trim()) return;
     if (!form.dueDate) return; // 날짜 없는 항목은 Task가 아니라 Idea — Ideas & Goals에서 추가하세요.
@@ -197,6 +213,7 @@ export function TaskForm({
         ? { ...form.newProject, name: form.newProject.name.trim() }
         : null,
       stage: stageApplies ? form.stage : null,
+      productLine: productLineApplies ? form.productLine : null,
     };
     if (editingTask) {
       onUpdateTask(editingTask.id, payload);
@@ -341,9 +358,9 @@ export function TaskForm({
             onChange={(e) => {
               const v = e.target.value;
               if (v === "__new__") {
-                setForm({ ...form, projectId: null, newProject: { name: "", startDate: null, endDate: null }, groupId: null });
+                setForm({ ...form, projectId: null, newProject: { name: "", startDate: null, endDate: null }, groupId: null, productLine: null });
               } else {
-                setForm({ ...form, projectId: v || null, newProject: null, groupId: v ? null : form.groupId });
+                setForm({ ...form, projectId: v || null, newProject: null, groupId: v ? null : form.groupId, productLine: v ? null : form.productLine });
               }
             }}
             className="bg-transparent outline-none text-sm border-b border-border py-1"
@@ -365,6 +382,7 @@ export function TaskForm({
                 groupId: v,
                 projectId: v ? null : form.projectId,
                 newProject: v ? null : form.newProject,
+                productLine: v ? null : form.productLine,
               });
             }}
             title="Shared Task — a Group-level Task, mutually exclusive with Project"
@@ -373,6 +391,19 @@ export function TaskForm({
             <option value="">그룹 없음</option>
             {groups.map((g) => (
               <option key={g.id} value={g.id}>{g.name}</option>
+            ))}
+          </select>
+        )}
+        {productLineApplies && (
+          <select
+            value={form.productLine ?? ""}
+            onChange={(e) => setForm({ ...form, productLine: e.target.value || null })}
+            title="특정 주차 Group 없이, 이 제품 라인 전체에 바로 소속되는 공통 작업 (예: 다음 주 재료 미리 주문)"
+            className="bg-transparent outline-none text-sm border-b border-border py-1"
+          >
+            <option value="">제품 라인 없음</option>
+            {PRODUCT_LINES.map((l) => (
+              <option key={l.key} value={l.key}>{l.label}</option>
             ))}
           </select>
         )}

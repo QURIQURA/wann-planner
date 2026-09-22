@@ -3,6 +3,7 @@ import { useState } from "react";
 import type { Category, MultipleTask, Subtag, Task, TaskCompletion } from "@/lib/wann-data";
 import { todayLocalStr, shortTime, isOccurrenceCompleted, isOccurrenceOverdue, currentOccurrenceDate, koDow, taskSortKey, diffDays, taskCategoryIds, hexToRgba } from "@/lib/wann-data";
 import type { Group } from "@/lib/wann-groups";
+import { PRODUCT_LINES } from "@/lib/wann-groups";
 import { Trash2, ChevronDown, ChevronUp } from "lucide-react";
 import { CategoryFilterBar } from "./CategoryFilterBar";
 import type { CategoryFilter, TaskFormValues } from "./TaskForm";
@@ -192,6 +193,10 @@ function TaskList({
         const project = t.multiple_task_id ? projects.find((p) => p.id === t.multiple_task_id) : null;
         // Mutually exclusive with project — a Task belongs to at most one.
         const group = !project && t.group_id ? groups.find((g) => g.id === t.group_id) : null;
+        // A pure Product Line tag only shows up when there's no Project/Group
+        // — a Task in either of those takes its product line from there.
+        const productLine =
+          !project && !group && t.product_line ? PRODUCT_LINES.find((l) => l.key === t.product_line) : null;
         const overdue = !completed && isOccurrenceOverdue(currentOccurrenceDate(t), completed);
         return (
           <div
@@ -221,6 +226,14 @@ function TaskList({
             {group && (
               <span className="text-[10px] label-caps bg-foreground text-background px-1.5 py-0.5 max-w-[90px] truncate flex-shrink-0">
                 {group.name}
+              </span>
+            )}
+            {productLine && (
+              <span
+                className="text-[10px] label-caps border border-border rounded-full px-1.5 py-0.5 text-muted-foreground max-w-[90px] truncate flex-shrink-0"
+                title="특정 Group 없이 이 제품 라인에 직접 소속된 공통 작업"
+              >
+                {productLine.label}
               </span>
             )}
             {cats.map((c) => (

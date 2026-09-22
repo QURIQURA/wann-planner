@@ -309,6 +309,7 @@ export function WeekRotation({
       isCritical: false,
       isShopping: false,
       stage: null,
+      productLine: null,
     });
   };
 

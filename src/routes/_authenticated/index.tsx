@@ -238,6 +238,7 @@ function Dashboard() {
               isCritical: false,
               isShopping: true,
               stage: null,
+              productLine: null,
             })
           }
           onReorder={(ids) => widgetCtx.taskActions.onReorderShopping(ids)}
@@ -304,6 +305,7 @@ function Dashboard() {
                   projects={multipleQ.data ?? []}
                   projectItems={multipleItemsQ.data ?? []}
                   tasks={tasksQ.data ?? []}
+                  onEditTask={(t) => widgetCtx.taskActions.onEditTask(t)}
                   onOpenGroup={(id) => {
                     setExpandedGroupId(id);
                     const el = document.getElementById(`group-${id}`);
@@ -576,6 +578,7 @@ function Dashboard() {
                                             isCritical: false,
                                             isShopping: false,
                                             stage: null,
+                                            productLine: null,
                                           });
                                           setQuickSharedTaskInput({ ...quickSharedTaskInput, [g.id]: "" });
                                         }}

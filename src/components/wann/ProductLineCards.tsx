@@ -22,12 +22,16 @@ export function ProductLineCards({
   projectItems,
   tasks,
   onOpenGroup,
+  onEditTask,
 }: {
   groups: Group[];
   projects: MultipleTask[];
   projectItems: Task[];
   tasks: Task[];
   onOpenGroup: (groupId: string) => void;
+  /** Opens a Product-Line-level shared Task (no Project/Group) for editing —
+   * optional so a caller that hasn't wired Task editing here still works. */
+  onEditTask?: (t: Task) => void;
 }) {
   const today = todayLocalStr();
 
@@ -92,12 +96,20 @@ export function ProductLineCards({
     // gets skipped in favour of an already-finished earlier week.
     const current = lineGroups.find((r) => !r.isDone) ?? lineGroups[0] ?? null;
 
-    return { line, current, groupCount: lineGroups.length };
+    // Tasks tagged directly to this Product Line (no Project, no Group) —
+    // e.g. next week's prep started before that week's Group even exists.
+    // Shown regardless of which Group is "current", since these
+    // deliberately sit above any one week's cycle.
+    const lineTasks = tasks
+      .filter((t) => t.product_line === line.key && !t.multiple_task_id && !t.group_id && !t.completed)
+      .sort((a, b) => (a.due_date ?? "").localeCompare(b.due_date ?? ""));
+
+    return { line, current, groupCount: lineGroups.length, lineTasks };
   });
 
   return (
     <section className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-      {cards.map(({ line, current, groupCount }) => {
+      {cards.map(({ line, current, groupCount, lineTasks }) => {
         const week = current ? weekNumber(current.g.name) : null;
         const daysToLaunch = line.launchDate
           ? Math.ceil(
@@ -161,6 +173,30 @@ export function ProductLineCards({
                   <p className="text-[10px] text-muted-foreground">그룹 {groupCount}개</p>
                 )}
               </button>
+            )}
+
+            {lineTasks.length > 0 && (
+              <div className="border-t border-border pt-2 mt-1 space-y-1">
+                <p className="label-caps text-[9px] text-muted-foreground">
+                  공통 준비 · {lineTasks.length}개
+                </p>
+                {lineTasks.slice(0, 3).map((t) => (
+                  <button
+                    key={t.id}
+                    onClick={() => onEditTask?.(t)}
+                    disabled={!onEditTask}
+                    className="w-full text-left text-xs truncate flex items-center gap-1 hover:underline disabled:hover:no-underline"
+                  >
+                    <ChevronRight size={11} className="text-muted-foreground flex-shrink-0" />
+                    <span className="truncate">{t.title}</span>
+                    {t.due_date && (
+                      <span className="text-[10px] text-muted-foreground flex-shrink-0 ml-auto">
+                        {t.due_date.slice(5)}
+                      </span>
+                    )}
+                  </button>
+                ))}
+              </div>
             )}
           </div>
         );
