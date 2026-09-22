@@ -19,6 +19,7 @@ import { monthlySummaryWidget } from "@/components/wann/MonthlySummaryPanel";
 import { tanjiTimelineWidget } from "@/components/wann/TanjiTimelinePanel";
 import { goalsWidget } from "@/components/wann/GoalsPanel";
 import { groupsWidget } from "@/components/wann/GroupsPanel";
+import { linkedTasksWidget } from "@/components/wann/LinkedTasksPanel";
 
 export const BUILT_IN_WIDGETS: WidgetDef[] = [
   taskWorkspaceWidget,
@@ -28,6 +29,7 @@ export const BUILT_IN_WIDGETS: WidgetDef[] = [
   eventsWidget,
   habitTrackerWidget,
   monthlySummaryWidget,
+  linkedTasksWidget,
 ];
 
 /** All widgets: the built-in list plus anything added via registerWidget(). */

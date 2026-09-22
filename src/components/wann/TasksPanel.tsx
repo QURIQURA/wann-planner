@@ -4,7 +4,7 @@ import type { Category, MultipleTask, Subtag, Task, TaskCompletion } from "@/lib
 import { todayLocalStr, shortTime, isOccurrenceCompleted, isOccurrenceOverdue, currentOccurrenceDate, koDow, taskSortKey, diffDays, taskCategoryIds, hexToRgba } from "@/lib/wann-data";
 import type { Group } from "@/lib/wann-groups";
 import { PRODUCT_LINES } from "@/lib/wann-groups";
-import { Trash2, ChevronDown, ChevronUp } from "lucide-react";
+import { Trash2, ChevronDown, ChevronUp, Link2 } from "lucide-react";
 import { CategoryFilterBar } from "./CategoryFilterBar";
 import type { CategoryFilter, TaskFormValues } from "./TaskForm";
 
@@ -218,6 +218,18 @@ function TaskList({
                 <span className="ml-1 text-[10px] text-muted-foreground">↻</span>
               )}
             </button>
+            {t.link_url && (
+              <a
+                href={t.link_url}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={(e) => e.stopPropagation()}
+                title={t.link_url}
+                className="text-muted-foreground hover:text-foreground flex-shrink-0"
+              >
+                <Link2 size={11} />
+              </a>
+            )}
             {project && (
               <span className="text-[10px] text-muted-foreground border-b border-border max-w-[90px] truncate">
                 {project.name}

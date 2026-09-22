@@ -5,7 +5,7 @@ import type { Group } from "@/lib/wann-groups";
 import { PRODUCT_LINES } from "@/lib/wann-groups";
 import type { Stage } from "@/lib/wann-stages";
 import { stageColorOf } from "@/lib/wann-stages";
-import { Plus, Trash2, X, AlertTriangle, ShoppingCart } from "lucide-react";
+import { Plus, Trash2, X, AlertTriangle, ShoppingCart, Link2 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { fetchSubitemsForTask, type SubitemDraft } from "@/lib/wann-subitems";
 
@@ -50,6 +50,9 @@ export type TaskFormValues = {
    * newProject/groupId — a Task in a Project or Group takes its product
    * line from there instead (see wann-groups.ts's PRODUCT_LINES). */
   productLine: string | null;
+  /** Optional external reference link (Figma, Notion, Drive, etc.) — e.g. a
+   * moodboard. Independent of everything else: any Task can carry one. */
+  linkUrl: string | null;
 };
 
 export function TaskForm({
@@ -114,6 +117,7 @@ export function TaskForm({
     isShopping: false,
     stage: null,
     productLine: null,
+    linkUrl: null,
   });
 
   const [form, setForm] = useState<TaskFormValues>(emptyForm);
@@ -141,6 +145,7 @@ export function TaskForm({
         isShopping: editingTask.is_shopping ?? false,
         stage: editingTask.stage ?? null,
         productLine: editingTask.product_line ?? null,
+        linkUrl: editingTask.link_url ?? null,
       });
     }
   }, [editingTask]);
@@ -214,6 +219,7 @@ export function TaskForm({
         : null,
       stage: stageApplies ? form.stage : null,
       productLine: productLineApplies ? form.productLine : null,
+      linkUrl: form.linkUrl?.trim() || null,
     };
     if (editingTask) {
       onUpdateTask(editingTask.id, payload);
@@ -455,6 +461,16 @@ export function TaskForm({
           />
           <ShoppingCart size={11} />
           Shopping
+        </label>
+        <label className="flex items-center gap-1" title="참고 링크 (Figma, Notion, Drive 등)">
+          <Link2 size={11} className="text-muted-foreground flex-shrink-0" />
+          <input
+            type="url"
+            placeholder="참고 링크 (선택)"
+            value={form.linkUrl ?? ""}
+            onChange={(e) => setForm({ ...form, linkUrl: e.target.value || null })}
+            className="w-[140px] bg-transparent outline-none text-sm border-b border-border py-1"
+          />
         </label>
         <button
           onClick={submit}

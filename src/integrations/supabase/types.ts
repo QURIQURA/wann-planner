@@ -1490,6 +1490,7 @@ export type Database = {
           id: string
           is_critical: boolean
           is_shopping: boolean
+          link_url: string | null
           multiple_task_id: string | null
           product_line: string | null
           recurrence: string
@@ -1511,6 +1512,7 @@ export type Database = {
           id?: string
           is_critical?: boolean
           is_shopping?: boolean
+          link_url?: string | null
           multiple_task_id?: string | null
           product_line?: string | null
           recurrence: string
@@ -1532,6 +1534,7 @@ export type Database = {
           id?: string
           is_critical?: boolean
           is_shopping?: boolean
+          link_url?: string | null
           multiple_task_id?: string | null
           product_line?: string | null
           recurrence?: string
@@ -1630,6 +1633,7 @@ export type Database = {
           id: string
           is_critical: boolean
           is_shopping: boolean
+          link_url: string | null
           multiple_task_id: string | null
           notes: string | null
           product_line: string | null
@@ -1655,6 +1659,7 @@ export type Database = {
           id?: string
           is_critical?: boolean
           is_shopping?: boolean
+          link_url?: string | null
           multiple_task_id?: string | null
           notes?: string | null
           product_line?: string | null
@@ -1680,6 +1685,7 @@ export type Database = {
           id?: string
           is_critical?: boolean
           is_shopping?: boolean
+          link_url?: string | null
           multiple_task_id?: string | null
           notes?: string | null
           product_line?: string | null

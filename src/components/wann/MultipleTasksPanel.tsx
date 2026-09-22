@@ -3,7 +3,7 @@ import { useState } from "react";
 import type { Category, MultipleTask, MultipleTaskItem, Subtag, Task } from "@/lib/wann-data";
 import { todayLocalStr, taskSortKey, formatDateKo, koDow, shortTime, currentOccurrenceDate, isOccurrenceOverdue, hexToRgba } from "@/lib/wann-data";
 import type { Group } from "@/lib/wann-groups";
-import { Plus, Trash2, X, Pencil, ChevronDown, ChevronRight, AlertTriangle } from "lucide-react";
+import { Plus, Trash2, X, Pencil, ChevronDown, ChevronRight, AlertTriangle, Link2 } from "lucide-react";
 import type { CategoryFilter } from "./TaskForm";
 import { StageTracker, StageDot } from "./StageTracker";
 import type { Stage } from "@/lib/wann-stages";
@@ -363,6 +363,18 @@ export function MultipleTasksPanel({
                           {it.title}
                         </button>
                       )}
+                      {it.link_url && (
+                        <a
+                          href={it.link_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          onClick={(ev) => ev.stopPropagation()}
+                          title={it.link_url}
+                          className="text-muted-foreground hover:text-foreground flex-shrink-0"
+                        >
+                          <Link2 size={11} />
+                        </a>
+                      )}
                       <input
                         type="date"
                         value={it.due_date ?? ""}
@@ -674,6 +686,18 @@ export function SharedTaskList({
             {t.title}
           </button>
           {t.is_critical && <AlertTriangle size={11} className="text-muted-foreground flex-shrink-0" />}
+          {t.link_url && (
+            <a
+              href={t.link_url}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={(e) => e.stopPropagation()}
+              title={t.link_url}
+              className="text-muted-foreground hover:text-foreground flex-shrink-0"
+            >
+              <Link2 size={11} />
+            </a>
+          )}
           {t.due_date && (
             <span className={`text-[10px] tabular-nums ${overdue ? "text-destructive font-medium" : "text-muted-foreground"}`}>
               {t.due_date.slice(5)} ({koDow(t.due_date)})

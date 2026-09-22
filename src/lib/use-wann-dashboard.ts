@@ -231,6 +231,7 @@ export function useWannDashboard(
         is_shopping: input.isShopping,
         stage: input.stage,
         product_line: input.productLine,
+        link_url: input.linkUrl,
       }).select("id").single();
       if (error) throw error;
       if (input.subitems?.length) await replaceSubitems(created.id, input.subitems);
@@ -277,6 +278,7 @@ export function useWannDashboard(
           is_shopping: input.isShopping,
           stage: input.stage,
           product_line: input.productLine,
+          link_url: input.linkUrl,
           generated_until: generatedUntil,
         })
         .select("id")
@@ -304,6 +306,7 @@ export function useWannDashboard(
         is_shopping: input.isShopping,
         stage: input.stage,
         product_line: input.productLine,
+        link_url: input.linkUrl,
         series_id: series.id,
       }));
       if (rows.length > 0) {
@@ -317,7 +320,7 @@ export function useWannDashboard(
   /** Tops up one series' rolling window once it's running low — called from
    * the effect below, once per loaded series. */
   const topUpTaskSeries = useMutation({
-    mutationFn: async (series: { id: string; title: string; recurrence: string; anchor_date: string; due_time: string | null; end_time: string | null; category_id: string | null; category_ids: string[]; subtag_id: string | null; multiple_task_id: string | null; group_id: string | null; is_critical: boolean; is_shopping: boolean; stage: string | null; product_line: string | null; generated_until: string }) => {
+    mutationFn: async (series: { id: string; title: string; recurrence: string; anchor_date: string; due_time: string | null; end_time: string | null; category_id: string | null; category_ids: string[]; subtag_id: string | null; multiple_task_id: string | null; group_id: string | null; is_critical: boolean; is_shopping: boolean; stage: string | null; product_line: string | null; link_url: string | null; generated_until: string }) => {
       const newUntil = formatLocalDate((() => {
         const d = new Date(); d.setDate(d.getDate() + SERIES_WINDOW_DAYS); return d;
       })());
@@ -339,6 +342,7 @@ export function useWannDashboard(
           is_shopping: series.is_shopping,
           stage: series.stage,
           product_line: series.product_line,
+          link_url: series.link_url,
           series_id: series.id,
         }));
         const { error } = await supabase.from("planner_tasks").insert(rows);
@@ -388,6 +392,7 @@ export function useWannDashboard(
         is_shopping: input.isShopping,
         stage: input.stage,
         product_line: input.productLine,
+        link_url: input.linkUrl,
       }).eq("id", id);
       if (error) throw error;
       await replaceSubitems(id, input.subitems ?? []);

@@ -239,6 +239,7 @@ function Dashboard() {
               isShopping: true,
               stage: null,
               productLine: null,
+              linkUrl: null,
             })
           }
           onReorder={(ids) => widgetCtx.taskActions.onReorderShopping(ids)}
@@ -579,6 +580,7 @@ function Dashboard() {
                                             isShopping: false,
                                             stage: null,
                                             productLine: null,
+                                            linkUrl: null,
                                           });
                                           setQuickSharedTaskInput({ ...quickSharedTaskInput, [g.id]: "" });
                                         }}
