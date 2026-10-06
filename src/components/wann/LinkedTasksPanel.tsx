@@ -1,25 +1,22 @@
 import type { WidgetDef } from "@/lib/widget-registry";
 import type { MultipleTask, Task } from "@/lib/wann-data";
 import { koDow } from "@/lib/wann-data";
-import type { Group } from "@/lib/wann-groups";
 import { Link2, ExternalLink } from "lucide-react";
 
 /**
  * Collects every Task that carries an external reference link (Figma,
  * Notion, Drive, etc. — set via TaskForm's "참고 링크" field) into one place,
- * regardless of which Project/Group/Product Line it belongs to. e.g. the
+ * regardless of which Project/Product Line it belongs to. e.g. the
  * "MoodBoard" task under a project can hold a Figma moodboard link, and this
  * widget is where all such linked tasks surface together.
  */
 export function LinkedTasksPanel({
   tasks,
   projects,
-  groups = [],
   onEditTask,
 }: {
   tasks: Task[];
   projects: MultipleTask[];
-  groups?: Group[];
   onEditTask: (t: Task) => void;
 }) {
   const linked = tasks
@@ -38,7 +35,6 @@ export function LinkedTasksPanel({
     <div className="space-y-1">
       {linked.map((t) => {
         const project = t.multiple_task_id ? projects.find((p) => p.id === t.multiple_task_id) : null;
-        const group = !project && t.group_id ? groups.find((g) => g.id === t.group_id) : null;
         return (
           <div
             key={t.id}
@@ -54,11 +50,6 @@ export function LinkedTasksPanel({
             {project && (
               <span className="text-[10px] text-muted-foreground border-b border-border max-w-[90px] truncate">
                 {project.name}
-              </span>
-            )}
-            {group && (
-              <span className="text-[10px] label-caps bg-foreground text-background px-1.5 py-0.5 max-w-[90px] truncate flex-shrink-0">
-                {group.name}
               </span>
             )}
             {t.due_date && (
@@ -96,7 +87,6 @@ export const linkedTasksWidget: WidgetDef = {
       <LinkedTasksPanel
         tasks={ctx.tasks}
         projects={ctx.projects}
-        groups={ctx.groups}
         onEditTask={ctx.taskActions.onEditTask}
       />
     </section>

@@ -2,7 +2,6 @@ import type { WidgetDef } from "@/lib/widget-registry";
 import { useState } from "react";
 import type { Category, MultipleTask, Subtag, Task, TaskCompletion } from "@/lib/wann-data";
 import { todayLocalStr, shortTime, isOccurrenceCompleted, isOccurrenceOverdue, currentOccurrenceDate, koDow, taskSortKey, diffDays, taskCategoryIds, hexToRgba } from "@/lib/wann-data";
-import type { Group } from "@/lib/wann-groups";
 import { PRODUCT_LINES } from "@/lib/wann-groups";
 import { Trash2, ChevronDown, ChevronUp, Link2 } from "lucide-react";
 import { CategoryFilterBar } from "./CategoryFilterBar";
@@ -12,7 +11,6 @@ export function TasksPanel({
   categories,
   subtags,
   projects,
-  groups = [],
   tasks,
   completions,
   editingTask,
@@ -35,7 +33,6 @@ export function TasksPanel({
   categories: Category[];
   subtags: Subtag[];
   projects: MultipleTask[];
-  groups?: Group[];
   tasks: Task[];
   completions: TaskCompletion[];
   editingTask: Task | null;
@@ -116,7 +113,6 @@ export function TasksPanel({
             items={open}
             categories={categories}
             projects={projects}
-            groups={groups}
             editingId={editingTask?.id ?? null}
             onToggle={onToggleTask}
             onEdit={onEditTask}
@@ -144,7 +140,6 @@ export function TasksPanel({
                   items={done}
                   categories={categories}
                   projects={projects}
-                  groups={groups}
                   editingId={editingTask?.id ?? null}
                   onToggle={onToggleTask}
                   onEdit={onEditTask}
@@ -162,7 +157,6 @@ export function TasksPanel({
 
 function TaskList({
   projects,
-  groups = [],
   items,
   categories,
   editingId,
@@ -179,7 +173,6 @@ function TaskList({
   onDelete: (id: string) => void;
   completed?: boolean;
   projects: MultipleTask[];
-  groups?: Group[];
 }) {
   if (items.length === 0 && !completed) {
     return <p className="text-xs text-muted-foreground italic">No tasks</p>;
@@ -191,12 +184,10 @@ function TaskList({
           .map((id) => categories.find((c) => c.id === id))
           .filter((c): c is Category => !!c);
         const project = t.multiple_task_id ? projects.find((p) => p.id === t.multiple_task_id) : null;
-        // Mutually exclusive with project — a Task belongs to at most one.
-        const group = !project && t.group_id ? groups.find((g) => g.id === t.group_id) : null;
-        // A pure Product Line tag only shows up when there's no Project/Group
-        // — a Task in either of those takes its product line from there.
+        // A pure Product Line tag only shows up when there's no Project — a
+        // Task in a Project takes its product line from there instead.
         const productLine =
-          !project && !group && t.product_line ? PRODUCT_LINES.find((l) => l.key === t.product_line) : null;
+          !project && t.product_line ? PRODUCT_LINES.find((l) => l.key === t.product_line) : null;
         const overdue = !completed && isOccurrenceOverdue(currentOccurrenceDate(t), completed);
         return (
           <div
@@ -235,15 +226,10 @@ function TaskList({
                 {project.name}
               </span>
             )}
-            {group && (
-              <span className="text-[10px] label-caps bg-foreground text-background px-1.5 py-0.5 max-w-[90px] truncate flex-shrink-0">
-                {group.name}
-              </span>
-            )}
             {productLine && (
               <span
                 className="text-[10px] label-caps border border-border rounded-full px-1.5 py-0.5 text-muted-foreground max-w-[90px] truncate flex-shrink-0"
-                title="특정 Group 없이 이 제품 라인에 직접 소속된 공통 작업"
+                title="특정 Project 없이 이 제품 라인에 직접 소속된 공통 작업"
               >
                 {productLine.label}
               </span>

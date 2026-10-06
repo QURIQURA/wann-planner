@@ -40,7 +40,6 @@ import {
   type ReviewInterval,
 } from "@/lib/wann-intentions";
 
-import { fetchGroups } from "@/lib/wann-groups";
 import { fetchStages, type Stage } from "@/lib/wann-stages";
 
 import {
@@ -93,7 +92,6 @@ export function useWannDashboard(
   const completionsQ = useQuery({ queryKey: ["completions", user.id], queryFn: () => fetchCompletions(user.id) });
   const exceptionsQ = useQuery({ queryKey: ["exceptions", user.id], queryFn: () => fetchExceptions(user.id) });
   const intentionsQ = useQuery({ queryKey: ["intentions", user.id], queryFn: () => fetchIntentions(user.id) });
-  const groupsQ = useQuery({ queryKey: ["groups", user.id], queryFn: () => fetchGroups(user.id) });
   const stagesQ = useQuery({ queryKey: ["cake_stages", user.id], queryFn: () => fetchStages(user.id) });
   const taskSeriesQ = useQuery({ queryKey: ["task_series", user.id], queryFn: () => fetchTaskSeries(user.id) });
 
@@ -226,7 +224,6 @@ export function useWannDashboard(
         end_time: input.dueTime ? input.endTime : null,
         recurrence: input.recurrence,
         multiple_task_id: projectId,
-        group_id: projectId ? null : input.groupId,
         is_critical: input.isCritical,
         is_shopping: input.isShopping,
         stage: input.stage,
@@ -273,7 +270,6 @@ export function useWannDashboard(
           category_ids: input.categoryIds,
           subtag_id: input.subtagId,
           multiple_task_id: input.projectId,
-          group_id: input.projectId ? null : input.groupId,
           is_critical: input.isCritical,
           is_shopping: input.isShopping,
           stage: input.stage,
@@ -301,7 +297,6 @@ export function useWannDashboard(
         end_time: input.dueTime ? input.endTime : null,
         recurrence: "none",
         multiple_task_id: input.projectId,
-        group_id: input.projectId ? null : input.groupId,
         is_critical: input.isCritical,
         is_shopping: input.isShopping,
         stage: input.stage,
@@ -387,7 +382,6 @@ export function useWannDashboard(
         end_time: input.dueTime ? input.endTime : null,
         recurrence: input.recurrence,
         multiple_task_id: projectId,
-        group_id: projectId ? null : input.groupId,
         is_critical: input.isCritical,
         is_shopping: input.isShopping,
         stage: input.stage,
@@ -576,7 +570,7 @@ export function useWannDashboard(
         subtag_id: v.subtagId,
         date: v.date,
         end_date: v.endDate,
-        group_id: v.groupId,
+        product_line: v.productLine,
       });
       if (error) throw error;
     },
@@ -591,7 +585,7 @@ export function useWannDashboard(
         subtag_id: patch.subtagId,
         date: patch.date,
         end_date: patch.endDate,
-        group_id: patch.groupId,
+        product_line: patch.productLine,
       }).eq("id", id);
       if (error) throw error;
     },
@@ -658,48 +652,6 @@ export function useWannDashboard(
     onSuccess: () => { invalidate("multiple_tasks"); invalidate("multiple_task_items"); },
   });
 
-  // --- Groups (generic context/batch above Project — e.g. a cake order made
-  // of several Projects, or a "Shared Task" belonging directly to the Group).
-  // Deleting a Group unlinks its Projects (group_id -> NULL, ON DELETE SET
-  // NULL) but CASCADE-deletes its direct Shared Tasks (ON DELETE CASCADE),
-  // matching the existing multiple_task_id CASCADE precedent. */
-  const addGroup = useMutation({
-    mutationFn: async (v: { name: string; notes: string | null; color?: string | null; productLine?: string | null }) => {
-      const { error } = await supabase.from("planner_groups").insert({
-        user_id: user.id,
-        name: v.name,
-        notes: v.notes,
-        color: v.color ?? null,
-        product_line: v.productLine ?? null,
-      });
-      if (error) throw error;
-    },
-    onSuccess: () => invalidate("groups"),
-  });
-
-  const updateGroup = useMutation({
-    mutationFn: async ({ id, patch }: { id: string; patch: { name: string; notes: string | null; color?: string | null; productLine?: string | null } }) => {
-      const { error } = await supabase.from("planner_groups").update({
-        name: patch.name,
-        notes: patch.notes,
-        color: patch.color ?? null,
-        product_line: patch.productLine ?? null,
-      }).eq("id", id);
-      if (error) throw error;
-    },
-    onSuccess: () => invalidate("groups"),
-  });
-
-  const deleteGroup = useMutation({
-    mutationFn: async (id: string) => {
-      const { error } = await supabase.from("planner_groups").delete().eq("id", id);
-      if (error) throw error;
-    },
-    // The DB handles unlinking Projects (SET NULL) and cascading Shared Task
-    // deletes; refresh every query that could be affected.
-    onSuccess: () => { invalidate("groups"); invalidate("multiple_tasks"); invalidate("tasks"); },
-  });
-
   // --- Cake production stages (Settings > 단계) — a per-user, fully
   // editable, ordered list. A Task's `stage` column stores one of these
   // rows' id, never a hardcoded key, so renaming/recoloring a stage never
@@ -761,21 +713,6 @@ export function useWannDashboard(
       if (ctx?.prev) qc.setQueryData(["cake_stages", user.id], ctx.prev);
     },
     onSettled: () => invalidate("cake_stages"),
-  });
-
-  // Links/unlinks an EXISTING Project to a Group — a single-column group_id
-  // update, same shape as moveProject's targeted date/end_date update. Never
-  // touches the Project's name/category/date/tasks, so its id, Tasks,
-  // completions and progress are all completely unaffected.
-  const setProjectGroup = useMutation({
-    mutationFn: async ({ projectId, groupId }: { projectId: string; groupId: string | null }) => {
-      const { error } = await supabase
-        .from("planner_multiple_tasks")
-        .update({ group_id: groupId })
-        .eq("id", projectId);
-      if (error) throw error;
-    },
-    onSuccess: () => invalidate("multiple_tasks"),
   });
 
   const invalidateItems = () => { invalidate("multiple_task_items"); invalidate("tasks"); };
@@ -1247,7 +1184,6 @@ export function useWannDashboard(
     eventTypes: eventTypesQ.data ?? [],
     editingTask,
     intentions: intentionsQ.data ?? [],
-    groups: groupsQ.data ?? [],
     stages: stagesQ.data ?? [],
     taskActions: {
       onCancelEdit: () => setEditingTask(null),
@@ -1296,13 +1232,6 @@ export function useWannDashboard(
       onSetSystemColor: (key, label, color) => setSystemEventTypeColor.mutate({ key, name: label, color }),
       onResetSystemColor: (key) => resetSystemEventTypeColor.mutate(key),
     },
-    groupActions: {
-      onAdd: (v) => addGroup.mutate(v),
-      onUpdate: (id, patch) => updateGroup.mutate({ id, patch }),
-      onDelete: (id) => deleteGroup.mutate(id),
-      onAddExistingProjectToGroup: (projectId, groupId) => setProjectGroup.mutate({ projectId, groupId }),
-      onRemoveProjectFromGroup: (projectId) => setProjectGroup.mutate({ projectId, groupId: null }),
-    },
     intentionActions: {
       onAdd: (title) => addIntention.mutate(title),
       onUpdate: (id, patch) => updateIntention.mutate({ id, patch }),
@@ -1348,7 +1277,6 @@ export function useWannDashboard(
     completionsQ,
     exceptionsQ,
     intentionsQ,
-    groupsQ,
     stagesQ,
     taskSeriesQ,
     habitsQ,

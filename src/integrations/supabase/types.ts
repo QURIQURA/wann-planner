@@ -1277,6 +1277,7 @@ export type Database = {
           group_id: string | null
           id: string
           name: string
+          product_line: string | null
           subtag_id: string | null
           updated_at: string
           user_id: string
@@ -1289,6 +1290,7 @@ export type Database = {
           group_id?: string | null
           id?: string
           name: string
+          product_line?: string | null
           subtag_id?: string | null
           updated_at?: string
           user_id: string
@@ -1301,6 +1303,7 @@ export type Database = {
           group_id?: string | null
           id?: string
           name?: string
+          product_line?: string | null
           subtag_id?: string | null
           updated_at?: string
           user_id?: string

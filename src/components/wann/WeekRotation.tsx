@@ -304,7 +304,6 @@ export function WeekRotation({
       recurrence: "none",
       projectId: null,
       newProject: null,
-      groupId: null,
       subitems: [],
       isCritical: false,
       isShopping: false,

@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import type { Category, MultipleTask, MultipleTaskItem, Subtag, Task } from "@/lib/wann-data";
 import { todayLocalStr, shortTime, formatDateKo } from "@/lib/wann-data";
-import type { Group } from "@/lib/wann-groups";
 import { PRODUCT_LINES } from "@/lib/wann-groups";
 import type { Stage } from "@/lib/wann-stages";
 import { stageColorOf } from "@/lib/wann-stages";
@@ -30,9 +29,6 @@ export type TaskFormValues = {
   recurrence: string;
   projectId: string | null;
   newProject: NewProjectValues | null;
-  /** Group a "Shared Task" belongs to directly (mutually exclusive with
-   * projectId/newProject — a Task belongs to at most one of the two). */
-  groupId: string | null;
   /** Lightweight checklist for duration tasks. */
   subitems: SubitemDraft[];
   /** "Can't miss this" marker — thicker border + icon wherever the task renders. */
@@ -40,15 +36,15 @@ export type TaskFormValues = {
   /** Marks this Task as a shopping-list item — surfaces it in the Shopping
    * List widget above the Timeline, grouped by due date. */
   isShopping: boolean;
-  /** Explicit weekly-cake production stage tag (see wann-stages.ts) — only
-   * shown/settable when this Task belongs to a Group (directly, or via a
-   * Project that belongs to a Group). Never inferred from dates/titles. */
+  /** Explicit weekly-cake production stage tag (see wann-stages.ts) — any
+   * Task can opt in, independent of category or project. Never inferred
+   * from dates/titles. */
   stage: string | null;
   /** Direct Product Line tag for a Task that isn't part of any specific
-   * Group/Project cycle — e.g. next week's prep started early, before that
-   * week's Group even exists yet. Mutually exclusive with projectId/
-   * newProject/groupId — a Task in a Project or Group takes its product
-   * line from there instead (see wann-groups.ts's PRODUCT_LINES). */
+   * Project — e.g. next week's prep started before that week's Project even
+   * exists. Mutually exclusive with projectId/newProject — a Task inside a
+   * Project takes its product line from there instead (see wann-groups.ts's
+   * PRODUCT_LINES). */
   productLine: string | null;
   /** Optional external reference link (Figma, Notion, Drive, etc.) — e.g. a
    * moodboard. Independent of everything else: any Task can carry one. */
@@ -66,10 +62,7 @@ export function TaskForm({
   subtags,
   projects,
   projectItems,
-  groups = [],
   stages = [],
-  forcedGroupId,
-  hideProjectField,
   filter,
 }: {
   editingTask: Task | null;
@@ -88,17 +81,8 @@ export function TaskForm({
   subtags: Subtag[];
   projects: MultipleTask[];
   projectItems: MultipleTaskItem[];
-  /** Groups a new/edited Task can be assigned to directly as a Shared Task. */
-  groups?: Group[];
   /** Editable per-user production stage list (Settings > 단계). */
   stages?: Stage[];
-  /** Pre-selects (and defaults new tasks to) this Group — used by the "Add
-   * Shared Task" flow inside a Group's detail view. */
-  forcedGroupId?: string;
-  /** Hide the Project selector entirely — used by the "Add Shared Task" flow
-   * inside a Group's detail view, where a Task added here must stay a pure
-   * Group-level Shared Task and should never be assignable to a Project. */
-  hideProjectField?: boolean;
   filter: CategoryFilter;
 }) {
   const emptyForm = (): TaskFormValues => ({
@@ -111,7 +95,6 @@ export function TaskForm({
     recurrence: "none",
     projectId: null,
     newProject: null,
-    groupId: forcedGroupId ?? null,
     subitems: [],
     isCritical: false,
     isShopping: false,
@@ -139,7 +122,6 @@ export function TaskForm({
         recurrence: editingTask.recurrence ?? "none",
         projectId: editingTask.multiple_task_id ?? null,
         newProject: null,
-        groupId: editingTask.group_id ?? null,
         subitems: [],
         isCritical: editingTask.is_critical ?? false,
         isShopping: editingTask.is_shopping ?? false,
@@ -189,20 +171,12 @@ export function TaskForm({
     return items.some((i) => !i.completed);
   });
 
-  /** A Task's production-stage dropdown only makes sense once it's tied to a
-   * Group (directly as a Shared Task, or via a Project that belongs to one)
-   * — the stage tracker is a Group-scoped feature. A new/unsaved Project
-   * can't be checked yet, so it's excluded here. */
-  const stageApplies =
-    !!form.groupId ||
-    (!!form.projectId && !!projects.find((p) => p.id === form.projectId)?.group_id);
-
   /** A Product Line can only be tagged directly onto a Task that isn't part
-   * of any specific Project/Group cycle — e.g. next week's prep started
-   * before that week's Group even exists. A Task inside a Project or Group
-   * takes its product line from there instead (see PRODUCT_LINES in
-   * wann-groups.ts), so this only applies to a genuinely standalone Task. */
-  const productLineApplies = !form.projectId && !form.newProject && !form.groupId;
+   * of any specific Project — e.g. next week's prep started before that
+   * week's Project even exists. A Task inside a Project takes its product
+   * line from there instead (see PRODUCT_LINES in wann-groups.ts), so this
+   * only applies to a genuinely standalone Task. */
+  const productLineApplies = !form.projectId && !form.newProject;
 
   const submit = () => {
     if (!form.title.trim()) return;
@@ -217,7 +191,7 @@ export function TaskForm({
       newProject: form.newProject
         ? { ...form.newProject, name: form.newProject.name.trim() }
         : null,
-      stage: stageApplies ? form.stage : null,
+      stage: form.stage,
       productLine: productLineApplies ? form.productLine : null,
       linkUrl: form.linkUrl?.trim() || null,
     };
@@ -358,53 +332,29 @@ export function TaskForm({
             날짜별 독립 운용
           </label>
         )}
-        {!hideProjectField && (
-          <select
-            value={form.newProject ? "__new__" : (form.projectId ?? "")}
-            onChange={(e) => {
-              const v = e.target.value;
-              if (v === "__new__") {
-                setForm({ ...form, projectId: null, newProject: { name: "", startDate: null, endDate: null }, groupId: null, productLine: null });
-              } else {
-                setForm({ ...form, projectId: v || null, newProject: null, groupId: v ? null : form.groupId, productLine: v ? null : form.productLine });
-              }
-            }}
-            className="bg-transparent outline-none text-sm border-b border-border py-1"
-          >
-            <option value="">소속 프로젝트 없음</option>
-            {selectableProjects.map((p) => (
-              <option key={p.id} value={p.id}>{p.name}</option>
-            ))}
-            <option value="__new__">+ 새 프로젝트</option>
-          </select>
-        )}
-        {groups.length > 0 && (
-          <select
-            value={form.groupId ?? ""}
-            onChange={(e) => {
-              const v = e.target.value || null;
-              setForm({
-                ...form,
-                groupId: v,
-                projectId: v ? null : form.projectId,
-                newProject: v ? null : form.newProject,
-                productLine: v ? null : form.productLine,
-              });
-            }}
-            title="Shared Task — a Group-level Task, mutually exclusive with Project"
-            className="bg-transparent outline-none text-sm border-b border-border py-1"
-          >
-            <option value="">그룹 없음</option>
-            {groups.map((g) => (
-              <option key={g.id} value={g.id}>{g.name}</option>
-            ))}
-          </select>
-        )}
+        <select
+          value={form.newProject ? "__new__" : (form.projectId ?? "")}
+          onChange={(e) => {
+            const v = e.target.value;
+            if (v === "__new__") {
+              setForm({ ...form, projectId: null, newProject: { name: "", startDate: null, endDate: null }, productLine: null });
+            } else {
+              setForm({ ...form, projectId: v || null, newProject: null, productLine: v ? null : form.productLine });
+            }
+          }}
+          className="bg-transparent outline-none text-sm border-b border-border py-1"
+        >
+          <option value="">소속 프로젝트 없음</option>
+          {selectableProjects.map((p) => (
+            <option key={p.id} value={p.id}>{p.name}</option>
+          ))}
+          <option value="__new__">+ 새 프로젝트</option>
+        </select>
         {productLineApplies && (
           <select
             value={form.productLine ?? ""}
             onChange={(e) => setForm({ ...form, productLine: e.target.value || null })}
-            title="특정 주차 Group 없이, 이 제품 라인 전체에 바로 소속되는 공통 작업 (예: 다음 주 재료 미리 주문)"
+            title="특정 Project 없이, 이 제품 라인 전체에 바로 소속되는 공통 작업 (예: 다음 주 재료 미리 주문)"
             className="bg-transparent outline-none text-sm border-b border-border py-1"
           >
             <option value="">제품 라인 없음</option>
@@ -413,7 +363,7 @@ export function TaskForm({
             ))}
           </select>
         )}
-        {stageApplies && stages.length > 0 && (
+        {stages.length > 0 && (
           <label className="flex items-center gap-1.5">
             <span
               className="h-2.5 w-2.5 rounded-full flex-shrink-0"
@@ -479,7 +429,7 @@ export function TaskForm({
           <Plus size={12} /> {editingTask ? "Save" : "Add"}
         </button>
       </div>
-      {!hideProjectField && form.newProject && (
+      {form.newProject && (
         <div className="border-t border-border pt-2 flex flex-wrap gap-2 items-center">
           <input
             type="text"

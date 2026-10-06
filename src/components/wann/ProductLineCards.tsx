@@ -1,5 +1,4 @@
-import type { Group } from "@/lib/wann-groups";
-import { PRODUCT_LINES, compareGroupsRecency, weekNumber } from "@/lib/wann-groups";
+import { PRODUCT_LINES, compareGroupsRecency } from "@/lib/wann-groups";
 import type { MultipleTask, Task } from "@/lib/wann-data";
 import { projectSpan, todayLocalStr } from "@/lib/wann-data";
 import { ChevronRight } from "lucide-react";
@@ -7,29 +6,26 @@ import { ChevronRight } from "lucide-react";
 /**
  * Three fixed cards — one per real product line the business sells (Weekly
  * Surprise Cake / Chiffon Cake / Confectionery Box), each showing at a
- * glance: which week/instance is current, the next pickup date, rough
- * progress, and the single most urgent next action. The actual weekly
- * Groups underneath are unchanged (still a flat list further down) — this
- * is a manually-tagged (`group.product_line`) summary layer on top, not a
- * new hierarchy level.
+ * glance: which Project is current, the next pickup date, rough progress,
+ * and the single most urgent next action. This is a manually-tagged
+ * (`project.product_line` / `task.product_line`) summary layer on top of
+ * Projects and Tasks — not a separate hierarchy level.
  *
- * A line with no Groups yet (Chiffon starts 11/14, Confectionery 12/12)
+ * A line with no Projects yet (Chiffon starts 11/14, Confectionery 12/12)
  * shows a launch countdown instead of stats.
  */
 export function ProductLineCards({
-  groups,
   projects,
   projectItems,
   tasks,
-  onOpenGroup,
+  onOpenProject,
   onEditTask,
 }: {
-  groups: Group[];
   projects: MultipleTask[];
   projectItems: Task[];
   tasks: Task[];
-  onOpenGroup: (groupId: string) => void;
-  /** Opens a Product-Line-level shared Task (no Project/Group) for editing —
+  onOpenProject: (projectId: string) => void;
+  /** Opens a Product-Line-level shared Task (no Project) for editing —
    * optional so a caller that hasn't wired Task editing here still works. */
   onEditTask?: (t: Task) => void;
 }) {
@@ -43,74 +39,47 @@ export function ProductLineCards({
   };
 
   const cards = PRODUCT_LINES.map((line) => {
-    const lineGroups = groups
-      .filter((g) => g.product_line === line.key)
-      .map((g) => {
-        const allProjects = projects.filter((p) => p.group_id === g.id);
-        const activeProjects = allProjects.filter((p) => pctOfProject(p) !== 100);
-        const doneProjects = allProjects.filter((p) => pctOfProject(p) === 100);
-        const allTasks = tasks.filter((t) => t.group_id === g.id && !t.multiple_task_id);
-        const activeTasks = allTasks.filter((t) => !t.completed);
-        const doneTasks = allTasks.filter((t) => t.completed);
-        const hasAny = allProjects.length > 0 || allTasks.length > 0;
-        const isDone = hasAny && activeProjects.length === 0 && activeTasks.length === 0;
+    const lineProjects = projects
+      .filter((p) => p.product_line === line.key)
+      .map((p) => {
+        const progress = pctOfProject(p);
+        const isDone = progress === 100;
+        const items = projectItems.filter((i) => i.multiple_task_id === p.id && !i.completed);
+        const nextAction = items
+          .slice()
+          .sort((a, b) => (a.due_date ?? "").localeCompare(b.due_date ?? ""))[0] ?? null;
+        const span = projectSpan(p);
+        const latestDate = span?.end ?? null;
 
-        const activeItems = [
-          ...activeProjects.map((p) => ({ title: p.name, date: projectSpan(p)?.end ?? null })),
-          ...activeTasks.map((t) => ({ title: t.title, date: t.due_date ?? null })),
-        ];
-        const allDates = [
-          ...allProjects.map((p) => projectSpan(p)?.end ?? null),
-          ...allTasks.map((t) => t.due_date ?? null),
-        ].filter((d): d is string => !!d);
-        const latestDate = allDates.sort().at(-1) ?? null;
-
-        const totalUnits = allProjects.length + allTasks.length;
-        const doneUnits = doneProjects.length + doneTasks.length;
-        const progress = totalUnits > 0 ? Math.round((doneUnits / totalUnits) * 100) : null;
-
-        // Next action: soonest-dated active item, falling back to any
-        // active item, so a card always points at something concrete.
-        const dated = activeItems.filter((i) => i.date).sort((a, b) => a.date!.localeCompare(b.date!));
-        const nextAction = dated[0] ?? activeItems[0] ?? null;
-        // "다음 픽업" is the cycle's final/delivery date, not just whichever
-        // linked date happens to come soonest — an intermediate bake/prep
-        // task dated earlier than the actual Delivery task would otherwise
-        // win here. The group's own latest linked date is the best proxy
-        // for "when does this week's order actually go out."
-        const upcomingDates = allDates.filter((d) => d >= today).sort();
-        const nextDate = upcomingDates.at(-1) ?? latestDate;
-
-        return { g, isDone, latestDate, progress, nextAction, nextDate };
+        return { p, isDone, latestDate, progress, nextAction, nextDate: latestDate };
       })
       .sort((a, b) =>
         compareGroupsRecency(
-          { name: a.g.name, created_at: a.g.created_at, latestDate: a.latestDate },
-          { name: b.g.name, created_at: b.g.created_at, latestDate: b.latestDate },
+          { name: a.p.name, created_at: a.p.created_at, latestDate: a.latestDate },
+          { name: b.p.name, created_at: b.p.created_at, latestDate: b.latestDate },
         ),
       );
 
     // The current instance is the highest-numbered (or most recent) one
-    // that isn't fully done yet — an empty just-created "Week 5" with no
+    // that isn't fully done yet — an empty just-created Project with no
     // items linked yet still counts as current, not "done", so it never
-    // gets skipped in favour of an already-finished earlier week.
-    const current = lineGroups.find((r) => !r.isDone) ?? lineGroups[0] ?? null;
+    // gets skipped in favour of an already-finished earlier one.
+    const current = lineProjects.find((r) => !r.isDone) ?? lineProjects[0] ?? null;
 
-    // Tasks tagged directly to this Product Line (no Project, no Group) —
-    // e.g. next week's prep started before that week's Group even exists.
-    // Shown regardless of which Group is "current", since these
-    // deliberately sit above any one week's cycle.
+    // Tasks tagged directly to this Product Line (no Project) — e.g. next
+    // cycle's prep started before that cycle's Project even exists. Shown
+    // regardless of which Project is "current", since these deliberately
+    // sit above any one cycle.
     const lineTasks = tasks
-      .filter((t) => t.product_line === line.key && !t.multiple_task_id && !t.group_id && !t.completed)
+      .filter((t) => t.product_line === line.key && !t.multiple_task_id && !t.completed)
       .sort((a, b) => (a.due_date ?? "").localeCompare(b.due_date ?? ""));
 
-    return { line, current, groupCount: lineGroups.length, lineTasks };
+    return { line, current, projectCount: lineProjects.length, lineTasks };
   });
 
   return (
     <section className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-      {cards.map(({ line, current, groupCount, lineTasks }) => {
-        const week = current ? weekNumber(current.g.name) : null;
+      {cards.map(({ line, current, projectCount, lineTasks }) => {
         const daysToLaunch = line.launchDate
           ? Math.ceil(
               (new Date(line.launchDate + "T00:00:00").getTime() - new Date(today + "T00:00:00").getTime()) /
@@ -130,21 +99,21 @@ export function ProductLineCards({
                       {daysToLaunch > 0 ? `D-${daysToLaunch}` : daysToLaunch === 0 ? "D-Day" : "런칭됨"}
                     </p>
                     <p className="text-xs text-muted-foreground">
-                      {line.launchDate} 시작 예정 · 아직 그룹 없음
+                      {line.launchDate} 시작 예정 · 아직 Project 없음
                     </p>
                   </>
                 ) : (
-                  <p className="text-xs text-muted-foreground italic">아직 그룹이 없어요.</p>
+                  <p className="text-xs text-muted-foreground italic">아직 Project가 없어요.</p>
                 )}
               </div>
             ) : (
               <button
-                onClick={() => onOpenGroup(current.g.id)}
+                onClick={() => onOpenProject(current.p.id)}
                 className="flex-1 flex flex-col gap-1.5 text-left group"
               >
                 <div className="flex items-baseline justify-between gap-2">
                   <span className="text-lg font-semibold truncate group-hover:underline">
-                    {week !== null ? `Week ${week}` : current.g.name}
+                    {current.p.name}
                   </span>
                   {current.progress !== null && (
                     <span className="text-xs text-muted-foreground tabular-nums flex-shrink-0">
@@ -169,8 +138,8 @@ export function ProductLineCards({
                     <span className="truncate">{current.nextAction.title}</span>
                   </p>
                 )}
-                {groupCount > 1 && (
-                  <p className="text-[10px] text-muted-foreground">그룹 {groupCount}개</p>
+                {projectCount > 1 && (
+                  <p className="text-[10px] text-muted-foreground">Project {projectCount}개</p>
                 )}
               </button>
             )}

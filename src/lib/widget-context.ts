@@ -10,7 +10,6 @@ import type {
   EventType,
   Intention,
 } from "@/lib/wann-data";
-import type { Group } from "@/lib/wann-groups";
 import type { Stage } from "@/lib/wann-stages";
 import type { TaskFormValues } from "@/components/wann/TaskForm";
 import type { MultipleTaskForm } from "@/components/wann/MultipleTasksPanel";
@@ -40,9 +39,6 @@ export type WidgetContext = {
   editingTask: Task | null;
   /** IDEA / LATER / GOAL intent layer — independent of tasks/projects. */
   intentions: Intention[];
-  /** Generic context/batch entity above Project (e.g. a cake order made of
-   * several Projects, or a "Shared Task" belonging directly to the Group). */
-  groups: Group[];
   /** User-editable weekly-cake production stage list (Settings > 단계) — a
    * Task's `stage` column stores one of these rows' id. */
   stages: Stage[];
@@ -86,19 +82,6 @@ export type WidgetContext = {
     onTogglePin: (id: string, pinned: boolean) => void;
   } & EventNoteActions;
   eventTypeActions: EventTypeActions;
-
-  groupActions: {
-    onAdd: (v: { name: string; notes: string | null; color?: string | null; productLine?: string | null }) => void;
-    onUpdate: (id: string, patch: { name: string; notes: string | null; color?: string | null; productLine?: string | null }) => void;
-    onDelete: (id: string) => void;
-    /** Links an existing Project into a Group — a plain group_id update, the
-     * Project keeps its id/Tasks/completions/progress untouched. Never
-     * duplicates the Project row. */
-    onAddExistingProjectToGroup: (projectId: string, groupId: string) => void;
-    /** Unlinks a Project from its Group (group_id -> null). The Project
-     * itself is never deleted. */
-    onRemoveProjectFromGroup: (projectId: string) => void;
-  };
 
   intentionActions: IntentionActions;
 

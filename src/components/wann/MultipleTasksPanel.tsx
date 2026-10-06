@@ -1,13 +1,12 @@
 import type { WidgetDef } from "@/lib/widget-registry";
 import { useState } from "react";
 import type { Category, MultipleTask, MultipleTaskItem, Subtag, Task } from "@/lib/wann-data";
-import { todayLocalStr, taskSortKey, formatDateKo, koDow, shortTime, currentOccurrenceDate, isOccurrenceOverdue, hexToRgba } from "@/lib/wann-data";
-import type { Group } from "@/lib/wann-groups";
-import { Plus, Trash2, X, Pencil, ChevronDown, ChevronRight, AlertTriangle, Link2, Check } from "lucide-react";
+import { todayLocalStr, taskSortKey, formatDateKo, koDow } from "@/lib/wann-data";
+import { PRODUCT_LINES } from "@/lib/wann-groups";
+import { Plus, Trash2, X, Pencil, ChevronDown, ChevronRight, Check } from "lucide-react";
 import type { CategoryFilter } from "./TaskForm";
 import { StageTracker, StageDot } from "./StageTracker";
 import type { Stage } from "@/lib/wann-stages";
-import { stageColorOf, stageLabel } from "@/lib/wann-stages";
 
 
 export type MultipleTaskForm = {
@@ -18,17 +17,18 @@ export type MultipleTaskForm = {
   date: string | null;
   /** end date (optional — same as start / null means single day) */
   endDate: string | null;
-  /** Group this Project optionally belongs to (context/batch above Project). */
-  groupId: string | null;
+  /** Direct Product Line tag — e.g. this week's instance of Weekly Surprise
+   * Cake. Replaces the deprecated Group-based batching. */
+  productLine: string | null;
 };
 
-export const emptyMultipleTaskForm = (forcedGroupId?: string): MultipleTaskForm => ({
+export const emptyMultipleTaskForm = (): MultipleTaskForm => ({
   name: "",
   categoryId: null,
   subtagId: null,
   date: todayLocalStr(),
   endDate: null,
-  groupId: forcedGroupId ?? null,
+  productLine: null,
 });
 
 
@@ -37,7 +37,6 @@ export function MultipleTasksPanel({
   items,
   categories,
   subtags,
-  groups = [],
   onAdd,
   onUpdate,
   onDelete,
@@ -51,11 +50,6 @@ export function MultipleTasksPanel({
   hideFilterBar,
   hideHeader,
   allTasks,
-  editingTaskId,
-  onToggleTask,
-  onEditTask,
-  onDeleteTask,
-  hideGroupSharedTasks,
   stages = [],
 }: {
 
@@ -63,14 +57,11 @@ export function MultipleTasksPanel({
   items: MultipleTaskItem[];
   categories: Category[];
   subtags: Subtag[];
-  /** Groups a Project can optionally belong to (context/batch above Project). */
-  groups?: Group[];
   onAdd: (v: MultipleTaskForm) => void;
   onUpdate: (id: string, patch: MultipleTaskForm) => void;
   onDelete: (id: string) => void;
   /** Label/title for the row delete button — override when this instance's
-   * onDelete isn't a hard delete (e.g. "Remove from group" inside a Group's
-   * filtered Project list, where onDelete is wired to unlink instead). */
+   * onDelete isn't a hard delete. */
   deleteLabel?: string;
   onAddItem: (parentId: string, title: string, date: string | null, time: string | null) => void;
   onUpdateItem: (id: string, patch: { title?: string; date?: string | null; time?: string | null; stage?: string | null; link?: string | null }) => void;
@@ -83,22 +74,11 @@ export function MultipleTasksPanel({
   /** Hide the built-in filter bar when a shared one is rendered above. */
   hideFilterBar?: boolean;
   /** Hide the built-in "Projects" header when the caller already renders
-   * its own (e.g. GroupsPanel's "Projects" section label). */
+   * its own. */
   hideHeader?: boolean;
-  /** Full unfiltered Task list — when provided (together with the task
-   * action callbacks below), each expanded Project that belongs to a Group
-   * additionally shows that Group's Shared Tasks inline, fully interactive,
-   * so viewing them never requires switching to the Groups tab. */
+  /** Full unfiltered Task list — when provided, used to compute each
+   * Project's tagged Tasks for the stage tracker row. */
   allTasks?: Task[];
-  editingTaskId?: string | null;
-  onToggleTask?: (t: Task, occurrenceDate: string) => void;
-  onEditTask?: (t: Task) => void;
-  onDeleteTask?: (id: string) => void;
-  /** Suppress the per-project "Group Shared Tasks" section — used when the
-   * caller (GroupsPanel's own Group detail view) already shows that Group's
-   * Shared Tasks once, as its own section, so repeating them inside every
-   * expanded Project would just be a duplicate view. */
-  hideGroupSharedTasks?: boolean;
   /** Editable per-user production stage list (Settings > 단계) — passed down
    * to the stage tracker/dot picker. Empty until the caller wires it up. */
   stages?: Stage[];
@@ -136,7 +116,7 @@ export function MultipleTasksPanel({
       subtagId: (e as MultipleTask & { subtag_id: string | null }).subtag_id ?? null,
       date: e.date,
       endDate: (e as MultipleTask & { end_date: string | null }).end_date ?? null,
-      groupId: (e as MultipleTask & { group_id: string | null }).group_id ?? null,
+      productLine: (e as MultipleTask & { product_line: string | null }).product_line ?? null,
     });
   };
 
@@ -246,17 +226,12 @@ export function MultipleTasksPanel({
           const pct = total > 0 ? Math.round((done / total) * 100) : null;
           const expanded = expandedId === e.id;
           const editing = editingId === e.id;
-          const projectGroupId = (e as MultipleTask & { group_id: string | null }).group_id ?? null;
-          const group = projectGroupId ? groups.find((g) => g.id === projectGroupId) : null;
-          const groupSharedTasks =
-            group && allTasks
-              ? allTasks.filter((t) => t.group_id === group.id && !t.multiple_task_id)
-              : [];
-          // Stage tracker only makes sense for Projects that belong to a
-          // Group — it reads the Tasks belonging to this Project (not the
+          const productLine = (e as MultipleTask & { product_line: string | null }).product_line ?? null;
+          const productLineInfo = productLine ? PRODUCT_LINES.find((l) => l.key === productLine) : null;
+          // Reads the real Tasks belonging to this Project (not the
           // lightweight checklist `items`), since that's where the stage
           // dropdown lives.
-          const projectTasks = group && allTasks ? allTasks.filter((t) => t.multiple_task_id === e.id) : [];
+          const projectTasks = allTasks ? allTasks.filter((t) => t.multiple_task_id === e.id) : [];
 
           return (
             <div key={e.id} id={`mt-${e.id}`} className="border-b border-border/50 rounded-sm transition-shadow">
@@ -299,6 +274,14 @@ export function MultipleTasksPanel({
                     {sub!.name}
                   </span>
                 )}
+                {productLineInfo && (
+                  <span
+                    className="text-[10px] label-caps border border-border rounded-full px-1.5 py-0.5 text-muted-foreground max-w-[90px] truncate flex-shrink-0"
+                    title="제품 라인"
+                  >
+                    {productLineInfo.label}
+                  </span>
+                )}
                 <button
                   onClick={() => startEdit(e)}
                   className="opacity-0 group-hover:opacity-100 hover:text-foreground"
@@ -322,7 +305,7 @@ export function MultipleTasksPanel({
                 </div>
               )}
 
-              {group && <StageTracker stages={stages} tasks={projectTasks} />}
+              <StageTracker stages={stages} tasks={projectTasks} />
 
               {editing && (
                 <div className="mb-2">
@@ -331,7 +314,6 @@ export function MultipleTasksPanel({
                     onChange={setEditForm}
                     categories={categories}
                     subtags={subtags}
-                    groups={groups}
                     submitLabel="Save"
                     onSubmit={() => {
                       onUpdate(e.id, { ...editForm, name: editForm.name.trim() });
@@ -349,13 +331,11 @@ export function MultipleTasksPanel({
                   )}
                   {children.map((it) => (
                     <div key={it.id} className="flex items-center gap-2 flex-wrap group/child">
-                      {group && (
-                        <StageDot
-                          stages={stages}
-                          value={it.stage}
-                          onChange={(stage) => onUpdateItem(it.id, { stage })}
-                        />
-                      )}
+                      <StageDot
+                        stages={stages}
+                        value={it.stage}
+                        onChange={(stage) => onUpdateItem(it.id, { stage })}
+                      />
                       <button
                         onClick={() => onToggleItem(it)}
                         aria-label="Toggle"
@@ -523,27 +503,6 @@ export function MultipleTasksPanel({
                       className="bg-transparent border-b border-border text-[10px] text-muted-foreground w-[64px]"
                     />
                   </div>
-
-                  {group && !hideGroupSharedTasks && (
-                    <div className="mt-3 border-t border-border pt-2">
-                      <p className="label-caps text-[10px] text-muted-foreground mb-1">
-                        Group Shared Tasks — {group.name}
-                      </p>
-                      {onToggleTask && onEditTask && onDeleteTask ? (
-                        <SharedTaskList
-                          tasks={groupSharedTasks}
-                          stages={stages}
-                          editingId={editingTaskId ?? null}
-                          onToggle={onToggleTask}
-                          onEdit={onEditTask}
-                          onDelete={onDeleteTask}
-                        />
-                      ) : (
-                        <p className="text-xs text-muted-foreground italic">No shared tasks</p>
-                      )}
-                    </div>
-                  )}
-
                 </div>
               )}
             </div>
@@ -600,7 +559,6 @@ export function MultipleTaskEditor({
   onChange,
   categories,
   subtags,
-  groups = [],
   onSubmit,
   onCancel,
   submitLabel,
@@ -609,8 +567,6 @@ export function MultipleTaskEditor({
   onChange: (v: MultipleTaskForm) => void;
   categories: Category[];
   subtags: Subtag[];
-  /** Groups this Project can optionally belong to. */
-  groups?: Group[];
   onSubmit: () => void;
   onCancel: () => void;
   submitLabel: string;
@@ -694,19 +650,17 @@ export function MultipleTaskEditor({
             <option key={s.id} value={s.id}>{s.name}</option>
           ))}
         </select>
-        {groups.length > 0 && (
-          <select
-            value={value.groupId ?? ""}
-            onChange={(e) => onChange({ ...value, groupId: e.target.value || null })}
-            title="Group this Project belongs to (optional)"
-            className="bg-transparent outline-none border-b border-border py-1 text-sm"
-          >
-            <option value="">그룹 없음</option>
-            {groups.map((g) => (
-              <option key={g.id} value={g.id}>{g.name}</option>
-            ))}
-          </select>
-        )}
+        <select
+          value={value.productLine ?? ""}
+          onChange={(e) => onChange({ ...value, productLine: e.target.value || null })}
+          title="이 Project가 소속된 제품 라인 (선택)"
+          className="bg-transparent outline-none border-b border-border py-1 text-sm"
+        >
+          <option value="">제품 라인 없음</option>
+          {PRODUCT_LINES.map((l) => (
+            <option key={l.key} value={l.key}>{l.label}</option>
+          ))}
+        </select>
         <button
           onClick={onSubmit}
           className="ml-auto border border-border px-3 py-1 label-caps hover:bg-muted"
@@ -714,93 +668,6 @@ export function MultipleTaskEditor({
           {submitLabel}
         </button>
       </div>
-    </div>
-  );
-}
-
-/** Minimal Shared Task row — same fields as TasksPanel's TaskList, minus the
- * Project/Group label (redundant once already shown inside that Group's or
- * Project's own detail view). Shared by GroupsPanel's Group detail and this
- * file's per-Project "Group Shared Tasks" section. */
-export function SharedTaskList({
-  tasks,
-  stages = [],
-  editingId,
-  onToggle,
-  onEdit,
-  onDelete,
-}: {
-  tasks: Task[];
-  /** Editable per-user production stage list — only used to color-match
-   * whichever stage was set on a Task via TaskForm. */
-  stages?: Stage[];
-  editingId: string | null;
-  onToggle: (t: Task, occurrenceDate: string) => void;
-  onEdit: (t: Task) => void;
-  onDelete: (id: string) => void;
-}) {
-  if (tasks.length === 0) {
-    return <p className="text-xs text-muted-foreground italic">No shared tasks</p>;
-  }
-  return (
-    <div className="space-y-1">
-      {tasks.map((t) => {
-        const overdue = !t.completed && isOccurrenceOverdue(currentOccurrenceDate(t), t.completed);
-        return (
-        <div
-          key={t.id}
-          className={`flex items-center gap-2 py-1 px-1 -mx-1 rounded-sm border-b border-border/50 group flex-wrap ${editingId === t.id ? "bg-muted" : ""}`}
-          style={overdue ? { background: hexToRgba("#F87171", 0.2) } : undefined}
-        >
-          <button
-            onClick={() => onToggle(t, currentOccurrenceDate(t))}
-            aria-label="Toggle"
-            className={`h-3 w-3 border border-border flex-shrink-0 ${t.completed ? "bg-foreground" : ""}`}
-          />
-          {t.stage && (
-            <span
-              className="h-2.5 w-2.5 rounded-full flex-shrink-0"
-              style={{ background: stageColorOf(stages, t.stage), border: `1.5px solid ${stageColorOf(stages, t.stage)}` }}
-              title={`단계: ${stageLabel(stages, t.stage) ?? t.stage}`}
-            />
-          )}
-          <button
-            onClick={() => onEdit(t)}
-            className={`text-sm flex-1 min-w-[6rem] text-left truncate hover:underline ${t.completed ? "line-through text-muted-foreground" : overdue ? "text-destructive font-medium" : ""}`}
-          >
-            {t.title}
-          </button>
-          {t.is_critical && <AlertTriangle size={11} className="text-muted-foreground flex-shrink-0" />}
-          {t.link_url && (
-            <a
-              href={t.link_url}
-              target="_blank"
-              rel="noopener noreferrer"
-              onClick={(e) => e.stopPropagation()}
-              title={t.link_url}
-              className="text-muted-foreground hover:text-foreground flex-shrink-0"
-            >
-              <Link2 size={11} />
-            </a>
-          )}
-          {t.due_date && (
-            <span className={`text-[10px] tabular-nums ${overdue ? "text-destructive font-medium" : "text-muted-foreground"}`}>
-              {t.due_date.slice(5)} ({koDow(t.due_date)})
-            </span>
-          )}
-          {t.due_time && (
-            <span className="text-[10px] text-muted-foreground tabular-nums">{shortTime(t.due_time)}</span>
-          )}
-          <button
-            onClick={() => onDelete(t.id)}
-            aria-label="Delete"
-            className="opacity-0 group-hover:opacity-100 hover:text-destructive"
-          >
-            <Trash2 size={12} />
-          </button>
-        </div>
-        );
-      })}
     </div>
   );
 }
@@ -815,13 +682,8 @@ export const multipleTasksWidget: WidgetDef = {
         items={ctx.projectItems}
         categories={ctx.categories}
         subtags={ctx.subtags}
-        groups={ctx.groups}
         stages={ctx.stages}
         allTasks={ctx.tasks}
-        editingTaskId={ctx.editingTask?.id ?? null}
-        onToggleTask={ctx.taskActions.onToggleTask}
-        onEditTask={ctx.taskActions.onEditTask}
-        onDeleteTask={ctx.taskActions.onDeleteTask}
         {...ctx.projectActions}
       />
     </section>

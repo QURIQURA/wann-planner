@@ -31,7 +31,6 @@ export function TaskWorkspace({ ctx }: { ctx: WidgetContext }) {
         subtags={ctx.subtags}
         projects={ctx.projects}
         projectItems={ctx.projectItems}
-        groups={ctx.groups}
         stages={ctx.stages}
         filter={filter}
       />
@@ -57,13 +56,8 @@ export function TaskWorkspace({ ctx }: { ctx: WidgetContext }) {
             items={ctx.projectItems}
             categories={ctx.categories}
             subtags={ctx.subtags}
-            groups={ctx.groups}
             stages={ctx.stages}
             allTasks={ctx.tasks}
-            editingTaskId={ctx.editingTask?.id ?? null}
-            onToggleTask={ctx.taskActions.onToggleTask}
-            onEditTask={ctx.taskActions.onEditTask}
-            onDeleteTask={ctx.taskActions.onDeleteTask}
             filter={filter}
             onFilterChange={setFilter}
             hideFilterBar
@@ -75,7 +69,6 @@ export function TaskWorkspace({ ctx }: { ctx: WidgetContext }) {
             categories={ctx.categories}
             subtags={ctx.subtags}
             projects={ctx.projects}
-            groups={ctx.groups}
             tasks={ctx.tasks}
             completions={ctx.completions}
             editingTask={ctx.editingTask}
