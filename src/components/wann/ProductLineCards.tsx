@@ -1,6 +1,6 @@
 import { PRODUCT_LINES, compareGroupsRecency } from "@/lib/wann-groups";
 import type { MultipleTask, Task } from "@/lib/wann-data";
-import { projectSpan, todayLocalStr } from "@/lib/wann-data";
+import { projectSpan, todayLocalStr, currentOccurrenceDate } from "@/lib/wann-data";
 import { ChevronRight } from "lucide-react";
 
 /**
@@ -72,7 +72,11 @@ export function ProductLineCards({
     // sit above any one cycle.
     const lineTasks = tasks
       .filter((t) => t.product_line === line.key && !t.multiple_task_id && !t.completed)
-      .sort((a, b) => (a.due_date ?? "").localeCompare(b.due_date ?? ""));
+      .sort((a, b) => {
+        const da = a.due_date ? currentOccurrenceDate(a) : "";
+        const db = b.due_date ? currentOccurrenceDate(b) : "";
+        return da.localeCompare(db);
+      });
 
     return { line, current, projectCount: lineProjects.length, lineTasks };
   });
@@ -149,22 +153,27 @@ export function ProductLineCards({
                 <p className="label-caps text-[9px] text-muted-foreground">
                   공통 준비 · {lineTasks.length}개
                 </p>
-                {lineTasks.slice(0, 3).map((t) => (
-                  <button
-                    key={t.id}
-                    onClick={() => onEditTask?.(t)}
-                    disabled={!onEditTask}
-                    className="w-full text-left text-xs truncate flex items-center gap-1 hover:underline disabled:hover:no-underline"
-                  >
-                    <ChevronRight size={11} className="text-muted-foreground flex-shrink-0" />
-                    <span className="truncate">{t.title}</span>
-                    {t.due_date && (
-                      <span className="text-[10px] text-muted-foreground flex-shrink-0 ml-auto">
-                        {t.due_date.slice(5)}
-                      </span>
-                    )}
-                  </button>
-                ))}
+                {lineTasks.slice(0, 3).map((t) => {
+                  // THIS occurrence's date, not the series' frozen anchor
+                  // date (see TasksPanel's same fix).
+                  const displayDate = t.due_date ? currentOccurrenceDate(t) : null;
+                  return (
+                    <button
+                      key={t.id}
+                      onClick={() => onEditTask?.(t)}
+                      disabled={!onEditTask}
+                      className="w-full text-left text-xs truncate flex items-center gap-1 hover:underline disabled:hover:no-underline"
+                    >
+                      <ChevronRight size={11} className="text-muted-foreground flex-shrink-0" />
+                      <span className="truncate">{t.title}</span>
+                      {displayDate && (
+                        <span className="text-[10px] text-muted-foreground flex-shrink-0 ml-auto">
+                          {displayDate.slice(5)}
+                        </span>
+                      )}
+                    </button>
+                  );
+                })}
               </div>
             )}
           </div>

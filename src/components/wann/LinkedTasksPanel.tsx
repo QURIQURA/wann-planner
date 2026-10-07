@@ -1,6 +1,6 @@
 import type { WidgetDef } from "@/lib/widget-registry";
 import type { MultipleTask, Task } from "@/lib/wann-data";
-import { koDow } from "@/lib/wann-data";
+import { koDow, currentOccurrenceDate } from "@/lib/wann-data";
 import { Link2, ExternalLink } from "lucide-react";
 
 /**
@@ -24,7 +24,9 @@ export function LinkedTasksPanel({
     .slice()
     .sort((a, b) => {
       if (a.completed !== b.completed) return a.completed ? 1 : -1;
-      return (a.due_date ?? "").localeCompare(b.due_date ?? "");
+      const da = a.due_date ? currentOccurrenceDate(a) : "";
+      const db = b.due_date ? currentOccurrenceDate(b) : "";
+      return da.localeCompare(db);
     });
 
   if (linked.length === 0) {
@@ -35,6 +37,9 @@ export function LinkedTasksPanel({
     <div className="space-y-1">
       {linked.map((t) => {
         const project = t.multiple_task_id ? projects.find((p) => p.id === t.multiple_task_id) : null;
+        // THIS occurrence's date for a recurring task, not the series'
+        // frozen anchor date (see TasksPanel's same fix).
+        const displayDate = t.due_date ? currentOccurrenceDate(t) : null;
         return (
           <div
             key={t.id}
@@ -52,9 +57,9 @@ export function LinkedTasksPanel({
                 {project.name}
               </span>
             )}
-            {t.due_date && (
+            {displayDate && (
               <span className="text-[10px] text-muted-foreground tabular-nums flex-shrink-0">
-                {t.due_date.slice(5)} ({koDow(t.due_date)})
+                {displayDate.slice(5)} ({koDow(displayDate)})
               </span>
             )}
             <a

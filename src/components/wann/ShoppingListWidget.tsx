@@ -6,6 +6,7 @@ import {
   koDow,
   shiftDate,
   shortTime,
+  taskOccursOn,
   todayLocalStr,
 } from "@/lib/wann-data";
 import { GripVertical, Plus, ShoppingCart } from "lucide-react";
@@ -43,13 +44,17 @@ export function ShoppingListWidget({
   const todayStr = todayLocalStr();
   const dayKeys = [-1, 0, 1].map((n) => shiftDate(anchorKey, n));
 
-  const shopping = tasks.filter((t) => t.is_shopping);
+  const shopping = tasks.filter((t) => t.is_shopping && !!t.due_date);
+  // Which of the 3 shown days a task occurs on — tested per day rather than
+  // keyed by the task's raw due_date, so a recurring shopping item (e.g.
+  // "주간 장보기" every week) keeps reappearing on its live occurrence date
+  // instead of only ever matching the column for its original anchor date.
   const byDate = new Map<string, Task[]>();
+  for (const date of dayKeys) byDate.set(date, []);
   for (const t of shopping) {
-    const key = t.due_date ?? "";
-    if (!key) continue;
-    if (!byDate.has(key)) byDate.set(key, []);
-    byDate.get(key)!.push(t);
+    for (const date of dayKeys) {
+      if (taskOccursOn(t, date)) byDate.get(date)!.push(t);
+    }
   }
 
   return (

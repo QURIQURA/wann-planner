@@ -189,6 +189,12 @@ function TaskList({
         const productLine =
           !project && t.product_line ? PRODUCT_LINES.find((l) => l.key === t.product_line) : null;
         const overdue = !completed && isOccurrenceOverdue(currentOccurrenceDate(t), completed);
+        // For a recurring task this is THIS occurrence's date, not the
+        // series' original anchor date — e.g. a task anchored 8/27 and
+        // recurring weekly shows 10/8 once that's the live occurrence,
+        // never a frozen 8/27. Undated tasks stay undated (currentOccurrenceDate
+        // falls back to today for those, which isn't a real due date to show).
+        const displayDate = t.due_date ? currentOccurrenceDate(t) : null;
         return (
           <div
             key={t.id}
@@ -239,9 +245,9 @@ function TaskList({
                 {c.name}
               </span>
             ))}
-            {t.due_date && (
+            {displayDate && (
               <span className={`text-[10px] tabular-nums ${overdue ? "text-destructive font-medium" : "text-muted-foreground"}`}>
-                {t.due_date.slice(5)} ({koDow(t.due_date)})
+                {displayDate.slice(5)} ({koDow(displayDate)})
               </span>
             )}
             {t.due_time && (
