@@ -243,15 +243,6 @@ export function MultipleTasksPanel({
                 >
                   {expanded ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
                 </button>
-                {expanded && e.date && (
-                  <span className="text-xs text-muted-foreground whitespace-nowrap">
-                    {e.date.slice(5)} ({koDow(e.date)})
-                    {e.end_date && e.end_date !== e.date
-                      ? ` → ${e.end_date.slice(5)} (${koDow(e.end_date)})`
-                      : ""}
-                  </span>
-                )}
-
                 <button
                   onClick={() => setExpandedId(expanded ? null : e.id)}
                   className="text-sm flex-1 min-w-[6rem] text-left truncate hover:underline"
@@ -298,6 +289,15 @@ export function MultipleTasksPanel({
                   <Trash2 size={12} />
                 </button>
               </div>
+
+              {expanded && e.date && (
+                <p className="pl-5 -mt-1 mb-1 text-xs text-muted-foreground whitespace-nowrap">
+                  {e.date.slice(5)} ({koDow(e.date)})
+                  {e.end_date && e.end_date !== e.date
+                    ? ` → ${e.end_date.slice(5)} (${koDow(e.end_date)})`
+                    : ""}
+                </p>
+              )}
 
               {pct !== null && (
                 <div className="h-[2px] bg-border mb-1">
