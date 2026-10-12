@@ -243,7 +243,7 @@ export function MultipleTasksPanel({
                 >
                   {expanded ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
                 </button>
-                {e.date && (
+                {expanded && e.date && (
                   <span className="text-xs text-muted-foreground whitespace-nowrap">
                     {e.date.slice(5)} ({koDow(e.date)})
                     {e.end_date && e.end_date !== e.date
@@ -269,12 +269,12 @@ export function MultipleTasksPanel({
                     {cat.name}
                   </span>
                 )}
-                {showSub && (
+                {expanded && showSub && (
                   <span className="text-[9px] text-muted-foreground border-b border-border">
                     {sub!.name}
                   </span>
                 )}
-                {productLineInfo && (
+                {expanded && productLineInfo && (
                   <span
                     className="text-[10px] label-caps border border-border rounded-full px-1.5 py-0.5 text-muted-foreground max-w-[90px] truncate flex-shrink-0"
                     title="제품 라인"
