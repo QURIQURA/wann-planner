@@ -71,6 +71,8 @@ function Dashboard() {
 
   const renderSection = (id: DashboardSectionId) => {
     switch (id) {
+      case "quickadd":
+        return <QuickAdd ctx={widgetCtx} />;
       case "shopping":
         return (
           <ShoppingListWidget
@@ -246,16 +248,12 @@ function Dashboard() {
       )}
 
       <main className="px-3 sm:px-6 py-6 space-y-6">
-        <div className="max-w-5xl mx-auto">
-          <QuickAdd ctx={widgetCtx} />
-        </div>
-
-        {/* The Dashboard's 5 sections — Shopping List / Weekly View /
-            Timeline / Product Line / Tasks & Projects — in the user's
-            drag-reordered order (Settings > Dashboard). All share the same
-            wide container now that they're freely reorderable: Timeline's
-            long titles need the extra room, and the others read fine at it
-            too. */}
+        {/* The Dashboard's 6 sections — Quick Add / Shopping List / Weekly
+            View / Timeline / Product Line / Tasks & Projects — in the
+            user's drag-reordered order (Settings > Dashboard). All share
+            the same wide container now that they're freely reorderable:
+            Timeline's long titles need the extra room, and the others read
+            fine at it too. */}
         <div className="max-w-[1800px] mx-auto space-y-4">
           {orderedDashboardSections(settings.dashboard_order).map((id) => (
             <div key={id}>{renderSection(id)}</div>

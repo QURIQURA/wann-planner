@@ -1,15 +1,16 @@
 /**
- * The Dashboard's own 5 sections (Shopping List / Weekly View / Timeline /
- * Product Line / Tasks & Projects) — drag-reorderable via Settings >
- * Dashboard, the same pattern as the existing widget_order for the
- * /widgets page but a separate, parallel list (`dashboard_order` on
+ * The Dashboard's own 6 sections (Quick Add / Shopping List / Weekly View /
+ * Timeline / Product Line / Tasks & Projects) — drag-reorderable via
+ * Settings > Dashboard, the same pattern as the existing widget_order for
+ * the /widgets page but a separate, parallel list (`dashboard_order` on
  * planner_user_settings) since these aren't part of the WidgetDef/
  * BUILT_IN_WIDGETS system: they're always-on Dashboard execution surfaces,
  * not optional management widgets.
  */
-export type DashboardSectionId = "shopping" | "weekly" | "timeline" | "productline" | "tasks";
+export type DashboardSectionId = "quickadd" | "shopping" | "weekly" | "timeline" | "productline" | "tasks";
 
 export const DASHBOARD_SECTIONS: { id: DashboardSectionId; label: string }[] = [
+  { id: "quickadd", label: "Quick Add" },
   { id: "shopping", label: "Shopping List" },
   { id: "weekly", label: "Weekly View" },
   { id: "timeline", label: "Timeline" },
