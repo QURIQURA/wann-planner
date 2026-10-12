@@ -65,6 +65,10 @@ export function TasksPanel({
   const setFilter = (f: CategoryFilter) => (onFilterChange ? onFilterChange(f) : setLocalFilter(f));
 
   const filtered = tasks.filter((t) => {
+    // Linked tasks (참고 링크 걸린 Task) have their own home in the Linked
+    // Tasks widget — keep them out of the plain Tasks list so they don't
+    // duplicate there.
+    if (t.link_url) return false;
     if (filter.categoryId && !taskCategoryIds(t).includes(filter.categoryId)) return false;
     if (filter.subtagId && t.subtag_id !== filter.subtagId) return false;
     // Recurring tasks only show their nearest occurrence when it falls within a
