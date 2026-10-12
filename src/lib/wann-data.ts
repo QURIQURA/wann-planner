@@ -9,11 +9,9 @@ export type UserSettings = {
   font: string;
   widget_visibility: Record<string, boolean>;
   widget_order: string[];
-  /** Background colour for the "review due" highlighter-marker on Intentions
-   * (goals/ideas) in the Timeline — user-customisable so it never blends
-   * into the unrelated category colours also shown there. Overdue reviews
-   * stay a fixed red regardless of this setting (mirrors overdue Tasks). */
-  review_highlight_color: string;
+  /** Drag-reorder of the Dashboard's own sections (Shopping List / Weekly
+   * View / Timeline / Product Line / Tasks & Projects) — Settings > Dashboard. */
+  dashboard_order: string[];
 };
 
 
@@ -550,6 +548,14 @@ export function shiftDate(dateStr: string, n: number): string {
 /** Whole-day difference b - a. */
 export function diffDays(a: string, b: string): number {
   return Math.round((parseLocalDate(b).getTime() - parseLocalDate(a).getTime()) / 86400000);
+}
+
+/** The Sunday (local) of the week containing dateStr — used to anchor a
+ * single Sun–Sat row, e.g. the Dashboard's Weekly View. */
+export function startOfWeek(dateStr: string): string {
+  const d = parseLocalDate(dateStr);
+  d.setDate(d.getDate() - d.getDay());
+  return formatLocalDate(d);
 }
 
 /* ---------- EVENT RECORDS (기록) — separate from the single `notes` field ---------- */

@@ -10,9 +10,7 @@ import type {
   MultipleTaskItem,
   RecurringException,
   EffectiveOccurrence,
-  Intention,
 } from "@/lib/wann-data";
-import { reviewShowsOnDate, reviewStatus } from "@/lib/wann-intentions";
 import {
   formatLocalDate,
   todayLocalStr,
@@ -54,7 +52,7 @@ import {
   type DragEndEvent,
   type DragStartEvent,
 } from "@dnd-kit/core";
-import { ChevronLeft, ChevronRight, ChevronDown, ChevronUp, ListChecks, GripVertical, CircleDashed, StickyNote, AlertTriangle, RotateCcw } from "lucide-react";
+import { ChevronLeft, ChevronRight, ChevronDown, ChevronUp, ListChecks, GripVertical, CircleDashed, StickyNote, AlertTriangle } from "lucide-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { fetchAllSubitems, sortSubitems, updateSubitem, type TaskSubitem } from "@/lib/wann-subitems";
 import type { Habit, HabitCompletion } from "@/lib/wann-extra";
@@ -149,9 +147,6 @@ export function WeekRotation({
   onMoveTask,
   onMoveProject,
   onMoveEvent,
-  intentions = [],
-  onOpenIntention,
-  reviewHighlightColor,
 }: {
   anchorDate: Date;
   onAnchorChange: (d: Date) => void;
@@ -177,13 +172,6 @@ export function WeekRotation({
   onMoveTask: (args: MoveTaskArgs) => void;
   onMoveProject: (args: MoveProjectArgs) => void;
   onMoveEvent: (event: EventEntry, newDate: string) => void;
-  /** Active IDEA/LATER/GOAL intentions whose Review Timer may be due. Optional — Timeline works without it. */
-  intentions?: Intention[];
-  onOpenIntention?: (id: string) => void;
-  /** User-customisable background for the "review due" highlighter-marker
-   * (see Settings > Colors). Defaults to the original yellow. Overdue
-   * reviews stay a fixed red regardless. */
-  reviewHighlightColor?: string;
 }) {
 
   // Yesterday / Today / Tomorrow — anchorDate is always the centre card.
@@ -367,10 +355,6 @@ export function WeekRotation({
             : {}),
         }
       : undefined;
-    // A Review only ever shows starting on its (single, mutable) next_review_date, and then
-    // carries forward every day after — never a duplicate row, never a planner_tasks row.
-    const dayReviews = intentions.filter((i) => reviewShowsOnDate(i, key));
-
     return (
       <DayCard
         key={key}
@@ -387,9 +371,6 @@ export function WeekRotation({
         eventNotes={eventNotes}
         eventTypes={eventTypes}
         dayMultiples={dayMultiples}
-        dayReviews={dayReviews}
-        onOpenIntention={onOpenIntention}
-        reviewHighlightColor={reviewHighlightColor}
         dayHabits={dayHabits}
         habitCompletions={habitCompletions}
         onTapHabit={onTapHabit}
@@ -579,9 +560,6 @@ function DayCard({
   eventNotes,
   eventTypes,
   dayMultiples,
-  dayReviews,
-  onOpenIntention,
-  reviewHighlightColor,
   dayHabits,
   habitCompletions,
   onTapHabit,
@@ -608,9 +586,6 @@ function DayCard({
   eventNotes: EventNote[];
   eventTypes: EventType[];
   dayMultiples: MultipleTask[];
-  dayReviews: Intention[];
-  onOpenIntention?: (id: string) => void;
-  reviewHighlightColor?: string;
   dayHabits: Habit[];
   habitCompletions: HabitCompletion[];
   onTapHabit: (habit: Habit, date: string) => void;
@@ -653,35 +628,6 @@ function DayCard({
       <AllDayZone dateKey={dateKey} isDragging={isDragging}>
         <p className="label-caps text-[10px] text-muted-foreground mb-1">All-day</p>
         <div className="space-y-1">
-          {/* REVIEW — a distinct semantic item type from TASK/EVENT/PROJECT ITEM. Never a
-              planner_tasks row, never draggable, never duplicated: one intention, one
-              next_review_date, re-shown every day (in "overdue" red) until handled. */}
-          {dayReviews.map((intention) => {
-            // Status is always relative to *real* today, not the card's date — a review
-            // showing on a past/future card is still "overdue"/"upcoming" the same way everywhere.
-            const st = reviewStatus(intention.next_review_date);
-            const overdue = st === "overdue";
-            const Comp = onOpenIntention ? "button" : "div";
-            // Highlighter-marker look — deliberately loud, unlike a plain task line, so a
-            // Review never blends into the rest of the timeline. Overdue swaps the highlighter
-            // colour from yellow to red on top of the existing red text/icon.
-            const markerBg = overdue
-              ? hexToRgba("#F87171", 0.35)
-              : hexToRgba(reviewHighlightColor || "#FDE047", 0.55);
-            return (
-              <Comp
-                key={`review-${intention.id}`}
-                onClick={onOpenIntention ? () => onOpenIntention(intention.id) : undefined}
-                className={`flex items-center gap-1.5 text-sm w-full text-left px-1.5 py-0.5 rounded-sm ${overdue ? "text-destructive font-medium" : "text-foreground"} ${onOpenIntention ? "hover:brightness-95" : ""}`}
-                style={{ background: markerBg }}
-                title={overdue ? "Review overdue" : "Review due"}
-              >
-                <RotateCcw size={11} className="flex-shrink-0" />
-                <span className="label-caps text-[10px] flex-shrink-0">REVIEW</span>
-                <span className="truncate">{intention.title}</span>
-              </Comp>
-            );
-          })}
           {dayEvents.map((ev) => (
             <DraggableEventLine
               key={ev.id}
@@ -721,7 +667,7 @@ function DayCard({
             onToggle={onToggle}
             onEdit={onEdit}
           />
-          {dayEvents.length === 0 && allDay.length === 0 && dayMultiples.length === 0 && dayReviews.length === 0 && (
+          {dayEvents.length === 0 && allDay.length === 0 && dayMultiples.length === 0 && (
             <p className="text-xs text-muted-foreground italic">—</p>
           )}
         </div>

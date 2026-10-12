@@ -33,7 +33,6 @@ export type ProductLine = {
 
 export const PRODUCT_LINES: ProductLine[] = [
   { key: "weekly_cake", label: "Weekly Surprise Cake", launchDate: null },
-  { key: "chiffon", label: "딸기·카카오 시폰 케이크", launchDate: "2026-11-14" },
   { key: "confectionery", label: "컨펙셔너리 박스", launchDate: "2026-12-12" },
 ];
 

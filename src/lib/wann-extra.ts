@@ -4,8 +4,6 @@ import type { Tables } from "@/integrations/supabase/types";
 export type Habit = Tables<"planner_habits">;
 export type HabitCompletion = Tables<"planner_habit_completions">;
 export type RoutineGroup = Tables<"planner_routine_groups">;
-export type HyattHours = Tables<"planner_monthly_hyatt_hours">;
-export type KoraSetupItem = Tables<"planner_kora_setup_items">;
 export type DiaryEntry = Tables<"planner_diary_entries">;
 export type Sticker = Tables<"planner_stickers">;
 export type DiaryPhoto = Tables<"planner_diary_photos">;
@@ -73,32 +71,6 @@ export async function setHabitCount(args: {
       .insert({ habit_id: habitId, user_id: userId, date, count });
     if (error) throw error;
   }
-}
-
-/* ---------- MONTHLY ---------- */
-export async function fetchHyattHours(month: string) {
-  const { data, error } = await supabase
-    .from("planner_monthly_hyatt_hours")
-    .select("*")
-    .eq("month", month)
-    .maybeSingle();
-  if (error) throw error;
-  return data;
-}
-export async function upsertHyattHours(userId: string, month: string, hours: number) {
-  const { error } = await supabase
-    .from("planner_monthly_hyatt_hours")
-    .upsert({ user_id: userId, month, hours }, { onConflict: "user_id,month" });
-  if (error) throw error;
-}
-export async function fetchKoraSetup() {
-  const { data, error } = await supabase
-    .from("planner_kora_setup_items")
-    .select("*")
-    .order("category")
-    .order("sort_order");
-  if (error) throw error;
-  return data ?? [];
 }
 
 /* ---------- DIARY ---------- */

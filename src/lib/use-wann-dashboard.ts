@@ -15,7 +15,6 @@ import {
   fetchMultipleTaskItems,
   fetchCompletions,
   fetchExceptions,
-  fetchIntentions,
   fetchEventTypes,
   fetchTaskSeries,
   generateSeriesOccurrenceDates,
@@ -31,14 +30,7 @@ import {
   type UserSettings,
   type Task,
   type MultipleTaskItem,
-  type Intention,
 } from "@/lib/wann-data";
-import {
-  nextReviewDateForKeep,
-  nextReviewDateForSnooze,
-  dueOrOverdueIntentions,
-  type ReviewInterval,
-} from "@/lib/wann-intentions";
 
 import { fetchStages, type Stage } from "@/lib/wann-stages";
 
@@ -91,7 +83,6 @@ export function useWannDashboard(
   const multipleItemsQ = useQuery({ queryKey: ["multiple_task_items", user.id], queryFn: () => fetchMultipleTaskItems(user.id) });
   const completionsQ = useQuery({ queryKey: ["completions", user.id], queryFn: () => fetchCompletions(user.id) });
   const exceptionsQ = useQuery({ queryKey: ["exceptions", user.id], queryFn: () => fetchExceptions(user.id) });
-  const intentionsQ = useQuery({ queryKey: ["intentions", user.id], queryFn: () => fetchIntentions(user.id) });
   const stagesQ = useQuery({ queryKey: ["cake_stages", user.id], queryFn: () => fetchStages(user.id) });
   const taskSeriesQ = useQuery({ queryKey: ["task_series", user.id], queryFn: () => fetchTaskSeries(user.id) });
 
@@ -965,152 +956,6 @@ export function useWannDashboard(
     onSuccess: () => invalidate("event_notes"),
   });
 
-  /* ---- Intentions (IDEA / LATER / GOAL + Review Timer) ---- */
-  const addIntention = useMutation({
-    mutationFn: async (title: string) => {
-      // Fast capture: title only. Everything else (category/notes/review) is set up later.
-      const { error } = await supabase.from("planner_intentions").insert({
-        user_id: user.id,
-        title,
-      });
-      if (error) throw error;
-    },
-    onSuccess: () => invalidate("intentions"),
-  });
-
-  const updateIntention = useMutation({
-    mutationFn: async ({
-      id,
-      patch,
-    }: {
-      id: string;
-      patch: Partial<{
-        title: string;
-        notes: string | null;
-        category_id: string | null;
-        review_interval: ReviewInterval;
-        review_interval_days: number | null;
-      }>;
-    }) => {
-      // Setting/changing the Review Timer immediately (re)computes next_review_date from
-      // today, calendar-safe — the same addCalendarInterval used by KEEP/SNOOZE.
-      const fullPatch: Record<string, unknown> = { ...patch };
-      if (patch.review_interval) {
-        fullPatch.next_review_date = nextReviewDateForSnooze(
-          patch.review_interval,
-          patch.review_interval_days,
-        );
-      }
-      const { error } = await supabase.from("planner_intentions").update(fullPatch as never).eq("id", id);
-      if (error) throw error;
-    },
-    onSuccess: () => invalidate("intentions"),
-  });
-
-  const keepIntention = useMutation({
-    mutationFn: async (intention: Intention) => {
-      const next = nextReviewDateForKeep(intention);
-      const { error } = await supabase
-        .from("planner_intentions")
-        .update({ next_review_date: next, last_reviewed_at: new Date().toISOString() })
-        .eq("id", intention.id);
-      if (error) throw error;
-    },
-    onSuccess: () => invalidate("intentions"),
-  });
-
-  const snoozeIntention = useMutation({
-    mutationFn: async ({ intention, interval }: { intention: Intention; interval: ReviewInterval }) => {
-      // SNOOZE only changes the date — the configured review_interval is left untouched.
-      const next = nextReviewDateForSnooze(interval);
-      const { error } = await supabase
-        .from("planner_intentions")
-        .update({ next_review_date: next, last_reviewed_at: new Date().toISOString() })
-        .eq("id", intention.id);
-      if (error) throw error;
-    },
-    onSuccess: () => invalidate("intentions"),
-  });
-
-  const promoteIntention = useMutation({
-    mutationFn: async (intention: Intention) => {
-      const next = intention.stage === "idea" ? "later" : "goal";
-      const { error } = await supabase.from("planner_intentions").update({ stage: next }).eq("id", intention.id);
-      if (error) throw error;
-    },
-    onSuccess: () => invalidate("intentions"),
-  });
-
-  const startProjectFromIntention = useMutation({
-    mutationFn: async (intention: Intention) => {
-      const { data, error } = await supabase
-        .from("planner_multiple_tasks")
-        .insert({
-          user_id: user.id,
-          name: intention.title,
-          category_id: intention.category_id,
-          date: todayLocalStr(),
-        })
-        .select()
-        .single();
-      if (error) throw error;
-      const { error: linkErr } = await supabase
-        .from("planner_intentions")
-        .update({ linked_project_id: data.id, stage: "goal" })
-        .eq("id", intention.id);
-      if (linkErr) throw linkErr;
-    },
-    onSuccess: () => { invalidate("intentions"); invalidate("multiple_tasks"); },
-  });
-
-  const startTaskFromIntention = useMutation({
-    mutationFn: async (intention: Intention) => {
-      const { data, error } = await supabase
-        .from("planner_tasks")
-        .insert({
-          user_id: user.id,
-          title: intention.title,
-          notes: intention.notes,
-          category_id: intention.category_id,
-          category_ids: intention.category_id ? [intention.category_id] : [],
-          due_date: todayLocalStr(),
-        })
-        .select()
-        .single();
-      if (error) throw error;
-      const { error: linkErr } = await supabase
-        .from("planner_intentions")
-        .update({ linked_task_id: data.id, stage: "goal" })
-        .eq("id", intention.id);
-      if (linkErr) throw linkErr;
-    },
-    onSuccess: () => { invalidate("intentions"); invalidate("tasks"); },
-  });
-
-  const archiveIntention = useMutation({
-    mutationFn: async (id: string) => {
-      const { error } = await supabase.from("planner_intentions").update({ status: "archived" }).eq("id", id);
-      if (error) throw error;
-    },
-    onSuccess: () => invalidate("intentions"),
-  });
-
-  const completeIntention = useMutation({
-    mutationFn: async (id: string) => {
-      const { error } = await supabase.from("planner_intentions").update({ status: "completed" }).eq("id", id);
-      if (error) throw error;
-    },
-    onSuccess: () => invalidate("intentions"),
-  });
-
-  const deleteIntention = useMutation({
-    mutationFn: async (id: string) => {
-      const { error } = await supabase.from("planner_intentions").delete().eq("id", id);
-      if (error) throw error;
-    },
-    onSuccess: () => invalidate("intentions"),
-  });
-
   const scrollToId = (id: string) => {
     const el = document.getElementById(id);
     if (el) {
@@ -1119,8 +964,6 @@ export function useWannDashboard(
       setTimeout(() => el.classList.remove("ring-2", "ring-foreground"), 1500);
     }
   };
-
-  const dueReviews = useMemo(() => dueOrOverdueIntentions(intentionsQ.data ?? []), [intentionsQ.data]);
 
   const upcoming = useMemo(() => {
     return (eventsQ.data ?? [])
@@ -1183,7 +1026,6 @@ export function useWannDashboard(
     eventNotes: eventNotesQ.data ?? [],
     eventTypes: eventTypesQ.data ?? [],
     editingTask,
-    intentions: intentionsQ.data ?? [],
     stages: stagesQ.data ?? [],
     taskActions: {
       onCancelEdit: () => setEditingTask(null),
@@ -1232,23 +1074,6 @@ export function useWannDashboard(
       onSetSystemColor: (key, label, color) => setSystemEventTypeColor.mutate({ key, name: label, color }),
       onResetSystemColor: (key) => resetSystemEventTypeColor.mutate(key),
     },
-    intentionActions: {
-      onAdd: (title) => addIntention.mutate(title),
-      onUpdate: (id, patch) => updateIntention.mutate({ id, patch }),
-      onKeep: (intention) => keepIntention.mutate(intention),
-      onSnooze: (intention, interval) => snoozeIntention.mutate({ intention, interval }),
-      onPromote: (intention) => promoteIntention.mutate(intention),
-      onStartProject: (intention) => startProjectFromIntention.mutate(intention),
-      onStartTask: (intention) => startTaskFromIntention.mutate(intention),
-      onArchive: (intention) => archiveIntention.mutate(intention.id),
-      onComplete: (intention) => completeIntention.mutate(intention.id),
-      onDelete: (id) => deleteIntention.mutate(id),
-      onOpenLinkedProject: (projectId) => scrollToId(`mt-${projectId}`),
-      onOpenLinkedTask: (taskId) => {
-        const t = (tasksQ.data ?? []).find((x) => x.id === taskId);
-        if (t) setEditingTask(t);
-      },
-    },
     stageActions: {
       onAdd: (v) => addStage.mutate(v),
       onUpdate: (id, patch) => updateStage.mutate({ id, patch }),
@@ -1276,7 +1101,6 @@ export function useWannDashboard(
     multipleItemsQ,
     completionsQ,
     exceptionsQ,
-    intentionsQ,
     stagesQ,
     taskSeriesQ,
     habitsQ,
@@ -1288,7 +1112,6 @@ export function useWannDashboard(
     moveEvent,
     visibleWidgets,
     widgetCtx,
-    dueReviews,
     upcoming,
     scrollToId,
     handleSignOut,

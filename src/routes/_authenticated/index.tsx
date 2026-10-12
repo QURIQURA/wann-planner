@@ -1,11 +1,12 @@
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState } from "react";
 import { Settings as SettingsIcon, LogOut, BookOpen, LineChart, CalendarDays, LayoutGrid } from "lucide-react";
 
-import { supabase } from "@/integrations/supabase/client";
-import { isDPlusEvent, dPlusLabel, formatLocalDate } from "@/lib/wann-data";
+import { isDPlusEvent, dPlusLabel, formatLocalDate, parseLocalDate } from "@/lib/wann-data";
 import { useWannDashboard } from "@/lib/use-wann-dashboard";
+import { orderedDashboardSections, type DashboardSectionId } from "@/lib/dashboard-sections";
 import { WeekRotation } from "@/components/wann/WeekRotation";
+import { WeeklyView } from "@/components/wann/WeeklyView";
 import { ShoppingListWidget } from "@/components/wann/ShoppingListWidget";
 import { ProductLineCards } from "@/components/wann/ProductLineCards";
 import { SettingsPanel } from "@/components/wann/SettingsPanel";
@@ -36,9 +37,7 @@ export const Route = createFileRoute("/_authenticated/")({
 function Dashboard() {
   const { user } = Route.useRouteContext() as { user: { id: string; email?: string } };
   const { date: dateParam } = Route.useSearch();
-  const navigate = useNavigate();
   const [settingsOpen, setSettingsOpen] = useState(false);
-  const [reviewPromptDismissed, setReviewPromptDismissed] = useState(false);
 
   const {
     anchor,
@@ -55,28 +54,115 @@ function Dashboard() {
     multipleItemsQ,
     habitsQ,
     habitCompQ,
-    intentionsQ,
     tapHabit,
     toggleOccurrence,
     moveTask,
     moveProject,
     moveEvent,
     widgetCtx,
-    dueReviews,
     upcoming,
     handleSignOut,
     scrollToId,
   } = useWannDashboard(user, { initialDate: dateParam });
 
-  const openGoalsWidget = (intentionId?: string) =>
-    navigate({
-      to: "/widgets",
-      search: { open: "goals", scrollTo: intentionId ? `gi-${intentionId}` : undefined },
-    });
-
   // The Projects list lives right on the Dashboard again (below), so a
   // Timeline project-item tap scrolls to it in place instead of navigating away.
   const openProject = (projectId: string) => scrollToId(`mt-${projectId}`);
+
+  const renderSection = (id: DashboardSectionId) => {
+    switch (id) {
+      case "shopping":
+        return (
+          <ShoppingListWidget
+            anchorKey={formatLocalDate(anchor)}
+            tasks={tasksQ.data ?? []}
+            completions={completionsQ.data ?? []}
+            onToggle={(t, date) => toggleOccurrence.mutate({ task: t, date })}
+            onEdit={(t) => widgetCtx.taskActions.onEditTask(t)}
+            onAdd={(title, date) =>
+              widgetCtx.taskActions.onAddTask({
+                title,
+                categoryIds: [],
+                subtagId: null,
+                dueDate: date,
+                dueTime: null,
+                endTime: null,
+                recurrence: "none",
+                projectId: null,
+                newProject: null,
+                subitems: [],
+                isCritical: false,
+                isShopping: true,
+                stage: null,
+                productLine: null,
+                linkUrl: null,
+              })
+            }
+            onReorder={(ids) => widgetCtx.taskActions.onReorderShopping(ids)}
+          />
+        );
+      case "weekly":
+        return (
+          <WeeklyView
+            tasks={tasksQ.data ?? []}
+            exceptions={exceptionsQ.data ?? []}
+            events={eventsQ.data ?? []}
+            eventTypes={eventTypesQ.data ?? []}
+            categories={widgetCtx.categories}
+            onSelectDate={(date) => setAnchor(parseLocalDate(date))}
+          />
+        );
+      case "timeline":
+        return (
+          <WeekRotation
+            anchorDate={anchor}
+            onAnchorChange={setAnchor}
+            tasks={tasksQ.data ?? []}
+            categories={widgetCtx.categories}
+            events={eventsQ.data ?? []}
+            eventNotes={eventNotesQ.data ?? []}
+            eventTypes={eventTypesQ.data ?? []}
+            completions={completionsQ.data ?? []}
+            exceptions={exceptionsQ.data ?? []}
+            onMoveTask={(args) => moveTask.mutate(args)}
+            onMoveProject={(args) => moveProject.mutate(args)}
+            onMoveEvent={(ev, newDate) => {
+              // recurring events keep their original year (birth year etc.)
+              const date = ev.is_recurring ? `${ev.date.slice(0, 4)}${newDate.slice(4)}` : newDate;
+              if (date === ev.date) return;
+              moveEvent.mutate({ id: ev.id, date });
+            }}
+            multipleTasks={multipleQ.data ?? []}
+            multipleTaskItems={multipleItemsQ.data ?? []}
+            habits={habitsQ.data ?? []}
+            habitCompletions={habitCompQ.data ?? []}
+            onTapHabit={(habit, date) => tapHabit.mutate({ habit, date })}
+            onOpenMultiple={(id) => openProject(id)}
+            onToggleOccurrence={(task, date) => toggleOccurrence.mutate({ task, date })}
+            onEditTask={(t) => widgetCtx.taskActions.onEditTask(t)}
+            onAddTask={(v) => widgetCtx.taskActions.onAddTask(v)}
+          />
+        );
+      case "productline":
+        return (
+          <ProductLineCards
+            projects={multipleQ.data ?? []}
+            projectItems={multipleItemsQ.data ?? []}
+            tasks={tasksQ.data ?? []}
+            onEditTask={(t) => widgetCtx.taskActions.onEditTask(t)}
+            onOpenProject={(id) => openProject(id)}
+          />
+        );
+      case "tasks":
+        // Original combined layout: one shared category filter, Projects
+        // left / Tasks right — the exact same TaskWorkspace used on
+        // /widgets' "Tasks & Projects" widget, same ctx.taskActions/
+        // projectActions.
+        return <TaskWorkspace ctx={widgetCtx} />;
+      default:
+        return null;
+    }
+  };
 
   if (!settings) {
     return <div className="min-h-screen flex items-center justify-center label-caps text-muted-foreground">Loading</div>;
@@ -91,15 +177,6 @@ function Dashboard() {
             <h1 className="text-lg font-light tracking-tight">Weekly OS</h1>
           </div>
           <div className="flex items-center gap-2 flex-wrap">
-            {dueReviews.length > 0 && (
-              <button
-                onClick={() => openGoalsWidget()}
-                className="border border-destructive text-destructive p-2 hover:bg-muted flex items-center gap-1"
-                aria-label="Reviews due"
-              >
-                <span className="label-caps text-[10px]">REVIEW · {dueReviews.length}</span>
-              </button>
-            )}
             <Link
               to="/month"
               className="border border-border p-2 hover:bg-muted flex items-center gap-1"
@@ -151,28 +228,6 @@ function Dashboard() {
         </div>
       </header>
 
-      {dueReviews.length > 0 && !reviewPromptDismissed && (
-        <div className="border-b border-border bg-muted">
-          <div className="max-w-5xl mx-auto px-3 sm:px-6 py-3 flex items-center gap-3 flex-wrap">
-            <span className="text-sm">
-              {dueReviews.length}개 항목을 다시 확인할 시간이에요.
-            </span>
-            <button
-              onClick={() => openGoalsWidget()}
-              className="border border-border px-2 py-1 label-caps text-[10px] hover:bg-background"
-            >
-              보러 가기
-            </button>
-            <button
-              onClick={() => setReviewPromptDismissed(true)}
-              className="ml-auto label-caps text-[10px] text-muted-foreground hover:text-foreground"
-            >
-              나중에
-            </button>
-          </div>
-        </div>
-      )}
-
       {upcoming.length > 0 && (
         <div className="border-b border-border bg-muted">
           <div className="max-w-5xl mx-auto px-3 sm:px-6 py-3 flex items-center gap-4 flex-wrap">
@@ -195,87 +250,16 @@ function Dashboard() {
           <QuickAdd ctx={widgetCtx} />
         </div>
 
-        {/* Timeline (and the Shopping List above it) alone get a much wider
-            container than the rest of the Dashboard — it's the view most
-            starved for horizontal room (event/task/project-bar titles
-            truncating), while QuickAdd and Tasks & Projects/Groups read
-            better at the original column width. */}
+        {/* The Dashboard's 5 sections — Shopping List / Weekly View /
+            Timeline / Product Line / Tasks & Projects — in the user's
+            drag-reordered order (Settings > Dashboard). All share the same
+            wide container now that they're freely reorderable: Timeline's
+            long titles need the extra room, and the others read fine at it
+            too. */}
         <div className="max-w-[1800px] mx-auto space-y-4">
-        <ShoppingListWidget
-          anchorKey={formatLocalDate(anchor)}
-          tasks={tasksQ.data ?? []}
-          completions={completionsQ.data ?? []}
-          onToggle={(t, date) => toggleOccurrence.mutate({ task: t, date })}
-          onEdit={(t) => widgetCtx.taskActions.onEditTask(t)}
-          onAdd={(title, date) =>
-            widgetCtx.taskActions.onAddTask({
-              title,
-              categoryIds: [],
-              subtagId: null,
-              dueDate: date,
-              dueTime: null,
-              endTime: null,
-              recurrence: "none",
-              projectId: null,
-              newProject: null,
-              subitems: [],
-              isCritical: false,
-              isShopping: true,
-              stage: null,
-              productLine: null,
-              linkUrl: null,
-            })
-          }
-          onReorder={(ids) => widgetCtx.taskActions.onReorderShopping(ids)}
-        />
-        <WeekRotation
-          anchorDate={anchor}
-          onAnchorChange={setAnchor}
-          tasks={tasksQ.data ?? []}
-          categories={widgetCtx.categories}
-          events={eventsQ.data ?? []}
-          eventNotes={eventNotesQ.data ?? []}
-          eventTypes={eventTypesQ.data ?? []}
-          completions={completionsQ.data ?? []}
-          exceptions={exceptionsQ.data ?? []}
-          onMoveTask={(args) => moveTask.mutate(args)}
-          onMoveProject={(args) => moveProject.mutate(args)}
-          onMoveEvent={(ev, newDate) => {
-            // recurring events keep their original year (birth year etc.)
-            const date = ev.is_recurring ? `${ev.date.slice(0, 4)}${newDate.slice(4)}` : newDate;
-            if (date === ev.date) return;
-            moveEvent.mutate({ id: ev.id, date });
-          }}
-
-          multipleTasks={multipleQ.data ?? []}
-          multipleTaskItems={multipleItemsQ.data ?? []}
-          habits={habitsQ.data ?? []}
-          habitCompletions={habitCompQ.data ?? []}
-          onTapHabit={(habit, date) => tapHabit.mutate({ habit, date })}
-          onOpenMultiple={(id) => openProject(id)}
-          onToggleOccurrence={(task, date) => toggleOccurrence.mutate({ task, date })}
-          onEditTask={(t) => widgetCtx.taskActions.onEditTask(t)}
-          onAddTask={(v) => widgetCtx.taskActions.onAddTask(v)}
-          intentions={(intentionsQ.data ?? []).filter((i) => i.status === "active")}
-          onOpenIntention={(id) => openGoalsWidget(id)}
-          reviewHighlightColor={settings.review_highlight_color}
-        />
-        </div>
-
-        <div className="max-w-5xl mx-auto">
-        {/* Original combined layout restored: one shared category filter,
-            Projects left / Tasks right — the exact same TaskWorkspace used
-            on /widgets' "Tasks & Projects" widget, same ctx.taskActions/
-            projectActions. (Splitting this into two separately-filtered
-            boxes was a mistake — same category, no reason for two boxes.) */}
-        <ProductLineCards
-          projects={multipleQ.data ?? []}
-          projectItems={multipleItemsQ.data ?? []}
-          tasks={tasksQ.data ?? []}
-          onEditTask={(t) => widgetCtx.taskActions.onEditTask(t)}
-          onOpenProject={(id) => openProject(id)}
-        />
-        <TaskWorkspace ctx={widgetCtx} />
+          {orderedDashboardSections(settings.dashboard_order).map((id) => (
+            <div key={id}>{renderSection(id)}</div>
+          ))}
         </div>
       </main>
 

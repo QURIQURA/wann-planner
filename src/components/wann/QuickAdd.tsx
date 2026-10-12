@@ -2,23 +2,21 @@ import { useState } from "react";
 import { Plus } from "lucide-react";
 import type { WidgetContext } from "@/lib/widget-context";
 import { EventEditor, emptyEventForm } from "./EventsPanel";
-import { FastCapture } from "./GoalsPanel";
 
 /**
  * Dashboard = execution. Quick Add is the entire "create" surface here — full
  * management (filters, editing lists, category setup, …) lives on /widgets.
  * Task and Project already have their own full always-visible section right
- * below Timeline (TaskWorkspace), so Quick Add only needs the two things that
- * DON'T have a full list/form on the Dashboard: Event and Idea. Every action
- * below calls the SAME ctx.*Actions used by the Widgets page — no new data
- * logic, just a compact presentation of existing capture flows.
+ * below Timeline (TaskWorkspace), so Quick Add only needs the one thing that
+ * DOESN'T have a full list/form on the Dashboard: Event. The action below
+ * calls the SAME ctx.eventActions used by the Widgets page — no new data
+ * logic, just a compact presentation of the existing capture flow.
  */
 export function QuickAdd({ ctx }: { ctx: WidgetContext }) {
   return (
     <section className="card-flat p-4 space-y-2">
       <p className="label-caps mb-1">Quick Add</p>
       <QuickAddEvent ctx={ctx} />
-      <FastCapture onAdd={ctx.intentionActions.onAdd} />
     </section>
   );
 }

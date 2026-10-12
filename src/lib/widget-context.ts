@@ -8,13 +8,11 @@ import type {
   EventEntry,
   EventNote,
   EventType,
-  Intention,
 } from "@/lib/wann-data";
 import type { Stage } from "@/lib/wann-stages";
 import type { TaskFormValues } from "@/components/wann/TaskForm";
 import type { MultipleTaskForm } from "@/components/wann/MultipleTasksPanel";
 import type { EventForm, EventNoteActions, EventTypeActions } from "@/components/wann/EventsPanel";
-import type { IntentionActions } from "@/components/wann/GoalsPanel";
 
 /**
  * Everything a dashboard widget may need. The dashboard builds this once and
@@ -37,8 +35,6 @@ export type WidgetContext = {
   /** Custom Event Types only — system types are a code constant, see wann-events.ts. */
   eventTypes: EventType[];
   editingTask: Task | null;
-  /** IDEA / LATER / GOAL intent layer — independent of tasks/projects. */
-  intentions: Intention[];
   /** User-editable weekly-cake production stage list (Settings > 단계) — a
    * Task's `stage` column stores one of these rows' id. */
   stages: Stage[];
@@ -82,8 +78,6 @@ export type WidgetContext = {
     onTogglePin: (id: string, pinned: boolean) => void;
   } & EventNoteActions;
   eventTypeActions: EventTypeActions;
-
-  intentionActions: IntentionActions;
 
   stageActions: {
     onAdd: (v: { label: string; color: string }) => void;

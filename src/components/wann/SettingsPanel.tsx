@@ -2,6 +2,7 @@ import { useState } from "react";
 import { X, GripVertical, Plus, Trash2 } from "lucide-react";
 import type { UserSettings } from "@/lib/wann-data";
 import { orderedWidgets, isWidgetVisible } from "@/lib/widgets";
+import { DASHBOARD_SECTIONS, orderedDashboardSections } from "@/lib/dashboard-sections";
 import type { Stage } from "@/lib/wann-stages";
 
 const PRESETS = [
@@ -41,7 +42,7 @@ export function SettingsPanel({
   onDeleteStage?: (id: string) => void;
   onReorderStages?: (orderedIds: string[]) => void;
 }) {
-  const [tab, setTab] = useState<"colors" | "font" | "widgets" | "stages">("colors");
+  const [tab, setTab] = useState<"colors" | "font" | "dashboard" | "widgets" | "stages">("colors");
 
   return (
     <div className="fixed inset-0 z-50 flex justify-end bg-foreground/10">
@@ -52,7 +53,7 @@ export function SettingsPanel({
         </div>
 
         <div className="flex border-b border-border">
-          {(["colors", "font", "widgets", "stages"] as const).map((t) => (
+          {(["colors", "font", "dashboard", "widgets", "stages"] as const).map((t) => (
             <button
               key={t}
               onClick={() => setTab(t)}
@@ -84,16 +85,6 @@ export function SettingsPanel({
             <ColorRow label="Background" value={settings.bg_color} onChange={(v) => onChange({ bg_color: v })} />
             <ColorRow label="Border" value={settings.border_color} onChange={(v) => onChange({ border_color: v })} />
             <ColorRow label="Text" value={settings.text_color} onChange={(v) => onChange({ text_color: v })} />
-            <div>
-              <ColorRow
-                label="Review Highlight"
-                value={settings.review_highlight_color || "#FDE047"}
-                onChange={(v) => onChange({ review_highlight_color: v })}
-              />
-              <p className="text-[10px] text-muted-foreground mt-1">
-                Timeline에서 다시 확인할 Goal/Idea에 붙는 하이라이터 색 — Task 카테고리 색과 헷갈리지 않게 직접 골라보세요. 기한이 지난 리뷰는 항상 빨간색으로 표시돼요.
-              </p>
-            </div>
           </div>
         )}
 
@@ -111,6 +102,8 @@ export function SettingsPanel({
             ))}
           </div>
         )}
+
+        {tab === "dashboard" && <DashboardTab settings={settings} onChange={onChange} />}
 
         {tab === "widgets" && <WidgetsTab settings={settings} onChange={onChange} />}
 
@@ -270,6 +263,59 @@ function StagesTab({
           <Plus size={12} /> Add
         </button>
       </div>
+    </div>
+  );
+}
+
+/** Drag-reorder for the Dashboard's own 5 always-on sections (Shopping List /
+ * Weekly View / Timeline / Product Line / Tasks & Projects) — order-only, no
+ * visibility toggle, since these aren't optional like the /widgets list. */
+function DashboardTab({
+  settings,
+  onChange,
+}: {
+  settings: UserSettings;
+  onChange: (patch: Partial<UserSettings>) => void;
+}) {
+  const sectionIds = orderedDashboardSections(settings.dashboard_order);
+  const labelOf = (id: string) => DASHBOARD_SECTIONS.find((s) => s.id === id)?.label ?? id;
+  const [dragId, setDragId] = useState<string | null>(null);
+  const [overId, setOverId] = useState<string | null>(null);
+
+  const commitOrder = (fromId: string, toId: string) => {
+    if (fromId === toId) return;
+    const ids = [...sectionIds];
+    const from = ids.indexOf(fromId as never);
+    const to = ids.indexOf(toId as never);
+    if (from < 0 || to < 0) return;
+    ids.splice(to, 0, ids.splice(from, 1)[0]);
+    onChange({ dashboard_order: ids });
+  };
+
+  return (
+    <div className="p-6 space-y-2">
+      <p className="label-caps text-muted-foreground mb-3">Drag to reorder</p>
+      {sectionIds.map((id) => (
+        <div
+          key={id}
+          draggable
+          onDragStart={() => setDragId(id)}
+          onDragEnd={() => { setDragId(null); setOverId(null); }}
+          onDragOver={(e) => { e.preventDefault(); setOverId(id); }}
+          onDrop={(e) => {
+            e.preventDefault();
+            if (dragId) commitOrder(dragId, id);
+            setDragId(null);
+            setOverId(null);
+          }}
+          className={`flex items-center gap-3 border border-border p-3 bg-background ${
+            overId === id && dragId && dragId !== id ? "border-foreground" : ""
+          } ${dragId === id ? "opacity-50" : ""}`}
+        >
+          <GripVertical size={14} className="cursor-grab text-muted-foreground shrink-0" />
+          <span className="truncate">{labelOf(id)}</span>
+        </div>
+      ))}
     </div>
   );
 }

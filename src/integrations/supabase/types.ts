@@ -1744,6 +1744,7 @@ export type Database = {
           bg_color: string
           border_color: string
           created_at: string
+          dashboard_order: string[]
           font: string
           review_highlight_color: string
           text_color: string
@@ -1756,6 +1757,7 @@ export type Database = {
           bg_color?: string
           border_color?: string
           created_at?: string
+          dashboard_order?: string[]
           font?: string
           review_highlight_color?: string
           text_color?: string
@@ -1768,6 +1770,7 @@ export type Database = {
           bg_color?: string
           border_color?: string
           created_at?: string
+          dashboard_order?: string[]
           font?: string
           review_highlight_color?: string
           text_color?: string
@@ -1784,6 +1787,10 @@ export type Database = {
     }
     Functions: {
       is_household_member: { Args: { _user_id: string }; Returns: boolean }
+      sync_kora_order: {
+        Args: { p_delivery_task: Json; p_project: Json }
+        Returns: undefined
+      }
     }
     Enums: {
       [_ in never]: never
