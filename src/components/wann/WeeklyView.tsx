@@ -15,14 +15,16 @@ import {
 import { resolveEventColor } from "@/lib/wann-events";
 
 const DOW = ["S", "M", "T", "W", "T", "F", "S"];
-const MAX_ITEMS = 3;
 
 /**
  * A single Sun–Sat row lifted straight out of the Month view's grid-cell
- * style (same item list / overflow / critical-border / today-highlight
- * logic as month.tsx) — a compact "this week at a glance" that sits above
- * the Timeline on the Dashboard, paged independently with its own
- * prev/next-week arrows rather than following the Timeline's day anchor.
+ * style (same item list / critical-border / today-highlight logic as
+ * month.tsx) — a compact "this week at a glance" that sits above the
+ * Timeline on the Dashboard, paged independently with its own prev/next-week
+ * arrows rather than following the Timeline's day anchor. Each day's cell
+ * lists every item (no truncation) and grows taller as a day fills up —
+ * since all 7 cells share one CSS grid row, the whole row grows together to
+ * match the busiest day.
  */
 export function WeeklyView({
   tasks,
@@ -92,7 +94,6 @@ export function WeeklyView({
         {days.map((dateStr) => {
           const occs = effectiveOccurrencesOnDate(tasks, exceptions, dateStr);
           const dayEvents = eventsOnDate(events, dateStr);
-          const totalItems = occs.length + dayEvents.length;
           const isToday = dateStr === today;
 
           const items: Array<{ key: string; label: string; color?: string; critical?: boolean }> = [
@@ -113,15 +114,15 @@ export function WeeklyView({
             <button
               key={dateStr}
               onClick={() => onSelectDate(dateStr)}
-              className={`relative min-h-[6rem] border p-1 text-left hover:bg-muted flex flex-col overflow-hidden ${
+              className={`relative min-h-[6rem] border p-1 text-left hover:bg-muted flex flex-col ${
                 isToday ? "border-foreground border-2" : "border-border"
               }`}
             >
               <span className={`text-xs flex-shrink-0 ${isToday ? "font-medium" : ""}`}>
                 {Number(dateStr.slice(-2))}
               </span>
-              <div className="mt-1 flex flex-col gap-0.5 overflow-hidden">
-                {items.slice(0, MAX_ITEMS).map((it) => (
+              <div className="mt-1 flex flex-col gap-0.5">
+                {items.map((it) => (
                   <span
                     key={it.key}
                     className={`text-[9px] truncate px-1 leading-tight ${it.critical ? "border-2 border-destructive" : ""}`}
@@ -130,9 +131,6 @@ export function WeeklyView({
                     {it.label}
                   </span>
                 ))}
-                {totalItems > MAX_ITEMS && (
-                  <span className="text-[9px] text-muted-foreground">+{totalItems - MAX_ITEMS} more</span>
-                )}
               </div>
             </button>
           );
