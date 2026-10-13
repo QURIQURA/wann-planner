@@ -3,7 +3,7 @@ import { useState } from "react";
 import type { Category, MultipleTask, Subtag, Task, TaskCompletion } from "@/lib/wann-data";
 import { todayLocalStr, shortTime, isOccurrenceCompleted, isOccurrenceOverdue, currentOccurrenceDate, koDow, taskSortKey, diffDays, taskCategoryIds, hexToRgba } from "@/lib/wann-data";
 import { PRODUCT_LINES } from "@/lib/wann-groups";
-import { Trash2, ChevronDown, ChevronUp, Link2 } from "lucide-react";
+import { Trash2, ChevronDown, ChevronUp, ChevronRight, Link2 } from "lucide-react";
 import { CategoryFilterBar } from "./CategoryFilterBar";
 import type { CategoryFilter, TaskFormValues } from "./TaskForm";
 
@@ -56,6 +56,7 @@ export function TasksPanel({
 }) {
   const today = todayLocalStr();
   const [showDone, setShowDone] = useState(false);
+  const [showUndated, setShowUndated] = useState(false);
 
   const [localFilter, setLocalFilter] = useState<CategoryFilter>({
     categoryId: null,
@@ -105,23 +106,52 @@ export function TasksPanel({
       )}
 
       {(() => {
-        // Tasks always carry a due date now (undated capture belongs to Ideas &
-        // Goals instead), so there's no separate "날짜 미정" bucket to split out
-        // any more — every open Task renders in one dated list.
-        const open = filtered
-          .filter((t) => !isOccurrenceCompleted(t, currentOccurrenceDate(t, today), completions))
+        // Open (not-yet-completed) tasks split into a dated list — the main,
+        // always-visible view, sorted by due date — and an undated "날짜 미정"
+        // bucket behind a collapsible toggle, mirroring the Projects pattern
+        // in MultipleTasksPanel.
+        const open = filtered.filter((t) => !isOccurrenceCompleted(t, currentOccurrenceDate(t, today), completions));
+        const dated = open
+          .filter((t) => !!t.due_date)
           .slice()
           .sort((a, b) => taskSortKey(a).localeCompare(taskSortKey(b)));
+        const undated = open.filter((t) => !t.due_date);
         return (
-          <TaskList
-            items={open}
-            categories={categories}
-            projects={projects}
-            editingId={editingTask?.id ?? null}
-            onToggle={onToggleTask}
-            onEdit={onEditTask}
-            onDelete={onDeleteTask}
-          />
+          <>
+            <TaskList
+              items={dated}
+              categories={categories}
+              projects={projects}
+              editingId={editingTask?.id ?? null}
+              onToggle={onToggleTask}
+              onEdit={onEditTask}
+              onDelete={onDeleteTask}
+            />
+            {undated.length > 0 && (
+              <div className="mt-3 border-t border-border pt-2">
+                <button
+                  onClick={() => setShowUndated((v) => !v)}
+                  className="flex items-center gap-1 text-[10px] label-caps text-muted-foreground hover:text-foreground"
+                >
+                  {showUndated ? <ChevronDown size={10} /> : <ChevronRight size={10} />}
+                  날짜 미정 ({undated.length})
+                </button>
+                {showUndated && (
+                  <div className="mt-1">
+                    <TaskList
+                      items={undated}
+                      categories={categories}
+                      projects={projects}
+                      editingId={editingTask?.id ?? null}
+                      onToggle={onToggleTask}
+                      onEdit={onEditTask}
+                      onDelete={onDeleteTask}
+                    />
+                  </div>
+                )}
+              </div>
+            )}
+          </>
         );
       })()}
 
