@@ -243,6 +243,7 @@ function TaskList({
             <button
               onClick={() => onEdit(t)}
               className={`text-sm flex-1 min-w-[6rem] text-left truncate hover:underline ${completed ? "line-through text-muted-foreground" : overdue ? "text-destructive font-medium" : ""}`}
+              style={t.is_critical && !completed ? { background: "#FFFF00", color: "#000", padding: "0 4px", borderRadius: "2px" } : undefined}
             >
               {t.title}
               {(t.recurrence ?? "none") !== "none" && (
