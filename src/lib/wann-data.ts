@@ -437,6 +437,16 @@ export function shortTimeAmPm(t: string | null | undefined): string {
   return `${h12}:${mStr} ${period}`;
 }
 
+/** "14:30" -> "PM", "09:05" -> "AM" — for a spot next to an already-visible
+ * time INPUT (e.g. a Project checklist item), where repeating the numbers
+ * via shortTimeAmPm() would just duplicate what the input already shows. */
+export function amPmOnly(t: string | null | undefined): string {
+  if (!t) return "";
+  const h = Number(t.slice(0, 2));
+  if (Number.isNaN(h)) return "";
+  return h < 12 ? "AM" : "PM";
+}
+
 /* ---------- Korean weekday helpers ---------- */
 export const KO_DOW = ["일", "월", "화", "수", "목", "금", "토"] as const;
 

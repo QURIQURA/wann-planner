@@ -1,7 +1,7 @@
 import type { WidgetDef } from "@/lib/widget-registry";
 import { useState } from "react";
 import type { Category, MultipleTask, MultipleTaskItem, Subtag, Task } from "@/lib/wann-data";
-import { todayLocalStr, taskSortKey, formatDateKo, koDow, shortTimeAmPm } from "@/lib/wann-data";
+import { todayLocalStr, taskSortKey, formatDateKo, koDow, amPmOnly } from "@/lib/wann-data";
 import { PRODUCT_LINES } from "@/lib/wann-groups";
 import { Plus, Trash2, X, Pencil, ChevronDown, ChevronRight, Check } from "lucide-react";
 import type { CategoryFilter } from "./TaskForm";
@@ -452,7 +452,7 @@ export function MultipleTasksPanel({
                           />
                           {it.due_time && (
                             <span className="text-[10px] text-muted-foreground whitespace-nowrap">
-                              {shortTimeAmPm(it.due_time)}
+                              {amPmOnly(it.due_time)}
                             </span>
                           )}
                         </>
