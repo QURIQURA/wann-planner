@@ -1,7 +1,7 @@
 import type { WidgetDef } from "@/lib/widget-registry";
 import { useState } from "react";
 import type { Category, MultipleTask, Subtag, Task, TaskCompletion } from "@/lib/wann-data";
-import { todayLocalStr, shortTime, isOccurrenceCompleted, isOccurrenceOverdue, currentOccurrenceDate, koDow, taskSortKey, diffDays, taskCategoryIds, hexToRgba } from "@/lib/wann-data";
+import { todayLocalStr, shortTimeAmPm, isOccurrenceCompleted, isOccurrenceOverdue, currentOccurrenceDate, koDow, taskSortKey, diffDays, taskCategoryIds, hexToRgba } from "@/lib/wann-data";
 import { PRODUCT_LINES } from "@/lib/wann-groups";
 import { Trash2, ChevronDown, ChevronUp, ChevronRight, Link2 } from "lucide-react";
 import { CategoryFilterBar } from "./CategoryFilterBar";
@@ -287,8 +287,8 @@ function TaskList({
             )}
             {t.due_time && (
               <span className="text-[10px] text-muted-foreground tabular-nums">
-                {shortTime(t.due_time)}
-                {t.end_time ? `–${shortTime(t.end_time)}` : ""}
+                {shortTimeAmPm(t.due_time)}
+                {t.end_time ? `–${shortTimeAmPm(t.end_time)}` : ""}
               </span>
             )}
             <button

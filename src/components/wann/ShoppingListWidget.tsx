@@ -5,7 +5,7 @@ import {
   isOccurrenceCompleted,
   koDow,
   shiftDate,
-  shortTime,
+  shortTimeAmPm,
   taskOccursOn,
   todayLocalStr,
 } from "@/lib/wann-data";
@@ -205,7 +205,7 @@ function ShoppingDayColumn({
               </button>
               {t.due_time && (
                 <span className="text-[10px] text-muted-foreground tabular-nums flex-shrink-0">
-                  {shortTime(t.due_time)}
+                  {shortTimeAmPm(t.due_time)}
                 </span>
               )}
             </div>

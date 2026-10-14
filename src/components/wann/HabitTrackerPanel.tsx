@@ -13,7 +13,7 @@ import {
   ALL_DAYS,
   type Habit,
 } from "@/lib/wann-extra";
-import { formatLocalDate, shortTime } from "@/lib/wann-data";
+import { formatLocalDate, shortTimeAmPm } from "@/lib/wann-data";
 
 const DOW_LABELS = ["S", "M", "T", "W", "T", "F", "S"];
 
@@ -366,7 +366,7 @@ export function HabitTrackerPanel({ userId, anchorDate }: { userId: string; anch
               )}
               {h.name}
               {h.habit_time && (
-                <span className="text-[10px] text-muted-foreground tabular-nums">{shortTime(h.habit_time)}</span>
+                <span className="text-[10px] text-muted-foreground tabular-nums">{shortTimeAmPm(h.habit_time)}</span>
               )}
               {s.target > 1 && <span className="text-[10px] text-muted-foreground">×{s.target}</span>}
             </span>

@@ -424,6 +424,19 @@ export function shortTime(t: string | null | undefined): string {
   return t.slice(0, 5);
 }
 
+/** "14:30" -> "2:30 PM", "09:05" -> "9:05 AM" — used everywhere EXCEPT the
+ * Timeline (WeekRotation), which keeps the compact 24-hour "HH:MM" from
+ * shortTime() to save space on its dense grid. */
+export function shortTimeAmPm(t: string | null | undefined): string {
+  if (!t) return "";
+  const [hStr, mStr] = t.slice(0, 5).split(":");
+  const h = Number(hStr);
+  if (Number.isNaN(h)) return shortTime(t);
+  const period = h < 12 ? "AM" : "PM";
+  const h12 = h % 12 === 0 ? 12 : h % 12;
+  return `${h12}:${mStr} ${period}`;
+}
+
 /* ---------- Korean weekday helpers ---------- */
 export const KO_DOW = ["일", "월", "화", "수", "목", "금", "토"] as const;
 
