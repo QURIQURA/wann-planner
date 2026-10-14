@@ -85,7 +85,16 @@ export function MultipleTasksPanel({
 }) {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState<MultipleTaskForm>(emptyMultipleTaskForm());
-  const [expandedId, setExpandedId] = useState<string | null>(null);
+  // A Set so any number of Projects can stay expanded at once — toggling one
+  // no longer collapses the others.
+  const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
+  const toggleExpanded = (id: string) =>
+    setExpandedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
   const [showUndated, setShowUndated] = useState(false);
   const [showFinished, setShowFinished] = useState(false);
   const [childInput, setChildInput] = useState<Record<string, string>>({});
@@ -224,7 +233,7 @@ export function MultipleTasksPanel({
           const done = children.filter((i) => i.completed).length;
           const total = children.length;
           const pct = total > 0 ? Math.round((done / total) * 100) : null;
-          const expanded = expandedId === e.id;
+          const expanded = expandedIds.has(e.id);
           const editing = editingId === e.id;
           const productLine = (e as MultipleTask & { product_line: string | null }).product_line ?? null;
           const productLineInfo = productLine ? PRODUCT_LINES.find((l) => l.key === productLine) : null;
@@ -237,14 +246,14 @@ export function MultipleTasksPanel({
             <div key={e.id} id={`mt-${e.id}`} className="border-b border-border/50 rounded-sm transition-shadow">
               <div className="flex items-center gap-2 py-1 group flex-wrap">
                 <button
-                  onClick={() => setExpandedId(expanded ? null : e.id)}
+                  onClick={() => toggleExpanded(e.id)}
                   className="text-muted-foreground p-1 -m-1"
                   aria-label="Expand"
                 >
                   {expanded ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
                 </button>
                 <button
-                  onClick={() => setExpandedId(expanded ? null : e.id)}
+                  onClick={() => toggleExpanded(e.id)}
                   className="text-sm flex-1 min-w-[6rem] text-left truncate hover:underline"
                 >
                   {e.name}
