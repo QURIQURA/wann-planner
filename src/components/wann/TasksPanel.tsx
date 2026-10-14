@@ -298,7 +298,7 @@ function TaskList({
               </span>
             )}
             {cats.map((c) => (
-              <span key={c.id} className="text-[10px] label-caps" style={{ color: c.color }}>
+              <span key={c.id} className="text-[10px] px-1 label-caps bg-foreground text-background flex-shrink-0">
                 {c.name}
               </span>
             ))}

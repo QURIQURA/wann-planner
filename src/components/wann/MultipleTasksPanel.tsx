@@ -262,10 +262,7 @@ export function MultipleTasksPanel({
                   )}
                 </button>
                 {cat && (
-                  <span
-                    className="text-[10px] label-caps border border-border px-1"
-                    style={{ color: cat.color }}
-                  >
+                  <span className="text-[10px] px-1 label-caps bg-foreground text-background flex-shrink-0">
                     {cat.name}
                   </span>
                 )}

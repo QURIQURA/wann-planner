@@ -543,6 +543,7 @@ export function hexToRgba(hex: string | null | undefined, alpha: number): string
   return `rgba(${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255}, ${alpha})`;
 }
 
+
 /* ---------- multi-day project (Multiple Task) span helpers ---------- */
 
 /** Start/end of a project's date range. `date` is the start date, `end_date` the end. */
