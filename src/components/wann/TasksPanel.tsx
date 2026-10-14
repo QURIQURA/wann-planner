@@ -57,6 +57,9 @@ export function TasksPanel({
   const today = todayLocalStr();
   const [showDone, setShowDone] = useState(false);
   const [showUndated, setShowUndated] = useState(false);
+  // "단독" (default) = tasks with no parent Project; "프로젝트" = only tasks
+  // belonging to a Project; "전체" = both, unfiltered by project membership.
+  const [scope, setScope] = useState<"solo" | "project" | "all">("solo");
 
   const [localFilter, setLocalFilter] = useState<CategoryFilter>({
     categoryId: null,
@@ -72,6 +75,8 @@ export function TasksPanel({
     if (t.link_url) return false;
     if (filter.categoryId && !taskCategoryIds(t).includes(filter.categoryId)) return false;
     if (filter.subtagId && t.subtag_id !== filter.subtagId) return false;
+    if (scope === "solo" && t.multiple_task_id) return false;
+    if (scope === "project" && !t.multiple_task_id) return false;
     // Recurring tasks only show their nearest occurrence when it falls within a
     // week of today — this list is a "what's live right now" view, not a full
     // history. This Week / Month views are unaffected: they scope by date range
@@ -87,6 +92,23 @@ export function TasksPanel({
     <div>
       <div className="flex items-center justify-between mb-4">
         <p className="label-caps">Tasks</p>
+        <div className="flex items-center border border-border rounded-sm overflow-hidden text-[10px] label-caps flex-shrink-0">
+          {(
+            [
+              { id: "solo", label: "단독" },
+              { id: "project", label: "프로젝트" },
+              { id: "all", label: "전체" },
+            ] as const
+          ).map((opt) => (
+            <button
+              key={opt.id}
+              onClick={() => setScope(opt.id)}
+              className={`px-2 py-1 ${scope === opt.id ? "bg-foreground text-background" : "hover:bg-muted text-muted-foreground"}`}
+            >
+              {opt.label}
+            </button>
+          ))}
+        </div>
       </div>
 
       {!hideFilterBar && (
