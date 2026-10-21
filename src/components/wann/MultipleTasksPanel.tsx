@@ -1,7 +1,7 @@
 import type { WidgetDef } from "@/lib/widget-registry";
 import { useState } from "react";
 import type { Category, MultipleTask, MultipleTaskItem, Subtag, Task } from "@/lib/wann-data";
-import { todayLocalStr, taskSortKey, formatDateKo, koDow, amPmOnly, hexToRgba } from "@/lib/wann-data";
+import { todayLocalStr, taskSortKey, formatDateKo, koDow, amPmOnly, hexToRgba, isOccurrenceOverdue, currentOccurrenceDate } from "@/lib/wann-data";
 import { PRODUCT_LINES } from "@/lib/wann-groups";
 import { Plus, Trash2, X, Pencil, ChevronDown, ChevronRight, Check } from "lucide-react";
 import type { CategoryFilter } from "./TaskForm";
@@ -338,8 +338,16 @@ export function MultipleTasksPanel({
                   {children.length === 0 && (
                     <p className="text-xs text-muted-foreground italic">No items</p>
                   )}
-                  {children.map((it) => (
-                    <div key={it.id} className="flex items-center gap-2 flex-wrap group/child">
+                  {children.map((it) => {
+                    const itemOverdue =
+                      !it.link_url && !!it.due_date &&
+                      isOccurrenceOverdue(currentOccurrenceDate(it), it.completed);
+                    return (
+                    <div
+                      key={it.id}
+                      className="flex items-center gap-2 py-0.5 px-1 -mx-1 rounded-sm flex-wrap group/child"
+                      style={itemOverdue ? { background: hexToRgba("#F87171", 0.2) } : undefined}
+                    >
                       <StageDot
                         stages={stages}
                         value={it.stage}
@@ -426,7 +434,7 @@ export function MultipleTasksPanel({
                       ) : (
                         <button
                           onClick={() => { setEditingItemId(it.id); setEditingItemTitle(it.title); }}
-                          className={`text-sm flex-1 min-w-[6rem] text-left truncate hover:underline ${it.completed ? "line-through text-muted-foreground" : ""}`}
+                          className={`text-sm flex-1 min-w-[6rem] text-left truncate hover:underline ${it.completed ? "line-through text-muted-foreground" : itemOverdue ? "text-destructive font-medium" : ""}`}
                         >
                           {it.title}
                         </button>
@@ -479,7 +487,8 @@ export function MultipleTasksPanel({
                         <Trash2 size={10} />
                       </button>
                     </div>
-                  ))}
+                    );
+                  })}
                   <div className="flex gap-1 pt-1 items-center flex-wrap">
                     <input
                       type="text"
