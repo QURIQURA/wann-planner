@@ -532,12 +532,23 @@ export function MultipleTasksPanel({
           );
         };
 
+        // Sort by the nearest upcoming task inside the Project (e.g. its
+        // earliest Delivery/Pickup date), not the Project's own start date —
+        // a Project due later overall but with a sooner task still needs
+        // attention first.
+        const earliestChildKey = (e: MultipleTask) => {
+          const ch = items.filter((i) => i.multiple_task_id === e.id && !i.completed && i.due_date);
+          const pool = ch.length > 0 ? ch : items.filter((i) => i.multiple_task_id === e.id && i.due_date);
+          if (pool.length === 0) return taskSortKey({ due_date: e.date, due_time: null });
+          return pool.map((i) => taskSortKey(i)).sort()[0];
+        };
+
         const finished = visible.filter((e) => pctOf(e) === 100);
         const rest = visible.filter((e) => pctOf(e) !== 100);
         const active = rest
           .filter((e) => !!e.date)
           .slice()
-          .sort((a, b) => (a.date ?? "").localeCompare(b.date ?? ""));
+          .sort((a, b) => earliestChildKey(a).localeCompare(earliestChildKey(b)));
         const undated = rest.filter((e) => !e.date);
 
         return (
