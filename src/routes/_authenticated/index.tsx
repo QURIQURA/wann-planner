@@ -81,7 +81,7 @@ function Dashboard() {
             completions={completionsQ.data ?? []}
             onToggle={(t, date) => toggleOccurrence.mutate({ task: t, date })}
             onEdit={(t) => widgetCtx.taskActions.onEditTask(t)}
-            onAdd={(title, date) =>
+            onAdd={(title, date, shoppingType, pickupDate) =>
               widgetCtx.taskActions.onAddTask({
                 title,
                 categoryIds: [],
@@ -95,8 +95,8 @@ function Dashboard() {
                 subitems: [],
                 isCritical: false,
                 isShopping: true,
-                shoppingType: null,
-                pickupDate: null,
+                shoppingType,
+                pickupDate,
                 stage: null,
                 productLine: null,
                 linkUrl: null,

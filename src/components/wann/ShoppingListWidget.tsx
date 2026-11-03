@@ -9,8 +9,8 @@ import {
   taskOccursOn,
   todayLocalStr,
 } from "@/lib/wann-data";
-import { GripVertical, Plus, ShoppingCart } from "lucide-react";
-import { SHOPPING_TYPES } from "./TaskForm";
+import { GripVertical, Plus, ShoppingCart, ChevronDown, ChevronRight } from "lucide-react";
+import { SHOPPING_TYPES, type ShoppingType } from "./TaskForm";
 
 /**
  * Mirrors the Timeline's own Yesterday/Today/Tomorrow 3-column layout and
@@ -37,8 +37,10 @@ export function ShoppingListWidget({
   completions: TaskCompletion[];
   onToggle: (t: Task, occurrenceDate: string) => void;
   onEdit: (t: Task) => void;
-  /** Quick-add — title only; category/time/notes are filled in later via onEdit. */
-  onAdd: (title: string, date: string) => void;
+  /** Quick-add — title plus optional fulfillment type/pickup date, set via
+   * the inline "detail" toggle; everything else is filled in later via
+   * onEdit. */
+  onAdd: (title: string, date: string, shoppingType: ShoppingType | null, pickupDate: string | null) => void;
   /** Full new top-to-bottom id order for the one day column being reordered. */
   onReorder: (orderedIds: string[]) => void;
 }) {
@@ -106,18 +108,25 @@ function ShoppingDayColumn({
   completions: TaskCompletion[];
   onToggle: (t: Task, occurrenceDate: string) => void;
   onEdit: (t: Task) => void;
-  onAdd: (title: string, date: string) => void;
+  onAdd: (title: string, date: string, shoppingType: ShoppingType | null, pickupDate: string | null) => void;
   onReorder: (orderedIds: string[]) => void;
 }) {
   const [draft, setDraft] = useState("");
   const [dragId, setDragId] = useState<string | null>(null);
   const [overId, setOverId] = useState<string | null>(null);
+  const [showDetails, setShowDetails] = useState(false);
+  const [draftType, setDraftType] = useState<ShoppingType | null>(null);
+  const [draftPickupDate, setDraftPickupDate] = useState("");
 
   const submit = () => {
     const title = draft.trim();
     if (!title) return;
-    onAdd(title, date);
+    const pickupApplies = draftType === "click_collect" || draftType === "delivery";
+    onAdd(title, date, draftType, pickupApplies ? draftPickupDate || null : null);
     setDraft("");
+    setDraftType(null);
+    setDraftPickupDate("");
+    setShowDetails(false);
   };
 
   const handleDrop = (targetId: string) => {
@@ -150,7 +159,7 @@ function ShoppingDayColumn({
         <span className="text-[10px] text-muted-foreground tabular-nums">{date.slice(5)}</span>
       </div>
 
-      <div className="flex items-center gap-1 mb-2">
+      <div className="flex items-center gap-1 mb-1">
         <Plus size={11} className="text-muted-foreground flex-shrink-0" />
         <input
           type="text"
@@ -165,7 +174,57 @@ function ShoppingDayColumn({
           }}
           className="flex-1 min-w-0 bg-transparent outline-none text-xs border-b border-border py-0.5"
         />
+        <button
+          onClick={() => setShowDetails((v) => !v)}
+          aria-label="상세 설정"
+          title="구매 방식 / 픽업일 설정"
+          className={`flex-shrink-0 ${draftType ? "text-foreground" : "text-muted-foreground hover:text-foreground"}`}
+        >
+          {draftType && (
+            <span
+              className="inline-block h-1.5 w-1.5 rounded-full mr-0.5 align-middle"
+              style={{ background: SHOPPING_TYPES.find((s) => s.id === draftType)?.color }}
+            />
+          )}
+          {showDetails ? <ChevronDown size={11} /> : <ChevronRight size={11} />}
+        </button>
       </div>
+
+      {showDetails && (
+        <div className="flex flex-wrap items-center gap-1 mb-2 pl-4">
+          <div className="flex items-center border border-border rounded-sm overflow-hidden text-[9px] label-caps">
+            {SHOPPING_TYPES.map((t) => (
+              <button
+                key={t.id}
+                onClick={() =>
+                  setDraftType((prev) => {
+                    const next = prev === t.id ? null : t.id;
+                    if (next !== "click_collect" && next !== "delivery") setDraftPickupDate("");
+                    return next;
+                  })
+                }
+                className="px-1.5 py-0.5"
+                style={
+                  draftType === t.id
+                    ? { background: t.color, color: "#000" }
+                    : { color: "var(--muted-foreground)" }
+                }
+              >
+                {t.label}
+              </button>
+            ))}
+          </div>
+          {(draftType === "click_collect" || draftType === "delivery") && (
+            <input
+              type="date"
+              value={draftPickupDate}
+              onChange={(e) => setDraftPickupDate(e.target.value)}
+              aria-label={draftType === "click_collect" ? "Pickup date" : "Delivery date"}
+              className="bg-transparent outline-none text-[10px] text-muted-foreground border-b border-border py-0.5 w-[92px]"
+            />
+          )}
+        </div>
+      )}
 
       <div className="space-y-1">
         {items.map((t) => {
