@@ -1631,11 +1631,13 @@ export type Database = {
           created_at: string
           due_date: string | null
           due_time: string | null
+          end_date: string | null
           end_time: string | null
           group_id: string | null
           id: string
           is_critical: boolean
           is_shopping: boolean
+          kora_work_session_id: string | null
           link_url: string | null
           multiple_task_id: string | null
           notes: string | null
@@ -1643,6 +1645,7 @@ export type Database = {
           recurrence: string
           series_id: string | null
           shopping_order: number
+          shopping_type: string | null
           stage: string | null
           subtag_id: string | null
           title: string
@@ -1657,11 +1660,13 @@ export type Database = {
           created_at?: string
           due_date?: string | null
           due_time?: string | null
+          end_date?: string | null
           end_time?: string | null
           group_id?: string | null
           id?: string
           is_critical?: boolean
           is_shopping?: boolean
+          kora_work_session_id?: string | null
           link_url?: string | null
           multiple_task_id?: string | null
           notes?: string | null
@@ -1669,6 +1674,7 @@ export type Database = {
           recurrence?: string
           series_id?: string | null
           shopping_order?: number
+          shopping_type?: string | null
           stage?: string | null
           subtag_id?: string | null
           title: string
@@ -1683,11 +1689,13 @@ export type Database = {
           created_at?: string
           due_date?: string | null
           due_time?: string | null
+          end_date?: string | null
           end_time?: string | null
           group_id?: string | null
           id?: string
           is_critical?: boolean
           is_shopping?: boolean
+          kora_work_session_id?: string | null
           link_url?: string | null
           multiple_task_id?: string | null
           notes?: string | null
@@ -1695,6 +1703,7 @@ export type Database = {
           recurrence?: string
           series_id?: string | null
           shopping_order?: number
+          shopping_type?: string | null
           stage?: string | null
           subtag_id?: string | null
           title?: string
@@ -1787,10 +1796,19 @@ export type Database = {
     }
     Functions: {
       is_household_member: { Args: { _user_id: string }; Returns: boolean }
-      sync_kora_order: {
-        Args: { p_delivery_task: Json; p_project: Json }
-        Returns: undefined
-      }
+      sync_kora_order:
+        | {
+            Args: { p_delivery_task: Json; p_project: Json }
+            Returns: undefined
+          }
+        | {
+            Args: {
+              p_delivery_task: Json
+              p_order_link_task?: Json
+              p_project: Json
+            }
+            Returns: undefined
+          }
     }
     Enums: {
       [_ in never]: never

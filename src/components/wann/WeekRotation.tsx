@@ -34,6 +34,7 @@ import {
 } from "@/lib/wann-data";
 import { resolveEventColor, eventTypeLabel } from "@/lib/wann-events";
 import type { TaskFormValues } from "./TaskForm";
+import { SHOPPING_TYPES } from "./TaskForm";
 
 import {
   DndContext,
@@ -52,7 +53,7 @@ import {
   type DragEndEvent,
   type DragStartEvent,
 } from "@dnd-kit/core";
-import { ChevronLeft, ChevronRight, ChevronDown, ChevronUp, ListChecks, GripVertical, CircleDashed, StickyNote, AlertTriangle } from "lucide-react";
+import { ChevronLeft, ChevronRight, ChevronDown, ChevronUp, ListChecks, GripVertical, CircleDashed, StickyNote, AlertTriangle, ShoppingCart } from "lucide-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { fetchAllSubitems, sortSubitems, updateSubitem, type TaskSubitem } from "@/lib/wann-subitems";
 import type { Habit, HabitCompletion } from "@/lib/wann-extra";
@@ -295,6 +296,8 @@ export function WeekRotation({
       subitems: [],
       isCritical: false,
       isShopping: false,
+      shoppingType: null,
+      pickupDate: null,
       stage: null,
       productLine: null,
       linkUrl: null,
@@ -388,15 +391,38 @@ export function WeekRotation({
   };
 
   // ---- multi-day project bars (Google-Calendar style) ----
+  // Shopping items with a pickup/delivery date different from their order
+  // date (click_collect/delivery, end_date set) join the SAME row-packed bar
+  // list as Projects, so a shopping run spanning days shows as a colored
+  // line exactly like a multi-day Project does — just colored by fulfillment
+  // type instead of category.
   const viewStart = dayKeys[0];
   const viewEnd = dayKeys[dayKeys.length - 1];
   const rowEnds: string[] = [];
-  const bars = multipleTasks
+  const projectEntries = multipleTasks
     .filter((m) => isMultiDayProject(m))
-    .map((m) => ({ m, span: projectSpan(m)! }))
+    .map((m) => ({ kind: "project" as const, id: m.id, title: m.name, m, span: projectSpan(m)! }));
+  const shoppingEntries = tasks
+    .filter(
+      (t) =>
+        t.is_shopping &&
+        (t.shopping_type === "click_collect" || t.shopping_type === "delivery") &&
+        !!t.due_date &&
+        !!t.end_date &&
+        t.end_date !== t.due_date,
+    )
+    .map((t) => ({
+      kind: "shopping" as const,
+      id: t.id,
+      title: t.title,
+      t,
+      span: { start: t.due_date!, end: t.end_date! },
+    }));
+  const bars = [...projectEntries, ...shoppingEntries]
     .filter(({ span }) => span.start <= viewEnd && span.end >= viewStart)
-    .sort((a, b) => a.span.start.localeCompare(b.span.start) || a.m.name.localeCompare(b.m.name))
-    .map(({ m, span }) => {
+    .sort((a, b) => a.span.start.localeCompare(b.span.start) || a.title.localeCompare(b.title))
+    .map((entry) => {
+      const { span } = entry;
       const startIdx = Math.max(0, diffDays(viewStart, span.start));
       const endIdx = Math.min(dayKeys.length - 1, diffDays(viewStart, span.end));
       let row = rowEnds.findIndex((e) => e < span.start);
@@ -406,12 +432,13 @@ export function WeekRotation({
       } else {
         rowEnds[row] = span.end;
       }
-      const children = multipleTaskItems.filter((i) => i.multiple_task_id === m.id);
-      const done = children.filter((i) => i.completed).length;
-      const pct = children.length > 0 ? Math.round((done / children.length) * 100) : null;
+      let pct: number | null = null;
+      if (entry.kind === "project") {
+        const children = multipleTaskItems.filter((i) => i.multiple_task_id === entry.m.id);
+        pct = children.length > 0 ? Math.round((children.filter((i) => i.completed).length / children.length) * 100) : null;
+      }
       return {
-        m,
-        span,
+        ...entry,
         startIdx,
         endIdx,
         row,
@@ -473,20 +500,24 @@ export function WeekRotation({
           </div>
         </div>
 
-        {/* multi-day project bars — mobile */}
+        {/* multi-day project/shopping bars — mobile */}
         {mobileBars.length > 0 && (
           <div className="md:hidden mb-2 space-y-1">
-            {mobileBars.map((b) => (
-              <ProjectBar
-                key={b.m.id}
-                bar={b}
-                cat={b.m.category_id ? catMap[b.m.category_id] : undefined}
-                draggableId={`bar|${b.m.id}|mobile`}
-                grabbedDate={anchorKey}
-                onOpen={() => onOpenMultiple(b.m.id)}
-                showHandles={false}
-              />
-            ))}
+            {mobileBars.map((b) =>
+              b.kind === "project" ? (
+                <ProjectBar
+                  key={b.id}
+                  bar={b}
+                  cat={b.m.category_id ? catMap[b.m.category_id] : undefined}
+                  draggableId={`bar|${b.id}|mobile`}
+                  grabbedDate={anchorKey}
+                  onOpen={() => onOpenMultiple(b.id)}
+                  showHandles={false}
+                />
+              ) : (
+                <ShoppingBar key={b.id} bar={b} onOpen={() => onEditTask(b.t)} />
+              ),
+            )}
           </div>
         )}
 
@@ -508,20 +539,24 @@ export function WeekRotation({
             >
               {bars.map((b) => (
                 <div
-                  key={b.m.id}
+                  key={b.id}
                   style={{
                     gridColumn: `${b.startIdx + 1} / span ${b.endIdx - b.startIdx + 1}`,
                     gridRow: b.row + 1,
                   }}
                 >
-                  <ProjectBar
-                    bar={b}
-                    cat={b.m.category_id ? catMap[b.m.category_id] : undefined}
-                    draggableId={`bar|${b.m.id}`}
-                    grabbedDate={dayKeys[b.startIdx]}
-                    onOpen={() => onOpenMultiple(b.m.id)}
-                    showHandles
-                  />
+                  {b.kind === "project" ? (
+                    <ProjectBar
+                      bar={b}
+                      cat={b.m.category_id ? catMap[b.m.category_id] : undefined}
+                      draggableId={`bar|${b.id}`}
+                      grabbedDate={dayKeys[b.startIdx]}
+                      onOpen={() => onOpenMultiple(b.id)}
+                      showHandles
+                    />
+                  ) : (
+                    <ShoppingBar bar={b} onOpen={() => onEditTask(b.t)} />
+                  )}
                 </div>
               ))}
             </div>
@@ -1418,6 +1453,46 @@ type BarItem = {
   continuesLeft: boolean;
   continuesRight: boolean;
 };
+
+type ShoppingBarItem = {
+  t: Task;
+  span: { start: string; end: string };
+  startIdx: number;
+  endIdx: number;
+  row: number;
+  continuesLeft: boolean;
+  continuesRight: boolean;
+};
+
+/** A Click & Collect / Delivery item whose pickup date differs from its
+ * order date — a read-only colored bar (no drag/resize, unlike Projects)
+ * spanning order → pickup, colored by fulfillment type rather than category. */
+function ShoppingBar({ bar, onOpen }: { bar: ShoppingBarItem; onOpen: () => void }) {
+  const typeInfo = SHOPPING_TYPES.find((s) => s.id === bar.t.shopping_type);
+  const bg = hexToRgba(typeInfo?.color, 0.5) ?? "var(--muted)";
+  return (
+    <button
+      onClick={onOpen}
+      className="relative flex items-center gap-1 h-[20px] px-1 border border-border text-[11px] overflow-hidden w-full text-left"
+      style={{
+        background: bg,
+        borderLeftStyle: bar.continuesLeft ? "dashed" : "solid",
+        borderRightStyle: bar.continuesRight ? "dashed" : "solid",
+      }}
+      title={`${typeInfo?.label ?? ""} · ${bar.span.start} → ${bar.span.end}`}
+    >
+      {bar.continuesLeft && <span className="text-foreground/60 flex-shrink-0">‹</span>}
+      <ShoppingCart size={10} className="flex-shrink-0 text-foreground/60" />
+      <span className="truncate flex-1 min-w-0">{bar.t.title}</span>
+      {typeInfo && (
+        <span className="text-[9px] px-1 label-caps flex-shrink-0 bg-foreground text-background">
+          {typeInfo.label}
+        </span>
+      )}
+      {bar.continuesRight && <span className="text-foreground/60 flex-shrink-0">›</span>}
+    </button>
+  );
+}
 
 /** Droppable column behind the bar row — one per visible day. */
 function BarColumn({ dateKey, isDragging }: { dateKey: string; isDragging: boolean }) {

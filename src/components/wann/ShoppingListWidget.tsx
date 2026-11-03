@@ -10,6 +10,7 @@ import {
   todayLocalStr,
 } from "@/lib/wann-data";
 import { GripVertical, Plus, ShoppingCart } from "lucide-react";
+import { SHOPPING_TYPES } from "./TaskForm";
 
 /**
  * Mirrors the Timeline's own Yesterday/Today/Tomorrow 3-column layout and
@@ -170,6 +171,7 @@ function ShoppingDayColumn({
         {items.map((t) => {
           const occ = currentOccurrenceDate(t, date);
           const done = isOccurrenceCompleted(t, occ, completions);
+          const typeInfo = t.shopping_type ? SHOPPING_TYPES.find((s) => s.id === t.shopping_type) : undefined;
           return (
             <div
               key={t.id}
@@ -197,6 +199,13 @@ function ShoppingDayColumn({
                 aria-label="Toggle"
                 className={`h-3 w-3 border border-border flex-shrink-0 ${done ? "bg-foreground" : ""}`}
               />
+              {typeInfo && (
+                <span
+                  className="h-2 w-2 rounded-full flex-shrink-0"
+                  style={{ background: typeInfo.color }}
+                  title={typeInfo.label}
+                />
+              )}
               <button
                 onClick={() => onEdit(t)}
                 className={`flex-1 min-w-0 text-left truncate hover:underline ${done ? "line-through text-muted-foreground" : ""}`}
@@ -206,6 +215,15 @@ function ShoppingDayColumn({
               {t.due_time && (
                 <span className="text-[10px] text-muted-foreground tabular-nums flex-shrink-0">
                   {shortTimeAmPm(t.due_time)}
+                </span>
+              )}
+              {t.end_date && t.end_date !== t.due_date && (
+                <span
+                  className="text-[9px] label-caps flex-shrink-0 px-1"
+                  style={{ background: typeInfo?.color, color: "#000" }}
+                  title={`${typeInfo?.label ?? ""} · ${t.due_date} → ${t.end_date}`}
+                >
+                  → {t.end_date.slice(5)}
                 </span>
               )}
             </div>

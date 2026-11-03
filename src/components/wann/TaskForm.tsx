@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import type { Category, MultipleTask, MultipleTaskItem, Subtag, Task } from "@/lib/wann-data";
-import { todayLocalStr, shortTime, formatDateKo } from "@/lib/wann-data";
+import { todayLocalStr, shortTime, formatDateKo, koDow } from "@/lib/wann-data";
 import { PRODUCT_LINES } from "@/lib/wann-groups";
 import type { Stage } from "@/lib/wann-stages";
 import { stageColorOf } from "@/lib/wann-stages";
@@ -9,6 +9,16 @@ import { useQuery } from "@tanstack/react-query";
 import { fetchSubitemsForTask, type SubitemDraft } from "@/lib/wann-subitems";
 
 export type CategoryFilter = { categoryId: string | null; subtagId: string | null };
+
+/** Shopping fulfillment — how a Shopping-List item actually gets sourced.
+ * click_collect/delivery can span two different days (order → pickup); an
+ * in_store trip is always same-day, so it never carries a pickup date. */
+export type ShoppingType = "click_collect" | "delivery" | "in_store";
+export const SHOPPING_TYPES: { id: ShoppingType; label: string; color: string }[] = [
+  { id: "click_collect", label: "Click & Collect", color: "#A78BFA" },
+  { id: "delivery", label: "Delivery", color: "#60A5FA" },
+  { id: "in_store", label: "In-Store", color: "#FB923C" },
+];
 
 export type NewProjectValues = {
   name: string;
@@ -36,6 +46,14 @@ export type TaskFormValues = {
   /** Marks this Task as a shopping-list item — surfaces it in the Shopping
    * List widget above the Timeline, grouped by due date. */
   isShopping: boolean;
+  /** How this Shopping item gets fulfilled — only meaningful when
+   * isShopping is true. */
+  shoppingType: ShoppingType | null;
+  /** click_collect/delivery only: the pickup/delivery date, when different
+   * from dueDate (the order date) — dueDate/dueTime become the order
+   * moment, pickupDate/endTime the pickup moment. Renders as a colored
+   * Timeline bar spanning dueDate → pickupDate. */
+  pickupDate: string | null;
   /** Explicit weekly-cake production stage tag (see wann-stages.ts) — any
    * Task can opt in, independent of category or project. Never inferred
    * from dates/titles. */
@@ -98,6 +116,8 @@ export function TaskForm({
     subitems: [],
     isCritical: false,
     isShopping: false,
+    shoppingType: null,
+    pickupDate: null,
     stage: null,
     productLine: null,
     linkUrl: null,
@@ -125,6 +145,8 @@ export function TaskForm({
         subitems: [],
         isCritical: editingTask.is_critical ?? false,
         isShopping: editingTask.is_shopping ?? false,
+        shoppingType: (editingTask.shopping_type as ShoppingType | null) ?? null,
+        pickupDate: editingTask.end_date ?? null,
         stage: editingTask.stage ?? null,
         productLine: editingTask.product_line ?? null,
         linkUrl: editingTask.link_url ?? null,
@@ -194,6 +216,11 @@ export function TaskForm({
       stage: form.stage,
       productLine: productLineApplies ? form.productLine : null,
       linkUrl: form.linkUrl?.trim() || null,
+      shoppingType: form.isShopping ? form.shoppingType : null,
+      pickupDate:
+        form.isShopping && (form.shoppingType === "click_collect" || form.shoppingType === "delivery")
+          ? form.pickupDate
+          : null,
     };
     if (editingTask) {
       onUpdateTask(editingTask.id, payload);
@@ -406,7 +433,14 @@ export function TaskForm({
           <input
             type="checkbox"
             checked={form.isShopping}
-            onChange={(e) => setForm({ ...form, isShopping: e.target.checked })}
+            onChange={(e) =>
+              setForm({
+                ...form,
+                isShopping: e.target.checked,
+                shoppingType: e.target.checked ? form.shoppingType : null,
+                pickupDate: e.target.checked ? form.pickupDate : null,
+              })
+            }
             className="h-3 w-3 accent-foreground"
           />
           <ShoppingCart size={11} />
@@ -429,6 +463,56 @@ export function TaskForm({
           <Plus size={12} /> {editingTask ? "Save" : "Add"}
         </button>
       </div>
+      {form.isShopping && (
+        <div className="border-t border-border pt-2 flex flex-wrap gap-2 items-center">
+          <div className="flex items-center border border-border rounded-sm overflow-hidden text-[10px] label-caps">
+            {SHOPPING_TYPES.map((t) => (
+              <button
+                key={t.id}
+                type="button"
+                onClick={() =>
+                  setForm({
+                    ...form,
+                    shoppingType: t.id,
+                    pickupDate: t.id === "in_store" ? null : form.pickupDate,
+                  })
+                }
+                className="px-2 py-1"
+                style={
+                  form.shoppingType === t.id
+                    ? { background: t.color, color: "#000" }
+                    : { color: "var(--muted-foreground)" }
+                }
+              >
+                {t.label}
+              </button>
+            ))}
+          </div>
+          {(form.shoppingType === "click_collect" || form.shoppingType === "delivery") && (
+            <>
+              <label className="text-[10px] label-caps text-muted-foreground">
+                {form.shoppingType === "click_collect" ? "Pickup" : "Delivery"}
+              </label>
+              <input
+                type="date"
+                value={form.pickupDate ?? ""}
+                onChange={(e) => setForm({ ...form, pickupDate: e.target.value || null })}
+                className="bg-transparent outline-none text-sm border-b border-border py-1"
+              />
+              {form.pickupDate && (
+                <span className="text-[10px] text-muted-foreground">({koDow(form.pickupDate)})</span>
+              )}
+              <input
+                type="time"
+                value={form.endTime ?? ""}
+                onChange={(e) => setForm({ ...form, endTime: e.target.value || null })}
+                aria-label={form.shoppingType === "click_collect" ? "Pickup time" : "Delivery time"}
+                className="bg-transparent outline-none text-sm border-b border-border py-1 text-muted-foreground"
+              />
+            </>
+          )}
+        </div>
+      )}
       {form.newProject && (
         <div className="border-t border-border pt-2 flex flex-wrap gap-2 items-center">
           <input

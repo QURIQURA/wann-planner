@@ -95,6 +95,8 @@ function Dashboard() {
                 subitems: [],
                 isCritical: false,
                 isShopping: true,
+                shoppingType: null,
+                pickupDate: null,
                 stage: null,
                 productLine: null,
                 linkUrl: null,
