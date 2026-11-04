@@ -574,6 +574,36 @@ export function diffDays(a: string, b: string): number {
   return Math.round((parseLocalDate(b).getTime() - parseLocalDate(a).getTime()) / 86400000);
 }
 
+function lerpChannel(a: number, b: number, t: number): number {
+  return Math.round(a + (b - a) * t);
+}
+
+function lerpHex(hexA: string, hexB: string, t: number): string {
+  const [r1, g1, b1] = [1, 3, 5].map((i) => parseInt(hexA.slice(i, i + 2), 16));
+  const [r2, g2, b2] = [1, 3, 5].map((i) => parseInt(hexB.slice(i, i + 2), 16));
+  const toHex = (n: number) => n.toString(16).padStart(2, "0");
+  return `#${toHex(lerpChannel(r1, r2, t))}${toHex(lerpChannel(g1, g2, t))}${toHex(lerpChannel(b1, b2, t))}`;
+}
+
+/** D-day badge for a delivery/pickup-style due date — gets visually louder
+ * the closer it gets: a faint pink at a week out, ramping to solid red on
+ * the day itself, then staying solid red (D+n) once overdue. More than a
+ * week out it's a plain neutral chip so the list isn't noisy. */
+export function dDayBadge(
+  dueDateStr: string,
+  today = todayLocalStr()
+): { label: string; bg: string; fg: string } | null {
+  if (!dueDateStr) return null;
+  const days = diffDays(today, dueDateStr);
+  if (days > 7) return { label: `D-${days}`, bg: "transparent", fg: "var(--muted-foreground)" };
+  if (days < 0) return { label: `D+${-days}`, bg: "#DC2626", fg: "#FFFFFF" };
+  const label = days === 0 ? "D-DAY" : `D-${days}`;
+  const t = 1 - days / 7; // 0 at 7 days out -> 1 on the day
+  const bg = lerpHex("#FDE4EC", "#DC2626", t);
+  const fg = t > 0.5 ? "#FFFFFF" : "#9D174D";
+  return { label, bg, fg };
+}
+
 /** The Sunday (local) of the week containing dateStr — used to anchor a
  * single Sun–Sat row, e.g. the Dashboard's Weekly View. */
 export function startOfWeek(dateStr: string): string {

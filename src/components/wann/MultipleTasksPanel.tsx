@@ -1,7 +1,7 @@
 import type { WidgetDef } from "@/lib/widget-registry";
 import { useState } from "react";
 import type { Category, MultipleTask, MultipleTaskItem, Subtag, Task } from "@/lib/wann-data";
-import { todayLocalStr, taskSortKey, formatDateKo, koDow, amPmOnly, hexToRgba, isOccurrenceOverdue, currentOccurrenceDate } from "@/lib/wann-data";
+import { todayLocalStr, taskSortKey, formatDateKo, koDow, amPmOnly, hexToRgba, isOccurrenceOverdue, currentOccurrenceDate, dDayBadge } from "@/lib/wann-data";
 import { PRODUCT_LINES } from "@/lib/wann-groups";
 import { Plus, Trash2, X, Pencil, ChevronDown, ChevronRight, Check } from "lucide-react";
 import type { CategoryFilter } from "./TaskForm";
@@ -463,6 +463,18 @@ export function MultipleTasksPanel({
                               {amPmOnly(it.due_time)}
                             </span>
                           )}
+                          {it.due_date && !it.completed && (() => {
+                            const d = dDayBadge(it.due_date);
+                            if (!d) return null;
+                            return (
+                              <span
+                                className="text-[9px] label-caps px-1 flex-shrink-0 border border-border"
+                                style={{ background: d.bg, color: d.fg, borderColor: d.bg === "transparent" ? undefined : d.bg }}
+                              >
+                                {d.label}
+                              </span>
+                            );
+                          })()}
                         </>
                       )}
                       {editingLinkId !== it.id && (
