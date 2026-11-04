@@ -746,18 +746,20 @@ export function useWannDashboard(
       time,
       stage,
       link,
-    }: { id: string; title?: string; date?: string | null; time?: string | null; stage?: string | null; link?: string | null }) => {
-      const patch: { title?: string; due_date?: string | null; due_time?: string | null; stage?: string | null; link_url?: string | null } = {};
+      isDelivery,
+    }: { id: string; title?: string; date?: string | null; time?: string | null; stage?: string | null; link?: string | null; isDelivery?: boolean }) => {
+      const patch: { title?: string; due_date?: string | null; due_time?: string | null; stage?: string | null; link_url?: string | null; is_delivery?: boolean } = {};
       if (title !== undefined) patch.title = title;
       if (date !== undefined) patch.due_date = date;
       if (time !== undefined) patch.due_time = time;
       if (stage !== undefined) patch.stage = stage;
       if (link !== undefined) patch.link_url = link;
+      if (isDelivery !== undefined) patch.is_delivery = isDelivery;
       const { error } = await supabase.from("planner_tasks").update(patch).eq("id", id);
 
       if (error) throw error;
     },
-    onMutate: async ({ id, title, date, time, stage }) => {
+    onMutate: async ({ id, title, date, time, stage, isDelivery }) => {
       await qc.cancelQueries({ queryKey: ["multiple_task_items", user.id] });
       await qc.cancelQueries({ queryKey: ["tasks", user.id] });
       const prevItems = qc.getQueryData<Task[]>(["multiple_task_items", user.id]);
@@ -770,6 +772,7 @@ export function useWannDashboard(
               ...(date !== undefined ? { due_date: date } : {}),
               ...(time !== undefined ? { due_time: time } : {}),
               ...(stage !== undefined ? { stage } : {}),
+              ...(isDelivery !== undefined ? { is_delivery: isDelivery } : {}),
             }
           : t;
       if (prevItems) qc.setQueryData<Task[]>(["multiple_task_items", user.id], prevItems.map(apply));

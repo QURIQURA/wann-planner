@@ -3,7 +3,7 @@ import { useState } from "react";
 import type { Category, MultipleTask, MultipleTaskItem, Subtag, Task } from "@/lib/wann-data";
 import { todayLocalStr, taskSortKey, formatDateKo, koDow, amPmOnly, hexToRgba, isOccurrenceOverdue, currentOccurrenceDate, dDayBadge } from "@/lib/wann-data";
 import { PRODUCT_LINES } from "@/lib/wann-groups";
-import { Plus, Trash2, X, Pencil, ChevronDown, ChevronRight, Check } from "lucide-react";
+import { Plus, Trash2, X, Pencil, ChevronDown, ChevronRight, Check, Truck } from "lucide-react";
 import type { CategoryFilter } from "./TaskForm";
 import { StageTracker, StageDot } from "./StageTracker";
 import type { Stage } from "@/lib/wann-stages";
@@ -64,7 +64,7 @@ export function MultipleTasksPanel({
    * onDelete isn't a hard delete. */
   deleteLabel?: string;
   onAddItem: (parentId: string, title: string, date: string | null, time: string | null) => void;
-  onUpdateItem: (id: string, patch: { title?: string; date?: string | null; time?: string | null; stage?: string | null; link?: string | null }) => void;
+  onUpdateItem: (id: string, patch: { title?: string; date?: string | null; time?: string | null; stage?: string | null; link?: string | null; isDelivery?: boolean }) => void;
   onToggleItem: (item: MultipleTaskItem) => void;
 
   onDeleteItem: (id: string) => void;
@@ -441,6 +441,18 @@ export function MultipleTasksPanel({
                       )}
                       {!it.link_url && editingLinkId !== it.id && (
                         <>
+                          <button
+                            onClick={() => onUpdateItem(it.id, { isDelivery: !it.is_delivery })}
+                            aria-label="Delivery로 표시"
+                            title="Delivery로 표시 — 켜면 이 항목에만 D-day 뱃지가 표시됩니다"
+                            className={`flex-shrink-0 p-0.5 -m-0.5 rounded-sm ${
+                              it.is_delivery
+                                ? "text-foreground"
+                                : "text-muted-foreground/40 opacity-0 group-hover/child:opacity-100 hover:text-foreground"
+                            }`}
+                          >
+                            <Truck size={11} />
+                          </button>
                           <input
                             type="date"
                             value={it.due_date ?? ""}
@@ -463,7 +475,7 @@ export function MultipleTasksPanel({
                               {amPmOnly(it.due_time)}
                             </span>
                           )}
-                          {it.due_date && !it.completed && (() => {
+                          {it.due_date && !it.completed && it.is_delivery && (() => {
                             const d = dDayBadge(it.due_date);
                             if (!d) return null;
                             return (

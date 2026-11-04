@@ -1636,6 +1636,7 @@ export type Database = {
           group_id: string | null
           id: string
           is_critical: boolean
+          is_delivery: boolean
           is_shopping: boolean
           kora_work_session_id: string | null
           link_url: string | null
@@ -1665,6 +1666,7 @@ export type Database = {
           group_id?: string | null
           id?: string
           is_critical?: boolean
+          is_delivery?: boolean
           is_shopping?: boolean
           kora_work_session_id?: string | null
           link_url?: string | null
@@ -1694,6 +1696,7 @@ export type Database = {
           group_id?: string | null
           id?: string
           is_critical?: boolean
+          is_delivery?: boolean
           is_shopping?: boolean
           kora_work_session_id?: string | null
           link_url?: string | null
