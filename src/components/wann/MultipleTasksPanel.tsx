@@ -556,13 +556,22 @@ export function MultipleTasksPanel({
           );
         };
 
-        // Sort by the nearest upcoming task inside the Project (e.g. its
-        // earliest Delivery/Pickup date), not the Project's own start date —
-        // a Project due later overall but with a sooner task still needs
-        // attention first.
+        // Sort by the Project's Delivery date (the is_delivery-flagged item)
+        // when it has one, since that's the date that actually matters —
+        // not the Project's own start date, and not an earlier production
+        // task date that happens to sort first. Falls back to the nearest
+        // dated child, then the Project's own date, when no item is flagged.
         const earliestChildKey = (e: MultipleTask) => {
-          const ch = items.filter((i) => i.multiple_task_id === e.id && !i.completed && i.due_date);
-          const pool = ch.length > 0 ? ch : items.filter((i) => i.multiple_task_id === e.id && i.due_date);
+          const all = items.filter((i) => i.multiple_task_id === e.id && i.due_date);
+          const delivery = all.filter((i) => i.is_delivery && !i.completed);
+          const pool =
+            delivery.length > 0
+              ? delivery
+              : all.filter((i) => i.is_delivery).length > 0
+                ? all.filter((i) => i.is_delivery)
+                : all.filter((i) => !i.completed).length > 0
+                  ? all.filter((i) => !i.completed)
+                  : all;
           if (pool.length === 0) return taskSortKey({ due_date: e.date, due_time: null });
           return pool.map((i) => taskSortKey(i)).sort()[0];
         };
