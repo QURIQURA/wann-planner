@@ -556,6 +556,30 @@ export function useWannDashboard(
     onSettled: () => invalidate("tasks"),
   });
 
+  /** Bulk-moves every still-open, non-recurring Shopping item whose date has
+   * passed up to today — the "지난 항목 오늘로 이동" action on the Shopping
+   * List widget, for items that just slipped rather than ones genuinely
+   * cancelled. */
+  const bulkMoveShoppingOverdueToToday = useMutation({
+    mutationFn: async () => {
+      const today = todayLocalStr();
+      const ids = (tasksQ.data ?? [])
+        .filter(
+          (t) =>
+            t.is_shopping &&
+            (t.recurrence ?? "none") === "none" &&
+            !t.completed &&
+            !!t.due_date &&
+            t.due_date < today,
+        )
+        .map((t) => t.id);
+      if (ids.length === 0) return;
+      const { error } = await supabase.from("planner_tasks").update({ due_date: today }).in("id", ids);
+      if (error) throw error;
+    },
+    onSuccess: () => invalidate("tasks"),
+  });
+
   // --- Multiple Tasks ---
   const addMultiple = useMutation({
     mutationFn: async (v: MultipleTaskForm) => {
@@ -1053,6 +1077,7 @@ export function useWannDashboard(
       onUpdateSubtag: (id, name) => updateSubtag.mutate({ id, name }),
       onDeleteSubtag: (id) => deleteSubtag.mutate(id),
       onReorderShopping: (orderedIds) => reorderShopping.mutate(orderedIds),
+      onBulkMoveShoppingOverdueToToday: () => bulkMoveShoppingOverdueToToday.mutate(),
     },
     projectActions: {
       onAdd: (v) => addMultiple.mutate(v),

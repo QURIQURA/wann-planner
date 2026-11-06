@@ -103,6 +103,7 @@ function Dashboard() {
               })
             }
             onReorder={(ids) => widgetCtx.taskActions.onReorderShopping(ids)}
+            onBulkMoveOverdueToToday={() => widgetCtx.taskActions.onBulkMoveShoppingOverdueToToday()}
           />
         );
       case "weekly":

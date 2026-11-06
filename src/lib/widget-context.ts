@@ -59,6 +59,9 @@ export type WidgetContext = {
     /** Persists a drag-reorder in the Shopping List widget — the full new
      * top-to-bottom id order for the day's items being reordered. */
     onReorderShopping: (orderedIds: string[]) => void;
+    /** Bulk-moves every still-open, one-off Shopping item whose date has
+     * already passed up to today. */
+    onBulkMoveShoppingOverdueToToday: () => void;
   };
 
   projectActions: {

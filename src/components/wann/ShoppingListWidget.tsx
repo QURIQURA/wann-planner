@@ -30,6 +30,7 @@ export function ShoppingListWidget({
   onEdit,
   onAdd,
   onReorder,
+  onBulkMoveOverdueToToday,
 }: {
   /** formatLocalDate(anchorDate) — same anchor the Timeline is centred on. */
   anchorKey: string;
@@ -43,11 +44,17 @@ export function ShoppingListWidget({
   onAdd: (title: string, date: string, shoppingType: ShoppingType | null, pickupDate: string | null) => void;
   /** Full new top-to-bottom id order for the one day column being reordered. */
   onReorder: (orderedIds: string[]) => void;
+  /** Bulk-moves every still-open, one-off Shopping item whose date has
+   * already passed up to today. */
+  onBulkMoveOverdueToToday: () => void;
 }) {
   const todayStr = todayLocalStr();
   const dayKeys = [-1, 0, 1].map((n) => shiftDate(anchorKey, n));
 
   const shopping = tasks.filter((t) => t.is_shopping && !!t.due_date);
+  const overdueCount = shopping.filter(
+    (t) => (t.recurrence ?? "none") === "none" && !t.completed && t.due_date! < todayStr,
+  ).length;
   // Which of the 3 shown days a task occurs on — tested per day rather than
   // keyed by the task's raw due_date, so a recurring shopping item (e.g.
   // "주간 장보기" every week) keeps reappearing on its live occurrence date
@@ -62,9 +69,21 @@ export function ShoppingListWidget({
 
   return (
     <section className="card-flat p-4">
-      <div className="flex items-center gap-2 mb-3">
+      <div className="flex items-center gap-2 mb-3 flex-wrap">
         <ShoppingCart size={14} />
         <p className="label-caps">Shopping List</p>
+        {overdueCount > 0 && (
+          <button
+            onClick={() => {
+              if (confirm(`날짜 지난 항목 ${overdueCount}개를 오늘 날짜로 한번에 옮길까요?`)) {
+                onBulkMoveOverdueToToday();
+              }
+            }}
+            className="ml-auto label-caps text-[10px] border border-destructive/40 text-destructive px-1.5 py-0.5 hover:bg-destructive/10"
+          >
+            지난 항목 {overdueCount}개 오늘로
+          </button>
+        )}
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         {dayKeys.map((date) => (
