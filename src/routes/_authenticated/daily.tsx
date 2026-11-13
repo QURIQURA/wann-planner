@@ -23,6 +23,7 @@ import {
 } from "@/lib/wann-data";
 import { useWannDashboard } from "@/lib/use-wann-dashboard";
 import { CategoryFilterBar } from "@/components/wann/CategoryFilterBar";
+import { ShoppingListWidget } from "@/components/wann/ShoppingListWidget";
 import { type CategoryFilter } from "@/components/wann/TaskForm";
 
 export const Route = createFileRoute("/_authenticated/daily")({
@@ -109,6 +110,9 @@ function DailyFocusPage() {
   );
 
   const filtered = occurrences.filter((o) => {
+    // Shopping items have their own box below (2026-11-13) — keep them out
+    // of the Today lists so they don't show twice.
+    if (o.task.is_shopping) return false;
     if (filter.categoryId && !taskCategoryIds(o.task).includes(filter.categoryId)) return false;
     if (filter.subtagId && o.task.subtag_id !== filter.subtagId) return false;
     return true;
@@ -196,6 +200,7 @@ function DailyFocusPage() {
   // doesn't fall on it (so they'd otherwise never surface here), e.g. a
   // Task jotted down today but dated for later or left undated.
   const addedToday = tasks.filter((t) => {
+    if (t.is_shopping) return false;
     if (pinnedIds.has(t.id)) return false;
     if (filtered.some((o) => o.task.id === t.id)) return false;
     if (filter.categoryId && !taskCategoryIds(t).includes(filter.categoryId)) return false;
@@ -208,6 +213,7 @@ function DailyFocusPage() {
   // recurring ones via their per-occurrence completion rows.
   const completedOnDate: { task: Task; occurrenceDate: string }[] = (() => {
     const passesFilter = (t: Task) =>
+      !t.is_shopping &&
       !(filter.categoryId && !taskCategoryIds(t).includes(filter.categoryId)) &&
       !(filter.subtagId && t.subtag_id !== filter.subtagId);
     const out: { task: Task; occurrenceDate: string }[] = [];
@@ -312,6 +318,7 @@ function DailyFocusPage() {
             inline "+ Add item" (right) — side by side so adding a project
             item doesn't require leaving this page. */}
         <div className="grid gap-6 lg:grid-cols-2 items-start">
+          <div className="space-y-6">
           <section className="card-flat p-4 space-y-4">
             <div className="flex items-center justify-between gap-2 flex-wrap">
               <p className="label-caps">Today</p>
@@ -448,6 +455,40 @@ function DailyFocusPage() {
             )}
 
           </section>
+
+          {/* The viewed day's Shopping List — same widget/handlers as the
+              Dashboard, just one day wide (2026-11-13). Quick-add included. */}
+          <ShoppingListWidget
+            anchorKey={date}
+            dayOffsets={[0]}
+            tasks={tasks}
+            completions={completions}
+            onToggle={(t, d) => toggleOccurrence.mutate({ task: t, date: d })}
+            onAdd={(title, d, shoppingType, pickupDate) =>
+              widgetCtx.taskActions.onAddTask({
+                title,
+                categoryIds: [],
+                subtagId: null,
+                dueDate: d,
+                dueTime: null,
+                endTime: null,
+                recurrence: "none",
+                projectId: null,
+                newProject: null,
+                subitems: [],
+                isCritical: false,
+                isShopping: true,
+                shoppingType,
+                pickupDate,
+                stage: null,
+                productLine: null,
+                linkUrl: null,
+              })
+            }
+            onReorder={(ids) => widgetCtx.taskActions.onReorderShopping(ids)}
+            onBulkMoveOverdueToToday={() => widgetCtx.taskActions.onBulkMoveShoppingOverdueToToday()}
+          />
+          </div>
 
           <div className="space-y-6">
             <ActiveProjectsPanel

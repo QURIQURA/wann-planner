@@ -31,13 +31,19 @@ export function ShoppingListWidget({
   onAdd,
   onReorder,
   onBulkMoveOverdueToToday,
+  dayOffsets = [-1, 0, 1],
 }: {
   /** formatLocalDate(anchorDate) — same anchor the Timeline is centred on. */
   anchorKey: string;
+  /** Which days to show relative to anchorKey — the Dashboard's 3-day strip
+   * by default; Daily Focus passes [0] for just the viewed day. */
+  dayOffsets?: number[];
   tasks: Task[];
   completions: TaskCompletion[];
   onToggle: (t: Task, occurrenceDate: string) => void;
-  onEdit: (t: Task) => void;
+  /** Opens the full Task editor; omit where there is none (Daily Focus) and
+   * the title renders as plain text. */
+  onEdit?: (t: Task) => void;
   /** Quick-add — title plus optional fulfillment type/pickup date, set via
    * the inline "detail" toggle; everything else is filled in later via
    * onEdit. */
@@ -49,7 +55,7 @@ export function ShoppingListWidget({
   onBulkMoveOverdueToToday: () => void;
 }) {
   const todayStr = todayLocalStr();
-  const dayKeys = [-1, 0, 1].map((n) => shiftDate(anchorKey, n));
+  const dayKeys = dayOffsets.map((n) => shiftDate(anchorKey, n));
 
   const shopping = tasks.filter((t) => t.is_shopping && !!t.due_date);
   const overdueCount = shopping.filter(
@@ -85,7 +91,7 @@ export function ShoppingListWidget({
           </button>
         )}
       </div>
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+      <div className={`grid grid-cols-1 gap-3 ${dayKeys.length > 1 ? "sm:grid-cols-3" : ""}`}>
         {dayKeys.map((date) => (
           <ShoppingDayColumn
             key={date}
@@ -126,7 +132,7 @@ function ShoppingDayColumn({
   items: Task[];
   completions: TaskCompletion[];
   onToggle: (t: Task, occurrenceDate: string) => void;
-  onEdit: (t: Task) => void;
+  onEdit?: (t: Task) => void;
   onAdd: (title: string, date: string, shoppingType: ShoppingType | null, pickupDate: string | null) => void;
   onReorder: (orderedIds: string[]) => void;
 }) {
@@ -284,12 +290,18 @@ function ShoppingDayColumn({
                   title={typeInfo.label}
                 />
               )}
-              <button
-                onClick={() => onEdit(t)}
-                className={`flex-1 min-w-0 text-left truncate hover:underline ${done ? "line-through text-muted-foreground" : ""}`}
-              >
-                {t.title}
-              </button>
+              {onEdit ? (
+                <button
+                  onClick={() => onEdit(t)}
+                  className={`flex-1 min-w-0 text-left truncate hover:underline ${done ? "line-through text-muted-foreground" : ""}`}
+                >
+                  {t.title}
+                </button>
+              ) : (
+                <span className={`flex-1 min-w-0 truncate ${done ? "line-through text-muted-foreground" : ""}`}>
+                  {t.title}
+                </span>
+              )}
               {t.due_time && (
                 <span className="text-[10px] text-muted-foreground tabular-nums flex-shrink-0">
                   {shortTimeAmPm(t.due_time)}

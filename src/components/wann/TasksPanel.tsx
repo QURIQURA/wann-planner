@@ -75,6 +75,9 @@ export function TasksPanel({
     // Tasks widget — keep them out of the plain Tasks list so they don't
     // duplicate there.
     if (t.link_url) return false;
+    // Shopping items live only in the Shopping List widget (2026-11-13) —
+    // same reasoning as linked tasks: one home, no duplicate rows here.
+    if (t.is_shopping) return false;
     if (filter.categoryId && !taskCategoryIds(t).includes(filter.categoryId)) return false;
     if (filter.subtagId && t.subtag_id !== filter.subtagId) return false;
     if (scope === "solo" && t.multiple_task_id) return false;
