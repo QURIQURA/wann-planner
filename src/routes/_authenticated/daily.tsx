@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { ArrowLeft, ChevronLeft, ChevronRight, ChevronDown, Pin, ArrowRightCircle, ArrowRightToLine, GripVertical, Check } from "lucide-react";
+import { ArrowLeft, ChevronLeft, ChevronRight, ChevronDown, Pin, ArrowRightCircle, ArrowRightToLine, GripVertical, Check, CalendarDays } from "lucide-react";
 
 import {
   effectiveOccurrencesOnDate,
@@ -74,7 +74,24 @@ function DailyFocusPage() {
     setPinnedDate,
     reorderPinned,
     renameTask,
+    setTaskTime,
   } = useWannDashboard(user, { initialDate: date });
+
+  // Inline date / time edits on a Today row (2026-11-13: same calendar +
+  // clock inputs as a Project checklist item). Date changes always go
+  // through moveTask so a recurring task's single occurrence moves via an
+  // exception; time changes patch the task directly when it's a plain one.
+  const changeOccDate = (task: Task, originalDate: string, effectiveTime: string | null, newDate: string) => {
+    if (!newDate || newDate === originalDate) return;
+    moveTask.mutate({ task, originalDate, newDate, newTime: effectiveTime });
+  };
+  const changeOccTime = (task: Task, originalDate: string, shownDate: string, newTime: string | null) => {
+    if ((task.recurrence ?? "none") === "none") {
+      setTaskTime.mutate({ id: task.id, time: newTime });
+    } else if (newTime) {
+      moveTask.mutate({ task, originalDate, newDate: shownDate, newTime });
+    }
+  };
 
   const tasks = tasksQ.data ?? [];
   const exceptions = exceptionsQ.data ?? [];
@@ -347,6 +364,8 @@ function DailyFocusPage() {
                 onRename={(t, title) => renameTask.mutate({ id: t.id, title })}
                 onUnpin={(t) => setPinnedDate.mutate({ id: t.id, date: null })}
                 onReorder={(ids) => reorderPinned.mutate(ids)}
+                onChangeDate={(t, d) => changeOccDate(t, t.due_date ?? date, t.due_time, d)}
+                onChangeTime={(t, tm) => changeOccTime(t, t.due_date ?? date, t.due_date ?? date, tm)}
               />
             )}
 
@@ -369,6 +388,8 @@ function DailyFocusPage() {
                         onSelect={() => toggleSelected(occKey(o))}
                         onToggle={() => toggleOccurrence.mutate({ task: o.task, date: o.originalDate })}
                         onRename={(title) => renameTask.mutate({ id: o.task.id, title })}
+                        onChangeDate={(d) => changeOccDate(o.task, o.originalDate, o.effectiveTime, d)}
+                        onChangeTime={(t) => changeOccTime(o.task, o.originalDate, date, t)}
                         onPin={() => setPinnedDate.mutate({ id: o.task.id, date: o.task.pinned_date === date ? null : date })}
                         onCarryOver={() =>
                           moveTask.mutate({
@@ -402,6 +423,8 @@ function DailyFocusPage() {
                       onSelect={() => toggleSelected(occKey(o))}
                       onToggle={() => toggleOccurrence.mutate({ task: o.task, date: o.originalDate })}
                       onRename={(title) => renameTask.mutate({ id: o.task.id, title })}
+                      onChangeDate={(d) => changeOccDate(o.task, o.originalDate, o.effectiveTime, d)}
+                      onChangeTime={(t) => changeOccTime(o.task, o.originalDate, date, t)}
                       onPin={() => setPinnedDate.mutate({ id: o.task.id, date: o.task.pinned_date === date ? null : date })}
                       onCarryOver={() =>
                         moveTask.mutate({
@@ -453,13 +476,12 @@ function DailyFocusPage() {
                             onRename={(title) => renameTask.mutate({ id: t.id, title })}
                             onPin={() => setPinnedDate.mutate({ id: t.id, date: t.pinned_date === date ? null : date })}
                             pinned={t.pinned_date === date}
+                            dateValue={t.due_date}
+                            timeValue={t.due_time}
+                            onChangeDate={(d) => changeOccDate(t, occ, t.due_time, d)}
+                            onChangeTime={(tm) => changeOccTime(t, occ, occ, tm)}
                           />
                         </div>
-                        {t.due_date && (
-                          <span className="text-[10px] text-muted-foreground tabular-nums flex-shrink-0">
-                            {t.due_date.slice(5)}
-                          </span>
-                        )}
                       </div>
                     );
                   })}
@@ -645,6 +667,8 @@ function PinnedList({
   onRename,
   onUnpin,
   onReorder,
+  onChangeDate,
+  onChangeTime,
 }: {
   items: Task[];
   date: string;
@@ -655,6 +679,8 @@ function PinnedList({
   onRename: (t: Task, title: string) => void;
   onUnpin: (t: Task) => void;
   onReorder: (orderedIds: string[]) => void;
+  onChangeDate: (t: Task, date: string) => void;
+  onChangeTime: (t: Task, time: string | null) => void;
 }) {
   const [dragId, setDragId] = useState<string | null>(null);
   const [overId, setOverId] = useState<string | null>(null);
@@ -715,6 +741,10 @@ function PinnedList({
                   onRename={(title) => onRename(t, title)}
                   onUnpin={() => onUnpin(t)}
                   pinned
+                  dateValue={t.due_date}
+                  timeValue={t.due_time}
+                  onChangeDate={(d) => onChangeDate(t, d)}
+                  onChangeTime={(tm) => onChangeTime(t, tm)}
                 />
               </div>
             </div>
@@ -739,6 +769,10 @@ function OccRow({
   onUnpin,
   pinned,
   bare = false,
+  dateValue,
+  timeValue,
+  onChangeDate,
+  onChangeTime,
 }: {
   task: Task;
   occurrenceDate: string;
@@ -754,6 +788,12 @@ function OccRow({
   onUnpin?: () => void;
   pinned?: boolean;
   bare?: boolean;
+  /** Inline calendar + clock inputs (shown when onChangeDate is given) —
+   * the same controls as a Project checklist item row. */
+  dateValue?: string | null;
+  timeValue?: string | null;
+  onChangeDate?: (date: string) => void;
+  onChangeTime?: (time: string | null) => void;
 }) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(task.title);
@@ -801,6 +841,33 @@ function OccRow({
       {!bare && project && (
         <span className="text-[10px] text-muted-foreground border-b border-border max-w-[90px] truncate">{project.name}</span>
       )}
+      {onChangeDate && (
+        <>
+          {/* Icon-only calendar (2026-11-13: no dd/mm/yyyy text) — the real
+              date input sits invisibly over the icon so a tap opens the
+              native picker; the current date shows as the tooltip. */}
+          <label
+            className="relative inline-flex items-center justify-center h-5 w-5 text-muted-foreground hover:text-foreground cursor-pointer flex-shrink-0"
+            title={dateValue ? `${dateValue} (${koDow(dateValue)})` : "날짜 설정"}
+          >
+            <CalendarDays size={12} />
+            <input
+              type="date"
+              value={dateValue ?? ""}
+              onChange={(ev) => onChangeDate(ev.target.value)}
+              aria-label="Task date"
+              className="absolute inset-0 h-full w-full opacity-0 cursor-pointer"
+            />
+          </label>
+          <input
+            type="time"
+            value={timeValue ? timeValue.slice(0, 5) : ""}
+            onChange={(ev) => onChangeTime?.(ev.target.value || null)}
+            aria-label="Task time"
+            className="bg-transparent border-b border-border text-[10px] text-muted-foreground w-[64px] flex-shrink-0"
+          />
+        </>
+      )}
       {cats.map((c) => (
         <span key={c.id} className="text-[10px] px-1 label-caps bg-foreground text-background flex-shrink-0">
           {c.name}
@@ -833,6 +900,8 @@ function OccRowWithCarry({
   selectMode = false,
   selected = false,
   onSelect,
+  onChangeDate,
+  onChangeTime,
 }: {
   o: { task: Task; originalDate: string; effectiveTime: string | null };
   date: string;
@@ -843,6 +912,8 @@ function OccRowWithCarry({
   onRename: (title: string) => void;
   onPin: () => void;
   onCarryOver: () => void;
+  onChangeDate?: (date: string) => void;
+  onChangeTime?: (time: string | null) => void;
   /** "선택해서 내일로" mode — shows a selection box on incomplete rows
    * (in place of the per-row carry-over button). */
   selectMode?: boolean;
@@ -879,6 +950,10 @@ function OccRowWithCarry({
           onRename={onRename}
           onPin={onPin}
           pinned={o.task.pinned_date === date}
+          dateValue={date}
+          timeValue={o.effectiveTime}
+          onChangeDate={onChangeDate}
+          onChangeTime={onChangeTime}
         />
       </div>
       {!done && !selectMode && (

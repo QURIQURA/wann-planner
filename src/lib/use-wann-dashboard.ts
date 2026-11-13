@@ -420,6 +420,37 @@ export function useWannDashboard(
     onSettled: () => invalidate("tasks"),
   });
 
+  /** Daily Focus inline time edit for a plain (non-recurring) task — sets or
+   * clears due_time; clearing also drops end_time since a duration without
+   * a start makes no sense. Recurring tasks go through moveTask (per-
+   * occurrence exception) instead. */
+  const setTaskTime = useMutation({
+    mutationFn: async ({ id, time }: { id: string; time: string | null }) => {
+      const patch: { due_time: string | null; end_time?: null } = { due_time: time };
+      if (time === null) patch.end_time = null;
+      const { error } = await supabase.from("planner_tasks").update(patch).eq("id", id);
+      if (error) throw error;
+    },
+    onMutate: async ({ id, time }) => {
+      await qc.cancelQueries({ queryKey: ["tasks", user.id] });
+      const prev = qc.getQueryData<Task[]>(["tasks", user.id]);
+      if (prev) {
+        qc.setQueryData<Task[]>(
+          ["tasks", user.id],
+          prev.map((t) =>
+            t.id === id ? { ...t, due_time: time, end_time: time === null ? null : t.end_time } : t,
+          ),
+        );
+      }
+      return { prev };
+    },
+    onError: (_e, _v, ctx) => {
+      if (ctx?.prev) qc.setQueryData(["tasks", user.id], ctx.prev);
+      toast.error("Could not update time");
+    },
+    onSettled: () => invalidate("tasks"),
+  });
+
   const toggleOccurrence = useMutation({
     mutationFn: async ({ task, date }: { task: Task; date: string }) => {
       const completions = completionsQ.data ?? [];
@@ -1228,6 +1259,7 @@ export function useWannDashboard(
     setPinnedDate,
     reorderPinned,
     renameTask,
+    setTaskTime,
     visibleWidgets,
     widgetCtx,
     upcoming,
