@@ -523,7 +523,7 @@ export function MultipleTasksPanel({
                         if (ev.key === "Enter" && !ev.nativeEvent.isComposing) {
                           const v = (childInput[e.id] ?? "").trim();
                           if (v) {
-                            onAddItem(e.id, v, childDate[e.id] || e.date || null, childTime[e.id] || null);
+                            onAddItem(e.id, v, childDate[e.id] || todayLocalStr(), childTime[e.id] || null);
                             setChildInput({ ...childInput, [e.id]: "" });
                             setChildDate({ ...childDate, [e.id]: "" });
                             setChildTime({ ...childTime, [e.id]: "" });
@@ -534,13 +534,13 @@ export function MultipleTasksPanel({
                     />
                     <input
                       type="date"
-                      value={childDate[e.id] ?? ""}
+                      value={childDate[e.id] ?? todayLocalStr()}
                       onChange={(ev) => setChildDate({ ...childDate, [e.id]: ev.target.value })}
                       aria-label="New item date"
                       className="bg-transparent border-b border-border text-[10px] text-muted-foreground w-[92px]"
                     />
-                    {childDate[e.id] && (
-                      <span className="text-[10px] text-muted-foreground w-4">({koDow(childDate[e.id])})</span>
+                    {(childDate[e.id] ?? todayLocalStr()) && (
+                      <span className="text-[10px] text-muted-foreground w-4">({koDow(childDate[e.id] ?? todayLocalStr())})</span>
                     )}
                     <input
                       type="time"
