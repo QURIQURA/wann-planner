@@ -121,8 +121,10 @@ function DailyFocusPage() {
   // date. Rendered at the top of the Today box itself (2026-11-13: user
   // asked NOT to keep this as a separate box), so build a Set to keep the
   // rest of Today's lists from also showing these same tasks twice.
+  // Finished pins drop out of Top Priorities too (2026-11-13: user wants a
+  // completed task to move straight to the "오늘 완료한 작업" list).
   const pinned = tasks
-    .filter((t) => t.pinned_date === date)
+    .filter((t) => t.pinned_date === date && !isOccurrenceCompleted(t, date, completions))
     .slice()
     .sort((a, b) => a.pinned_order - b.pinned_order);
   const pinnedIds = new Set(pinned.map((t) => t.id));
@@ -225,6 +227,11 @@ function DailyFocusPage() {
     }
     return out.sort((a, b) => a.task.title.localeCompare(b.task.title));
   })();
+  // Split by when the task was created: added today & finished today vs.
+  // carried in from an earlier day and finished today.
+  const createdOn = (t: Task) => (t.created_at ? formatLocalDate(new Date(t.created_at)) : null);
+  const completedAddedToday = completedOnDate.filter((r) => createdOn(r.task) === date);
+  const completedAddedEarlier = completedOnDate.filter((r) => createdOn(r.task) !== date);
 
   return (
     <div className="min-h-screen">
@@ -489,29 +496,43 @@ function DailyFocusPage() {
 
                 <div className="border-t border-dashed border-border" />
 
-                <div className="space-y-1">
+                <div className="space-y-2">
                   <p className="label-caps">오늘 완료한 작업</p>
                   {completedOnDate.length === 0 && <p className="text-xs text-muted-foreground italic">없음</p>}
-                  {completedOnDate.map(({ task: t, occurrenceDate: occ }) => (
-                    <div key={`${t.id}-${occ}`} className="flex items-center gap-2">
-                      <div className="flex-1 min-w-0">
-                        <OccRow
-                          task={t}
-                          occurrenceDate={occ}
-                          done
-                          categories={widgetCtx.categories}
-                          projects={projects}
-                          onToggle={() => toggleOccurrence.mutate({ task: t, date: occ })}
-                          onRename={(title) => renameTask.mutate({ id: t.id, title })}
-                        />
+                  {(
+                    [
+                      ["오늘 추가 → 오늘 완료", completedAddedToday],
+                      ["이전 추가 → 오늘 완료", completedAddedEarlier],
+                    ] as const
+                  ).map(([label, rows]) =>
+                    rows.length === 0 ? null : (
+                      <div key={label}>
+                        <p className="text-[10px] label-caps text-muted-foreground mb-1">{label}</p>
+                        <div className="space-y-1">
+                          {rows.map(({ task: t, occurrenceDate: occ }) => (
+                            <div key={`${t.id}-${occ}`} className="flex items-center gap-2">
+                              <div className="flex-1 min-w-0">
+                                <OccRow
+                                  task={t}
+                                  occurrenceDate={occ}
+                                  done
+                                  categories={widgetCtx.categories}
+                                  projects={projects}
+                                  onToggle={() => toggleOccurrence.mutate({ task: t, date: occ })}
+                                  onRename={(title) => renameTask.mutate({ id: t.id, title })}
+                                />
+                              </div>
+                              {t.due_date && t.due_date !== date && (
+                                <span className="text-[10px] text-muted-foreground tabular-nums flex-shrink-0">
+                                  {t.due_date.slice(5)}
+                                </span>
+                              )}
+                            </div>
+                          ))}
+                        </div>
                       </div>
-                      {t.due_date && t.due_date !== date && (
-                        <span className="text-[10px] text-muted-foreground tabular-nums flex-shrink-0">
-                          {t.due_date.slice(5)}
-                        </span>
-                      )}
-                    </div>
-                  ))}
+                    ),
+                  )}
                 </div>
               </section>
             )}
