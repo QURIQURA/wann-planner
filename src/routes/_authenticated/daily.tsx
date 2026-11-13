@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { ArrowLeft, ChevronLeft, ChevronRight, Pin, ArrowRightCircle, ArrowRightToLine, GripVertical } from "lucide-react";
+import { ArrowLeft, ChevronLeft, ChevronRight, ChevronDown, Pin, ArrowRightCircle, ArrowRightToLine, GripVertical, Check } from "lucide-react";
 
 import {
   effectiveOccurrencesOnDate,
@@ -139,8 +139,27 @@ function DailyFocusPage() {
   const incompleteCarryable = filtered.filter(
     (o) => !pinnedIds.has(o.task.id) && !isOccurrenceCompleted(o.task, o.originalDate, completions),
   );
-  const carryAllToTomorrow = () => {
+  // Selection mode for "선택해서 내일로 넘기기" — the user picks which
+  // incomplete tasks move (2026-11-13: a one-click move-everything button
+  // was judged too risky). Keys are task id + occurrence date so a
+  // recurring task's single occurrence is what gets selected.
+  const occKey = (o: { task: Task; originalDate: string }) => `${o.task.id}-${o.originalDate}`;
+  const [selectMode, setSelectMode] = useState(false);
+  const [selectedKeys, setSelectedKeys] = useState<Set<string>>(new Set());
+  const toggleSelected = (key: string) =>
+    setSelectedKeys((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  const exitSelectMode = () => {
+    setSelectMode(false);
+    setSelectedKeys(new Set());
+  };
+  const carrySelectedToTomorrow = () => {
     for (const o of incompleteCarryable) {
+      if (!selectedKeys.has(occKey(o))) continue;
       moveTask.mutate({
         task: o.task,
         originalDate: o.originalDate,
@@ -148,6 +167,7 @@ function DailyFocusPage() {
         newTime: o.effectiveTime,
       });
     }
+    exitSelectMode();
   };
 
   // "오늘 추가된 작업" — tasks created on the viewed date whose due_date
@@ -241,20 +261,50 @@ function DailyFocusPage() {
             item doesn't require leaving this page. */}
         <div className="grid gap-6 lg:grid-cols-2 items-start">
           <section className="card-flat p-4 space-y-4">
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between gap-2 flex-wrap">
               <p className="label-caps">Today</p>
-              {incompleteCarryable.length > 0 && (
+              {incompleteCarryable.length > 0 && !selectMode && (
                 <button
-                  onClick={carryAllToTomorrow}
+                  onClick={() => setSelectMode(true)}
                   className="flex items-center gap-1 border border-border px-2 py-1 text-[10px] label-caps hover:bg-muted"
-                  title="오늘 미완료 작업을 모두 내일로 이동"
+                  title="미완료 작업 중 골라서 내일로 이동"
                 >
                   <ArrowRightToLine size={11} />
-                  내일로 전체 넘기기
+                  선택해서 내일로
                 </button>
               )}
+              {selectMode && (
+                <div className="flex items-center gap-1 flex-wrap">
+                  <button
+                    onClick={() =>
+                      setSelectedKeys(
+                        selectedKeys.size === incompleteCarryable.length
+                          ? new Set()
+                          : new Set(incompleteCarryable.map(occKey)),
+                      )
+                    }
+                    className="border border-border px-2 py-1 text-[10px] label-caps hover:bg-muted"
+                  >
+                    {selectedKeys.size === incompleteCarryable.length ? "전체 해제" : "전체 선택"}
+                  </button>
+                  <button
+                    onClick={carrySelectedToTomorrow}
+                    disabled={selectedKeys.size === 0}
+                    className="flex items-center gap-1 border border-foreground bg-foreground text-background px-2 py-1 text-[10px] label-caps disabled:opacity-40"
+                  >
+                    <ArrowRightToLine size={11} />
+                    내일로 넘기기 ({selectedKeys.size})
+                  </button>
+                  <button
+                    onClick={exitSelectMode}
+                    className="border border-border px-2 py-1 text-[10px] label-caps hover:bg-muted"
+                  >
+                    취소
+                  </button>
+                </div>
+              )}
             </div>
-            {filtered.length === 0 && pinned.length === 0 && addedToday.length === 0 && (
+            {filtered.length === 0 && pinned.length === 0 && (
               <p className="text-xs text-muted-foreground italic">No tasks for this day</p>
             )}
 
@@ -286,6 +336,9 @@ function DailyFocusPage() {
                         completions={completions}
                         categories={widgetCtx.categories}
                         projects={projects}
+                        selectMode={selectMode}
+                        selected={selectedKeys.has(occKey(o))}
+                        onSelect={() => toggleSelected(occKey(o))}
                         onToggle={() => toggleOccurrence.mutate({ task: o.task, date: o.originalDate })}
                         onRename={(title) => renameTask.mutate({ id: o.task.id, title })}
                         onPin={() => setPinnedDate.mutate({ id: o.task.id, date: o.task.pinned_date === date ? null : date })}
@@ -316,6 +369,9 @@ function DailyFocusPage() {
                       completions={completions}
                       categories={widgetCtx.categories}
                       projects={projects}
+                      selectMode={selectMode}
+                      selected={selectedKeys.has(occKey(o))}
+                      onSelect={() => toggleSelected(occKey(o))}
                       onToggle={() => toggleOccurrence.mutate({ task: o.task, date: o.originalDate })}
                       onRename={(title) => renameTask.mutate({ id: o.task.id, title })}
                       onPin={() => setPinnedDate.mutate({ id: o.task.id, date: o.task.pinned_date === date ? null : date })}
@@ -333,9 +389,23 @@ function DailyFocusPage() {
               </div>
             )}
 
+          </section>
+
+          <div className="space-y-6">
+            <ActiveProjectsPanel
+              projects={projects}
+              projectItems={projectItems}
+              categories={widgetCtx.categories}
+              onAddItem={widgetCtx.projectActions.onAddItem}
+              onToggleItem={widgetCtx.projectActions.onToggleItem}
+            />
+
+            {/* "오늘 추가된 작업" — its own box (2026-11-13: moved out of
+                Today), since these are dated elsewhere and only share the
+                creation date with the viewed day. */}
             {addedToday.length > 0 && (
-              <div>
-                <p className="text-[10px] label-caps text-muted-foreground mb-1">오늘 추가된 작업</p>
+              <section className="card-flat p-4 space-y-2">
+                <p className="label-caps">오늘 추가된 작업</p>
                 <div className="space-y-1">
                   {addedToday.map((t) => {
                     const occ = t.due_date ?? date;
@@ -364,16 +434,9 @@ function DailyFocusPage() {
                     );
                   })}
                 </div>
-              </div>
+              </section>
             )}
-          </section>
-
-          <ActiveProjectsPanel
-            projects={projects}
-            projectItems={projectItems}
-            categories={widgetCtx.categories}
-            onAddItem={widgetCtx.projectActions.onAddItem}
-          />
+          </div>
         </div>
       </main>
     </div>
@@ -391,13 +454,23 @@ function ActiveProjectsPanel({
   projectItems,
   categories,
   onAddItem,
+  onToggleItem,
 }: {
   projects: MultipleTask[];
   projectItems: MultipleTaskItem[];
   categories: { id: string; name: string }[];
   onAddItem: (parentId: string, title: string, date: string | null, time: string | null) => void;
+  onToggleItem: (item: MultipleTaskItem) => void;
 }) {
   const [input, setInput] = useState<Record<string, string>>({});
+  const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
+  const toggleExpanded = (id: string) =>
+    setExpandedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
 
   const active = projects.filter((p) => {
     if (!p.date) return false;
@@ -416,13 +489,30 @@ function ActiveProjectsPanel({
           const children = projectItems.filter((i) => i.multiple_task_id === p.id);
           const pct = children.length > 0 ? Math.round((children.filter((i) => i.completed).length / children.length) * 100) : null;
           const cat = p.category_id ? categories.find((c) => c.id === p.category_id) : null;
+          const expanded = expandedIds.has(p.id);
+          // Open items first (date order), completed ones after — a quick
+          // "what's left" read rather than the full checklist's link/date sort.
+          const sortedChildren = children.slice().sort((a, b) => {
+            if (a.completed !== b.completed) return a.completed ? 1 : -1;
+            return (a.due_date ?? "9999").localeCompare(b.due_date ?? "9999") || a.title.localeCompare(b.title);
+          });
           return (
             <div key={p.id} className="border-b border-border/50 pb-2">
               <div className="flex items-center gap-2">
-                <span className="text-sm flex-1 min-w-0 truncate">
+                <button
+                  onClick={() => toggleExpanded(p.id)}
+                  className="text-muted-foreground p-1 -m-1 flex-shrink-0"
+                  aria-label={expanded ? "Collapse" : "Expand"}
+                >
+                  {expanded ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
+                </button>
+                <button
+                  onClick={() => toggleExpanded(p.id)}
+                  className="text-sm flex-1 min-w-0 truncate text-left hover:underline"
+                >
                   {p.name}
                   {pct !== null && <span className="text-muted-foreground"> · {pct}%</span>}
-                </span>
+                </button>
                 {cat && (
                   <span className="text-[10px] px-1 label-caps bg-foreground text-background flex-shrink-0">
                     {cat.name}
@@ -432,6 +522,32 @@ function ActiveProjectsPanel({
               {pct !== null && (
                 <div className="h-[2px] bg-border mt-1">
                   <div className="h-full bg-foreground" style={{ width: `${pct}%` }} />
+                </div>
+              )}
+              {expanded && (
+                <div className="pl-5 mt-1 space-y-0.5">
+                  {sortedChildren.length === 0 && (
+                    <p className="text-xs text-muted-foreground italic">No items</p>
+                  )}
+                  {sortedChildren.map((it) => (
+                    <div key={it.id} className="flex items-center gap-2 py-0.5">
+                      <button
+                        onClick={() => onToggleItem(it)}
+                        aria-label="Toggle"
+                        className={`h-3 w-3 border border-border flex-shrink-0 ${it.completed ? "bg-foreground" : ""}`}
+                      />
+                      <span
+                        className={`text-xs flex-1 min-w-0 truncate ${it.completed ? "line-through text-muted-foreground" : ""}`}
+                      >
+                        {it.title}
+                      </span>
+                      {it.due_date && (
+                        <span className="text-[10px] text-muted-foreground tabular-nums flex-shrink-0">
+                          {it.due_date.slice(5)}
+                        </span>
+                      )}
+                    </div>
+                  ))}
                 </div>
               )}
               <input
@@ -655,6 +771,9 @@ function OccRowWithCarry({
   onRename,
   onPin,
   onCarryOver,
+  selectMode = false,
+  selected = false,
+  onSelect,
 }: {
   o: { task: Task; originalDate: string; effectiveTime: string | null };
   date: string;
@@ -665,14 +784,31 @@ function OccRowWithCarry({
   onRename: (title: string) => void;
   onPin: () => void;
   onCarryOver: () => void;
+  /** "선택해서 내일로" mode — shows a selection box on incomplete rows
+   * (in place of the per-row carry-over button). */
+  selectMode?: boolean;
+  selected?: boolean;
+  onSelect?: () => void;
 }) {
   const done = isOccurrenceCompleted(o.task, o.originalDate, completions);
   const overdue = !done && o.originalDate < date;
+  const selectable = selectMode && !done;
   return (
     <div
-      className="flex items-center gap-1"
-      style={overdue ? { background: hexToRgba("#F87171", 0.2) } : undefined}
+      className={`flex items-center gap-1 ${selected ? "bg-muted" : ""}`}
+      style={overdue && !selected ? { background: hexToRgba("#F87171", 0.2) } : undefined}
     >
+      {selectable && (
+        <button
+          onClick={onSelect}
+          aria-label={selected ? "Deselect" : "Select"}
+          className={`h-4 w-4 border flex-shrink-0 flex items-center justify-center ${
+            selected ? "border-foreground bg-foreground text-background" : "border-border text-transparent"
+          }`}
+        >
+          <Check size={10} />
+        </button>
+      )}
       <div className="flex-1 min-w-0">
         <OccRow
           task={o.task}
@@ -686,7 +822,7 @@ function OccRowWithCarry({
           pinned={o.task.pinned_date === date}
         />
       </div>
-      {!done && (
+      {!done && !selectMode && (
         <button
           onClick={onCarryOver}
           aria-label="Carry over to tomorrow"
