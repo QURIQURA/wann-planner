@@ -62,6 +62,9 @@ export type WidgetContext = {
     /** Bulk-moves every still-open, one-off Shopping item whose date has
      * already passed up to today. */
     onBulkMoveShoppingOverdueToToday: () => void;
+    /** Daily Focus "Pin to Daily" — sets (or clears, with null) the single
+     * date this Task is pinned as a Top Priority for. */
+    onSetPinnedDate: (id: string, date: string | null) => void;
   };
 
   projectActions: {

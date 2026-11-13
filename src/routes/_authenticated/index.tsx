@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState } from "react";
-import { Settings as SettingsIcon, LogOut, BookOpen, LineChart, CalendarDays, LayoutGrid } from "lucide-react";
+import { Settings as SettingsIcon, LogOut, BookOpen, LineChart, CalendarDays, LayoutGrid, Target } from "lucide-react";
 
 import { isDPlusEvent, dPlusLabel, formatLocalDate, parseLocalDate } from "@/lib/wann-data";
 import { useWannDashboard } from "@/lib/use-wann-dashboard";
@@ -182,6 +182,14 @@ function Dashboard() {
             <h1 className="text-lg font-light tracking-tight">Weekly OS</h1>
           </div>
           <div className="flex items-center gap-2 flex-wrap">
+            <Link
+              to="/daily"
+              className="border border-border p-2 hover:bg-muted flex items-center gap-1"
+              aria-label="Daily Focus"
+            >
+              <Target size={14} />
+              <span className="label-caps hidden sm:inline">Daily</span>
+            </Link>
             <Link
               to="/month"
               className="border border-border p-2 hover:bg-muted flex items-center gap-1"

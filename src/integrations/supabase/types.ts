@@ -1642,6 +1642,7 @@ export type Database = {
           link_url: string | null
           multiple_task_id: string | null
           notes: string | null
+          pinned_date: string | null
           product_line: string | null
           recurrence: string
           series_id: string | null
@@ -1672,6 +1673,7 @@ export type Database = {
           link_url?: string | null
           multiple_task_id?: string | null
           notes?: string | null
+          pinned_date?: string | null
           product_line?: string | null
           recurrence?: string
           series_id?: string | null
@@ -1702,6 +1704,7 @@ export type Database = {
           link_url?: string | null
           multiple_task_id?: string | null
           notes?: string | null
+          pinned_date?: string | null
           product_line?: string | null
           recurrence?: string
           series_id?: string | null

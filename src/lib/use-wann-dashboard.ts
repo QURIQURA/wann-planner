@@ -527,6 +527,33 @@ export function useWannDashboard(
     onSuccess: () => invalidate("tasks"),
   });
 
+  /** Daily Focus "Pin to Daily" — `pinned_date` is a single plain date on the
+   * Task, independent of due_date, with no auto-expiry. Passing the same
+   * date it's already pinned to unpins it (toggle); passing a date or null
+   * explicitly also works for "move the pin" / "unpin" callers. */
+  const setPinnedDate = useMutation({
+    mutationFn: async ({ id, date }: { id: string; date: string | null }) => {
+      const { error } = await supabase.from("planner_tasks").update({ pinned_date: date }).eq("id", id);
+      if (error) throw error;
+    },
+    onMutate: async ({ id, date }) => {
+      await qc.cancelQueries({ queryKey: ["tasks", user.id] });
+      const prev = qc.getQueryData<Task[]>(["tasks", user.id]);
+      if (prev) {
+        qc.setQueryData<Task[]>(
+          ["tasks", user.id],
+          prev.map((t) => (t.id === id ? { ...t, pinned_date: date } : t)),
+        );
+      }
+      return { prev };
+    },
+    onError: (_e, _v, ctx) => {
+      if (ctx?.prev) qc.setQueryData(["tasks", user.id], ctx.prev);
+      toast.error("Could not update pin");
+    },
+    onSettled: () => invalidate("tasks"),
+  });
+
   /** Persists a drag-reorder of the Shopping List widget — `orderedIds` is
    * the full new top-to-bottom order for whichever day's items were
    * reordered; each gets its list index written as shopping_order. */
@@ -1078,6 +1105,7 @@ export function useWannDashboard(
       onDeleteSubtag: (id) => deleteSubtag.mutate(id),
       onReorderShopping: (orderedIds) => reorderShopping.mutate(orderedIds),
       onBulkMoveShoppingOverdueToToday: () => bulkMoveShoppingOverdueToToday.mutate(),
+      onSetPinnedDate: (id, date) => setPinnedDate.mutate({ id, date }),
     },
     projectActions: {
       onAdd: (v) => addMultiple.mutate(v),
@@ -1143,6 +1171,7 @@ export function useWannDashboard(
     moveTask,
     moveProject,
     moveEvent,
+    setPinnedDate,
     visibleWidgets,
     widgetCtx,
     upcoming,

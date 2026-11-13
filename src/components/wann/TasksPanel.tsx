@@ -3,7 +3,7 @@ import { useState } from "react";
 import type { Category, MultipleTask, Subtag, Task, TaskCompletion } from "@/lib/wann-data";
 import { todayLocalStr, shortTimeAmPm, isOccurrenceCompleted, isOccurrenceOverdue, currentOccurrenceDate, koDow, taskSortKey, diffDays, taskCategoryIds, hexToRgba } from "@/lib/wann-data";
 import { PRODUCT_LINES } from "@/lib/wann-groups";
-import { Trash2, ChevronDown, ChevronUp, ChevronRight, Link2 } from "lucide-react";
+import { Trash2, ChevronDown, ChevronUp, ChevronRight, Link2, Pin } from "lucide-react";
 import { CategoryFilterBar } from "./CategoryFilterBar";
 import type { CategoryFilter, TaskFormValues } from "./TaskForm";
 
@@ -26,6 +26,7 @@ export function TasksPanel({
   onUpdateCategory,
   onUpdateSubtag,
   onDeleteSubtag,
+  onSetPinnedDate,
   filter: filterProp,
   onFilterChange,
   hideFilterBar,
@@ -48,6 +49,7 @@ export function TasksPanel({
   onUpdateCategory: (id: string, name: string, color: string) => void;
   onUpdateSubtag: (id: string, name: string) => void;
   onDeleteSubtag: (id: string) => void;
+  onSetPinnedDate: (id: string, date: string | null) => void;
   /** Controlled category filter (shared with the Multiple Task column). */
   filter?: CategoryFilter;
   onFilterChange?: (f: CategoryFilter) => void;
@@ -148,6 +150,7 @@ export function TasksPanel({
               onToggle={onToggleTask}
               onEdit={onEditTask}
               onDelete={onDeleteTask}
+              onSetPinnedDate={onSetPinnedDate}
             />
             {undated.length > 0 && (
               <div className="mt-3 border-t border-border pt-2">
@@ -168,6 +171,7 @@ export function TasksPanel({
                       onToggle={onToggleTask}
                       onEdit={onEditTask}
                       onDelete={onDeleteTask}
+                      onSetPinnedDate={onSetPinnedDate}
                     />
                   </div>
                 )}
@@ -200,6 +204,7 @@ export function TasksPanel({
                   onToggle={onToggleTask}
                   onEdit={onEditTask}
                   onDelete={onDeleteTask}
+                  onSetPinnedDate={onSetPinnedDate}
                   completed
                 />
               </div>
@@ -219,6 +224,7 @@ function TaskList({
   onToggle,
   onEdit,
   onDelete,
+  onSetPinnedDate,
   completed = false,
 }: {
   items: Task[];
@@ -227,6 +233,7 @@ function TaskList({
   onToggle: (t: Task, occurrenceDate: string) => void;
   onEdit: (t: Task) => void;
   onDelete: (id: string) => void;
+  onSetPinnedDate: (id: string, date: string | null) => void;
   completed?: boolean;
   projects: MultipleTask[];
 }) {
@@ -313,6 +320,14 @@ function TaskList({
                 {t.end_time ? `–${shortTimeAmPm(t.end_time)}` : ""}
               </span>
             )}
+            <button
+              onClick={() => onSetPinnedDate(t.id, t.pinned_date ? null : currentOccurrenceDate(t))}
+              aria-label={t.pinned_date ? "Unpin from Daily" : "Pin to Daily"}
+              title={t.pinned_date ? `Daily 상단 고정 — ${t.pinned_date}` : "Daily 상단에 고정"}
+              className={`flex-shrink-0 ${t.pinned_date ? "text-foreground" : "opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-foreground"}`}
+            >
+              <Pin size={12} fill={t.pinned_date ? "currentColor" : "none"} />
+            </button>
             <button
               onClick={() => onDelete(t.id)}
               aria-label="Delete"
