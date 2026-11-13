@@ -123,6 +123,9 @@ function DailyFocusPage() {
     const solo: typeof filtered = [];
     for (const o of filtered) {
       if (pinnedIds.has(o.task.id)) continue;
+      // Finished items leave the Today lists (2026-11-13) — they're shown
+      // in the "오늘 완료한 작업" box instead, so Today reads as what's left.
+      if (isOccurrenceCompleted(o.task, o.originalDate, completions)) continue;
       if (o.task.multiple_task_id) {
         const arr = byProject.get(o.task.multiple_task_id) ?? [];
         arr.push(o);
@@ -180,6 +183,31 @@ function DailyFocusPage() {
     if (filter.subtagId && t.subtag_id !== filter.subtagId) return false;
     return !!t.created_at && formatLocalDate(new Date(t.created_at)) === date;
   });
+
+  // "오늘 완료한 작업" — everything ticked off ON the viewed date (by the
+  // completion timestamp, not the due date): plain tasks via completed_at,
+  // recurring ones via their per-occurrence completion rows.
+  const completedOnDate: { task: Task; occurrenceDate: string }[] = (() => {
+    const passesFilter = (t: Task) =>
+      !(filter.categoryId && !taskCategoryIds(t).includes(filter.categoryId)) &&
+      !(filter.subtagId && t.subtag_id !== filter.subtagId);
+    const out: { task: Task; occurrenceDate: string }[] = [];
+    for (const t of tasks) {
+      if ((t.recurrence ?? "none") !== "none") continue;
+      if (!t.completed || !t.completed_at) continue;
+      if (formatLocalDate(new Date(t.completed_at)) !== date) continue;
+      if (!passesFilter(t)) continue;
+      out.push({ task: t, occurrenceDate: t.due_date ?? date });
+    }
+    const byId = new Map(tasks.map((t) => [t.id, t]));
+    for (const c of completions) {
+      if (formatLocalDate(new Date(c.completed_at)) !== date) continue;
+      const t = byId.get(c.task_id);
+      if (!t || !passesFilter(t)) continue;
+      out.push({ task: t, occurrenceDate: c.occurrence_date });
+    }
+    return out.sort((a, b) => a.task.title.localeCompare(b.task.title));
+  })();
 
   return (
     <div className="min-h-screen">
@@ -400,13 +428,15 @@ function DailyFocusPage() {
               onToggleItem={widgetCtx.projectActions.onToggleItem}
             />
 
-            {/* "오늘 추가된 작업" — its own box (2026-11-13: moved out of
-                Today), since these are dated elsewhere and only share the
-                creation date with the viewed day. */}
-            {addedToday.length > 0 && (
-              <section className="card-flat p-4 space-y-2">
-                <p className="label-caps">오늘 추가된 작업</p>
+            {/* Day log — "오늘 추가된 작업" + "오늘 완료한 작업" in ONE box
+                (2026-11-13), split by a dashed rule. Both are keyed on
+                what happened on the viewed date (created_at / completed_at),
+                not on the due date. */}
+            {(addedToday.length > 0 || completedOnDate.length > 0) && (
+              <section className="card-flat p-4 space-y-3">
                 <div className="space-y-1">
+                  <p className="label-caps">오늘 추가된 작업</p>
+                  {addedToday.length === 0 && <p className="text-xs text-muted-foreground italic">없음</p>}
                   {addedToday.map((t) => {
                     const occ = t.due_date ?? date;
                     const done = isOccurrenceCompleted(t, occ, completions);
@@ -433,6 +463,33 @@ function DailyFocusPage() {
                       </div>
                     );
                   })}
+                </div>
+
+                <div className="border-t border-dashed border-border" />
+
+                <div className="space-y-1">
+                  <p className="label-caps">오늘 완료한 작업</p>
+                  {completedOnDate.length === 0 && <p className="text-xs text-muted-foreground italic">없음</p>}
+                  {completedOnDate.map(({ task: t, occurrenceDate: occ }) => (
+                    <div key={`${t.id}-${occ}`} className="flex items-center gap-2">
+                      <div className="flex-1 min-w-0">
+                        <OccRow
+                          task={t}
+                          occurrenceDate={occ}
+                          done
+                          categories={widgetCtx.categories}
+                          projects={projects}
+                          onToggle={() => toggleOccurrence.mutate({ task: t, date: occ })}
+                          onRename={(title) => renameTask.mutate({ id: t.id, title })}
+                        />
+                      </div>
+                      {t.due_date && t.due_date !== date && (
+                        <span className="text-[10px] text-muted-foreground tabular-nums flex-shrink-0">
+                          {t.due_date.slice(5)}
+                        </span>
+                      )}
+                    </div>
+                  ))}
                 </div>
               </section>
             )}
@@ -490,12 +547,14 @@ function ActiveProjectsPanel({
           const pct = children.length > 0 ? Math.round((children.filter((i) => i.completed).length / children.length) * 100) : null;
           const cat = p.category_id ? categories.find((c) => c.id === p.category_id) : null;
           const expanded = expandedIds.has(p.id);
-          // Open items first (date order), completed ones after — a quick
-          // "what's left" read rather than the full checklist's link/date sort.
-          const sortedChildren = children.slice().sort((a, b) => {
-            if (a.completed !== b.completed) return a.completed ? 1 : -1;
-            return (a.due_date ?? "9999").localeCompare(b.due_date ?? "9999") || a.title.localeCompare(b.title);
-          });
+          // Open items only, in date order — a "what's left" read; finished
+          // items are hidden here on Daily Focus (2026-11-13), the full
+          // checklist on Dashboard/Widgets still shows them.
+          const sortedChildren = children
+            .filter((i) => !i.completed)
+            .sort((a, b) =>
+              (a.due_date ?? "9999").localeCompare(b.due_date ?? "9999") || a.title.localeCompare(b.title),
+            );
           return (
             <div key={p.id} className="border-b border-border/50 pb-2">
               <div className="flex items-center gap-2">
@@ -527,7 +586,7 @@ function ActiveProjectsPanel({
               {expanded && (
                 <div className="pl-5 mt-1 space-y-0.5">
                   {sortedChildren.length === 0 && (
-                    <p className="text-xs text-muted-foreground italic">No items</p>
+                    <p className="text-xs text-muted-foreground italic">남은 항목 없음</p>
                   )}
                   {sortedChildren.map((it) => (
                     <div key={it.id} className="flex items-center gap-2 py-0.5">
