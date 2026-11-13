@@ -394,6 +394,32 @@ export function useWannDashboard(
   });
 
 
+  /** Daily Focus inline rename — title-only patch (no other fields touched),
+   * for the click-to-edit title pattern borrowed from the Project checklist
+   * item rows, used in place of the full TaskForm edit panel there. */
+  const renameTask = useMutation({
+    mutationFn: async ({ id, title }: { id: string; title: string }) => {
+      const { error } = await supabase.from("planner_tasks").update({ title }).eq("id", id);
+      if (error) throw error;
+    },
+    onMutate: async ({ id, title }) => {
+      await qc.cancelQueries({ queryKey: ["tasks", user.id] });
+      const prev = qc.getQueryData<Task[]>(["tasks", user.id]);
+      if (prev) {
+        qc.setQueryData<Task[]>(
+          ["tasks", user.id],
+          prev.map((t) => (t.id === id ? { ...t, title } : t)),
+        );
+      }
+      return { prev };
+    },
+    onError: (_e, _v, ctx) => {
+      if (ctx?.prev) qc.setQueryData(["tasks", user.id], ctx.prev);
+      toast.error("Could not rename task");
+    },
+    onSettled: () => invalidate("tasks"),
+  });
+
   const toggleOccurrence = useMutation({
     mutationFn: async ({ task, date }: { task: Task; date: string }) => {
       const completions = completionsQ.data ?? [];
@@ -1201,6 +1227,7 @@ export function useWannDashboard(
     moveEvent,
     setPinnedDate,
     reorderPinned,
+    renameTask,
     visibleWidgets,
     widgetCtx,
     upcoming,

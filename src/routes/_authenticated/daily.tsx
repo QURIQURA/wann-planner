@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { ArrowLeft, ChevronLeft, ChevronRight, Pin, ArrowRightCircle, GripVertical } from "lucide-react";
+import { ArrowLeft, ChevronLeft, ChevronRight, Pin, ArrowRightCircle, ArrowRightToLine, GripVertical } from "lucide-react";
 
 import {
   effectiveOccurrencesOnDate,
@@ -18,10 +18,12 @@ import {
   type Task,
   type TaskCompletion,
   type Category,
+  type MultipleTask,
+  type MultipleTaskItem,
 } from "@/lib/wann-data";
 import { useWannDashboard } from "@/lib/use-wann-dashboard";
 import { CategoryFilterBar } from "@/components/wann/CategoryFilterBar";
-import { TaskForm, type CategoryFilter } from "@/components/wann/TaskForm";
+import { type CategoryFilter } from "@/components/wann/TaskForm";
 
 export const Route = createFileRoute("/_authenticated/daily")({
   component: DailyFocusPage,
@@ -71,12 +73,14 @@ function DailyFocusPage() {
     moveTask,
     setPinnedDate,
     reorderPinned,
+    renameTask,
   } = useWannDashboard(user, { initialDate: date });
 
   const tasks = tasksQ.data ?? [];
   const exceptions = exceptionsQ.data ?? [];
   const completions = completionsQ.data ?? [];
   const projects = multipleQ.data ?? [];
+  const projectItems = widgetCtx.projectItems;
   const today = todayLocalStr();
   const isToday = date === today;
 
@@ -129,6 +133,22 @@ function DailyFocusPage() {
     }
     return { byProject, solo };
   })();
+
+  // Same scope as the per-row "carry over to tomorrow" action (grouped +
+  // solo, not pinned) — feeds the bulk "내일로 전체 넘기기" button.
+  const incompleteCarryable = filtered.filter(
+    (o) => !pinnedIds.has(o.task.id) && !isOccurrenceCompleted(o.task, o.originalDate, completions),
+  );
+  const carryAllToTomorrow = () => {
+    for (const o of incompleteCarryable) {
+      moveTask.mutate({
+        task: o.task,
+        originalDate: o.originalDate,
+        newDate: shiftDate(date, 1),
+        newTime: o.effectiveTime,
+      });
+    }
+  };
 
   // "오늘 추가된 작업" — tasks created on the viewed date whose due_date
   // doesn't fall on it (so they'd otherwise never surface here), e.g. a
@@ -193,21 +213,6 @@ function DailyFocusPage() {
           </div>
         </div>
 
-        <TaskForm
-          editingTask={widgetCtx.editingTask}
-          onCancelEdit={widgetCtx.taskActions.onCancelEdit}
-          onAddTask={widgetCtx.taskActions.onAddTask}
-          onAddTaskSeries={widgetCtx.taskActions.onAddTaskSeries}
-          onUpdateTask={widgetCtx.taskActions.onUpdateTask}
-          onDeleteTask={widgetCtx.taskActions.onDeleteTask}
-          categories={widgetCtx.categories}
-          subtags={widgetCtx.subtags}
-          projects={widgetCtx.projects}
-          projectItems={widgetCtx.projectItems}
-          stages={widgetCtx.stages}
-          filter={filter}
-        />
-
         <CategoryFilterBar
           categories={widgetCtx.categories}
           subtags={widgetCtx.subtags}
@@ -227,44 +232,83 @@ function DailyFocusPage() {
         {timed.length > 0 && (
           <section className="card-flat p-4">
             <p className="label-caps mb-2">Timeline</p>
-            <DailyTimelineBar
-              items={timed}
-              categories={widgetCtx.categories}
-              onEdit={(t) => widgetCtx.taskActions.onEditTask(t)}
-            />
+            <DailyTimelineBar items={timed} categories={widgetCtx.categories} />
           </section>
         )}
 
-        {/* Today's tasks — pinned Top Priorities first (manually reorderable),
-            then grouped by project + a "No project" bucket, then anything
-            added today but dated elsewhere. */}
-        <section className="card-flat p-4 space-y-4">
-          <p className="label-caps">Today</p>
-          {filtered.length === 0 && pinned.length === 0 && addedToday.length === 0 && (
-            <p className="text-xs text-muted-foreground italic">No tasks for this day</p>
-          )}
+        {/* Today's tasks (left) + a quick-glance Active Projects panel with
+            inline "+ Add item" (right) — side by side so adding a project
+            item doesn't require leaving this page. */}
+        <div className="grid gap-6 lg:grid-cols-2 items-start">
+          <section className="card-flat p-4 space-y-4">
+            <div className="flex items-center justify-between">
+              <p className="label-caps">Today</p>
+              {incompleteCarryable.length > 0 && (
+                <button
+                  onClick={carryAllToTomorrow}
+                  className="flex items-center gap-1 border border-border px-2 py-1 text-[10px] label-caps hover:bg-muted"
+                  title="오늘 미완료 작업을 모두 내일로 이동"
+                >
+                  <ArrowRightToLine size={11} />
+                  내일로 전체 넘기기
+                </button>
+              )}
+            </div>
+            {filtered.length === 0 && pinned.length === 0 && addedToday.length === 0 && (
+              <p className="text-xs text-muted-foreground italic">No tasks for this day</p>
+            )}
 
-          {pinned.length > 0 && (
-            <PinnedList
-              items={pinned}
-              date={date}
-              completions={completions}
-              categories={widgetCtx.categories}
-              projects={projects}
-              onToggle={(t) => toggleOccurrence.mutate({ task: t, date })}
-              onEdit={(t) => widgetCtx.taskActions.onEditTask(t)}
-              onUnpin={(t) => setPinnedDate.mutate({ id: t.id, date: null })}
-              onReorder={(ids) => reorderPinned.mutate(ids)}
-            />
-          )}
+            {pinned.length > 0 && (
+              <PinnedList
+                items={pinned}
+                date={date}
+                completions={completions}
+                categories={widgetCtx.categories}
+                projects={projects}
+                onToggle={(t) => toggleOccurrence.mutate({ task: t, date })}
+                onRename={(t, title) => renameTask.mutate({ id: t.id, title })}
+                onUnpin={(t) => setPinnedDate.mutate({ id: t.id, date: null })}
+                onReorder={(ids) => reorderPinned.mutate(ids)}
+              />
+            )}
 
-          {[...groups.byProject.entries()].map(([projectId, occs]) => {
-            const project = projects.find((p) => p.id === projectId);
-            return (
-              <div key={projectId}>
-                <p className="text-[10px] label-caps text-muted-foreground mb-1">{project?.name ?? "Project"}</p>
+            {[...groups.byProject.entries()].map(([projectId, occs]) => {
+              const project = projects.find((p) => p.id === projectId);
+              return (
+                <div key={projectId}>
+                  <p className="text-[10px] label-caps text-muted-foreground mb-1">{project?.name ?? "Project"}</p>
+                  <div className="space-y-1">
+                    {occs.map((o) => (
+                      <OccRowWithCarry
+                        key={`${o.task.id}-${o.originalDate}`}
+                        o={o}
+                        date={date}
+                        completions={completions}
+                        categories={widgetCtx.categories}
+                        projects={projects}
+                        onToggle={() => toggleOccurrence.mutate({ task: o.task, date: o.originalDate })}
+                        onRename={(title) => renameTask.mutate({ id: o.task.id, title })}
+                        onPin={() => setPinnedDate.mutate({ id: o.task.id, date: o.task.pinned_date === date ? null : date })}
+                        onCarryOver={() =>
+                          moveTask.mutate({
+                            task: o.task,
+                            originalDate: o.originalDate,
+                            newDate: shiftDate(date, 1),
+                            newTime: o.effectiveTime,
+                          })
+                        }
+                      />
+                    ))}
+                  </div>
+                </div>
+              );
+            })}
+
+            {groups.solo.length > 0 && (
+              <div>
+                {groups.byProject.size > 0 && <p className="text-[10px] label-caps text-muted-foreground mb-1">No project</p>}
                 <div className="space-y-1">
-                  {occs.map((o) => (
+                  {groups.solo.map((o) => (
                     <OccRowWithCarry
                       key={`${o.task.id}-${o.originalDate}`}
                       o={o}
@@ -273,7 +317,7 @@ function DailyFocusPage() {
                       categories={widgetCtx.categories}
                       projects={projects}
                       onToggle={() => toggleOccurrence.mutate({ task: o.task, date: o.originalDate })}
-                      onEdit={() => widgetCtx.taskActions.onEditTask(o.task)}
+                      onRename={(title) => renameTask.mutate({ id: o.task.id, title })}
                       onPin={() => setPinnedDate.mutate({ id: o.task.id, date: o.task.pinned_date === date ? null : date })}
                       onCarryOver={() =>
                         moveTask.mutate({
@@ -287,74 +331,130 @@ function DailyFocusPage() {
                   ))}
                 </div>
               </div>
-            );
-          })}
+            )}
 
-          {groups.solo.length > 0 && (
-            <div>
-              {groups.byProject.size > 0 && <p className="text-[10px] label-caps text-muted-foreground mb-1">No project</p>}
-              <div className="space-y-1">
-                {groups.solo.map((o) => (
-                  <OccRowWithCarry
-                    key={`${o.task.id}-${o.originalDate}`}
-                    o={o}
-                    date={date}
-                    completions={completions}
-                    categories={widgetCtx.categories}
-                    projects={projects}
-                    onToggle={() => toggleOccurrence.mutate({ task: o.task, date: o.originalDate })}
-                    onEdit={() => widgetCtx.taskActions.onEditTask(o.task)}
-                    onPin={() => setPinnedDate.mutate({ id: o.task.id, date: o.task.pinned_date === date ? null : date })}
-                    onCarryOver={() =>
-                      moveTask.mutate({
-                        task: o.task,
-                        originalDate: o.originalDate,
-                        newDate: shiftDate(date, 1),
-                        newTime: o.effectiveTime,
-                      })
-                    }
-                  />
-                ))}
-              </div>
-            </div>
-          )}
-
-          {addedToday.length > 0 && (
-            <div>
-              <p className="text-[10px] label-caps text-muted-foreground mb-1">오늘 추가된 작업</p>
-              <div className="space-y-1">
-                {addedToday.map((t) => {
-                  const occ = t.due_date ?? date;
-                  const done = isOccurrenceCompleted(t, occ, completions);
-                  return (
-                    <div key={t.id} className="flex items-center gap-2">
-                      <div className="flex-1 min-w-0">
-                        <OccRow
-                          task={t}
-                          occurrenceDate={occ}
-                          done={done}
-                          categories={widgetCtx.categories}
-                          projects={projects}
-                          onToggle={() => toggleOccurrence.mutate({ task: t, date: occ })}
-                          onEdit={() => widgetCtx.taskActions.onEditTask(t)}
-                          onPin={() => setPinnedDate.mutate({ id: t.id, date: t.pinned_date === date ? null : date })}
-                          pinned={t.pinned_date === date}
-                        />
+            {addedToday.length > 0 && (
+              <div>
+                <p className="text-[10px] label-caps text-muted-foreground mb-1">오늘 추가된 작업</p>
+                <div className="space-y-1">
+                  {addedToday.map((t) => {
+                    const occ = t.due_date ?? date;
+                    const done = isOccurrenceCompleted(t, occ, completions);
+                    return (
+                      <div key={t.id} className="flex items-center gap-2">
+                        <div className="flex-1 min-w-0">
+                          <OccRow
+                            task={t}
+                            occurrenceDate={occ}
+                            done={done}
+                            categories={widgetCtx.categories}
+                            projects={projects}
+                            onToggle={() => toggleOccurrence.mutate({ task: t, date: occ })}
+                            onRename={(title) => renameTask.mutate({ id: t.id, title })}
+                            onPin={() => setPinnedDate.mutate({ id: t.id, date: t.pinned_date === date ? null : date })}
+                            pinned={t.pinned_date === date}
+                          />
+                        </div>
+                        {t.due_date && (
+                          <span className="text-[10px] text-muted-foreground tabular-nums flex-shrink-0">
+                            {t.due_date.slice(5)}
+                          </span>
+                        )}
                       </div>
-                      {t.due_date && (
-                        <span className="text-[10px] text-muted-foreground tabular-nums flex-shrink-0">
-                          {t.due_date.slice(5)}
-                        </span>
-                      )}
-                    </div>
-                  );
-                })}
+                    );
+                  })}
+                </div>
               </div>
-            </div>
-          )}
-        </section>
+            )}
+          </section>
+
+          <ActiveProjectsPanel
+            projects={projects}
+            projectItems={projectItems}
+            categories={widgetCtx.categories}
+            onAddItem={widgetCtx.projectActions.onAddItem}
+          />
+        </div>
       </main>
     </div>
+  );
+}
+
+/** Simplified, read-mostly Active Projects list for the Daily Focus page —
+ * the same Project rows as the Dashboard/Widgets Projects panel, but
+ * trimmed to name/%/category + a quick "+ Add item" input, and with
+ * completed (100%) and undated Projects left out entirely per the user's
+ * request (2026-11-13). Reuses the existing projects/projectItems data —
+ * no separate store. */
+function ActiveProjectsPanel({
+  projects,
+  projectItems,
+  categories,
+  onAddItem,
+}: {
+  projects: MultipleTask[];
+  projectItems: MultipleTaskItem[];
+  categories: { id: string; name: string }[];
+  onAddItem: (parentId: string, title: string, date: string | null, time: string | null) => void;
+}) {
+  const [input, setInput] = useState<Record<string, string>>({});
+
+  const active = projects.filter((p) => {
+    if (!p.date) return false;
+    const children = projectItems.filter((i) => i.multiple_task_id === p.id);
+    if (children.length === 0) return true;
+    const pct = Math.round((children.filter((i) => i.completed).length / children.length) * 100);
+    return pct !== 100;
+  });
+
+  return (
+    <section className="card-flat p-4 space-y-3">
+      <p className="label-caps">Projects</p>
+      {active.length === 0 && <p className="text-xs text-muted-foreground italic">No active projects</p>}
+      <div className="space-y-3">
+        {active.map((p) => {
+          const children = projectItems.filter((i) => i.multiple_task_id === p.id);
+          const pct = children.length > 0 ? Math.round((children.filter((i) => i.completed).length / children.length) * 100) : null;
+          const cat = p.category_id ? categories.find((c) => c.id === p.category_id) : null;
+          return (
+            <div key={p.id} className="border-b border-border/50 pb-2">
+              <div className="flex items-center gap-2">
+                <span className="text-sm flex-1 min-w-0 truncate">
+                  {p.name}
+                  {pct !== null && <span className="text-muted-foreground"> · {pct}%</span>}
+                </span>
+                {cat && (
+                  <span className="text-[10px] px-1 label-caps bg-foreground text-background flex-shrink-0">
+                    {cat.name}
+                  </span>
+                )}
+              </div>
+              {pct !== null && (
+                <div className="h-[2px] bg-border mt-1">
+                  <div className="h-full bg-foreground" style={{ width: `${pct}%` }} />
+                </div>
+              )}
+              <input
+                type="text"
+                placeholder="+ Add item"
+                value={input[p.id] ?? ""}
+                onChange={(ev) => setInput({ ...input, [p.id]: ev.target.value })}
+                onKeyDown={(ev) => {
+                  if (ev.key === "Enter" && !ev.nativeEvent.isComposing) {
+                    const v = (input[p.id] ?? "").trim();
+                    if (v) {
+                      onAddItem(p.id, v, todayLocalStr(), null);
+                      setInput({ ...input, [p.id]: "" });
+                    }
+                  }
+                }}
+                className="w-full bg-transparent outline-none border-b border-border py-1 text-xs mt-1"
+              />
+            </div>
+          );
+        })}
+      </div>
+    </section>
   );
 }
 
@@ -367,7 +467,7 @@ function PinnedList({
   categories,
   projects,
   onToggle,
-  onEdit,
+  onRename,
   onUnpin,
   onReorder,
 }: {
@@ -377,7 +477,7 @@ function PinnedList({
   categories: { id: string; name: string }[];
   projects: { id: string; name: string }[];
   onToggle: (t: Task) => void;
-  onEdit: (t: Task) => void;
+  onRename: (t: Task, title: string) => void;
   onUnpin: (t: Task) => void;
   onReorder: (orderedIds: string[]) => void;
 }) {
@@ -437,7 +537,7 @@ function PinnedList({
                   categories={categories}
                   projects={projects}
                   onToggle={() => onToggle(t)}
-                  onEdit={() => onEdit(t)}
+                  onRename={(title) => onRename(t, title)}
                   onUnpin={() => onUnpin(t)}
                   pinned
                 />
@@ -454,12 +554,12 @@ function PinnedList({
  * Top Priorities and Timeline (which don't need the carry-over action). */
 function OccRow({
   task,
-  occurrenceDate,
+  occurrenceDate: _occurrenceDate,
   done,
   categories,
   projects,
   onToggle,
-  onEdit,
+  onRename,
   onPin,
   onUnpin,
   pinned,
@@ -471,12 +571,17 @@ function OccRow({
   categories: { id: string; name: string }[];
   projects: { id: string; name: string }[];
   onToggle: () => void;
-  onEdit: () => void;
+  /** Inline click-to-rename (title only) — same pattern as a Project
+   * checklist item row, replacing the old full TaskForm edit panel here
+   * (2026-11-13: that box was removed from Daily Focus). */
+  onRename: (title: string) => void;
   onPin?: () => void;
   onUnpin?: () => void;
   pinned?: boolean;
   bare?: boolean;
 }) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(task.title);
   const cats = taskCategoryIds(task)
     .map((id) => categories.find((c) => c.id === id))
     .filter((c): c is { id: string; name: string } => !!c);
@@ -488,12 +593,36 @@ function OccRow({
         aria-label="Toggle"
         className={`h-3 w-3 border border-border flex-shrink-0 ${done ? "bg-foreground" : ""}`}
       />
-      <button
-        onClick={onEdit}
-        className={`text-sm flex-1 min-w-[6rem] text-left truncate hover:underline ${done ? "line-through text-muted-foreground" : ""}`}
-      >
-        {task.title}
-      </button>
+      {editing ? (
+        <input
+          autoFocus
+          value={draft}
+          onChange={(ev) => setDraft(ev.target.value)}
+          onBlur={() => {
+            const v = draft.trim();
+            if (v && v !== task.title) onRename(v);
+            setEditing(false);
+          }}
+          onKeyDown={(ev) => {
+            if (ev.key === "Enter") (ev.target as HTMLInputElement).blur();
+            if (ev.key === "Escape") {
+              setDraft(task.title);
+              setEditing(false);
+            }
+          }}
+          className="text-sm flex-1 min-w-[6rem] bg-transparent outline-none border-b border-border py-0"
+        />
+      ) : (
+        <button
+          onClick={() => {
+            setDraft(task.title);
+            setEditing(true);
+          }}
+          className={`text-sm flex-1 min-w-[6rem] text-left truncate hover:underline ${done ? "line-through text-muted-foreground" : ""}`}
+        >
+          {task.title}
+        </button>
+      )}
       {!bare && project && (
         <span className="text-[10px] text-muted-foreground border-b border-border max-w-[90px] truncate">{project.name}</span>
       )}
@@ -523,7 +652,7 @@ function OccRowWithCarry({
   categories,
   projects,
   onToggle,
-  onEdit,
+  onRename,
   onPin,
   onCarryOver,
 }: {
@@ -533,7 +662,7 @@ function OccRowWithCarry({
   categories: { id: string; name: string }[];
   projects: { id: string; name: string }[];
   onToggle: () => void;
-  onEdit: () => void;
+  onRename: (title: string) => void;
   onPin: () => void;
   onCarryOver: () => void;
 }) {
@@ -552,7 +681,7 @@ function OccRowWithCarry({
           categories={categories}
           projects={projects}
           onToggle={onToggle}
-          onEdit={onEdit}
+          onRename={onRename}
           onPin={onPin}
           pinned={o.task.pinned_date === date}
         />
@@ -578,11 +707,9 @@ function OccRowWithCarry({
 function DailyTimelineBar({
   items,
   categories,
-  onEdit,
 }: {
   items: { task: Task; originalDate: string; effectiveTime: string | null }[];
   categories: Category[];
-  onEdit: (t: Task) => void;
 }) {
   const blocks = items
     .map((o) => {
@@ -644,11 +771,10 @@ function DailyTimelineBar({
             const left = ((start - windowStart) / span) * 100;
             const width = ((end - start) / span) * 100;
             return (
-              <button
+              <div
                 key={`${o.task.id}-${o.originalDate}`}
-                onClick={() => onEdit(o.task)}
                 title={`${shortTimeAmPm(o.effectiveTime)} — ${o.task.title}`}
-                className="absolute top-0 h-full flex items-center justify-center px-2 text-xs truncate hover:brightness-95"
+                className="absolute top-0 h-full flex items-center justify-center px-2 text-xs truncate"
                 style={{
                   left: `${left}%`,
                   width: `${Math.max(width, 2)}%`,
@@ -657,7 +783,7 @@ function DailyTimelineBar({
                 }}
               >
                 <span className="truncate">{o.task.title}</span>
-              </button>
+              </div>
             );
           })}
         </div>
