@@ -1804,6 +1804,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      create_daily_event_contact_tasks: { Args: never; Returns: undefined }
       is_household_member: { Args: { _user_id: string }; Returns: boolean }
       sync_kora_order:
         | {
