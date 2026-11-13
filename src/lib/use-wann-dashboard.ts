@@ -583,6 +583,34 @@ export function useWannDashboard(
     onSettled: () => invalidate("tasks"),
   });
 
+  /** Persists a drag-reorder of the Daily Focus pinned ("Top Priorities")
+   * list — same pattern as reorderShopping, written to pinned_order. */
+  const reorderPinned = useMutation({
+    mutationFn: async (orderedIds: string[]) => {
+      await Promise.all(
+        orderedIds.map((id, i) =>
+          supabase.from("planner_tasks").update({ pinned_order: i }).eq("id", id),
+        ),
+      );
+    },
+    onMutate: async (orderedIds) => {
+      await qc.cancelQueries({ queryKey: ["tasks", user.id] });
+      const prevTasks = qc.getQueryData<Task[]>(["tasks", user.id]);
+      if (prevTasks) {
+        const rank = new Map(orderedIds.map((id, i) => [id, i]));
+        qc.setQueryData<Task[]>(
+          ["tasks", user.id],
+          prevTasks.map((t) => (rank.has(t.id) ? { ...t, pinned_order: rank.get(t.id)! } : t)),
+        );
+      }
+      return { prevTasks };
+    },
+    onError: (_e, _v, ctx) => {
+      if (ctx?.prevTasks) qc.setQueryData(["tasks", user.id], ctx.prevTasks);
+    },
+    onSettled: () => invalidate("tasks"),
+  });
+
   /** Bulk-moves every still-open, non-recurring Shopping item whose date has
    * passed up to today — the "지난 항목 오늘로 이동" action on the Shopping
    * List widget, for items that just slipped rather than ones genuinely
@@ -1172,6 +1200,7 @@ export function useWannDashboard(
     moveProject,
     moveEvent,
     setPinnedDate,
+    reorderPinned,
     visibleWidgets,
     widgetCtx,
     upcoming,

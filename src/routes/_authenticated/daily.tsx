@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { ArrowLeft, ChevronLeft, ChevronRight, Pin, ArrowRightCircle } from "lucide-react";
+import { ArrowLeft, ChevronLeft, ChevronRight, Pin, ArrowRightCircle, GripVertical } from "lucide-react";
 
 import {
   effectiveOccurrencesOnDate,
@@ -9,10 +9,15 @@ import {
   taskCategoryIds,
   shiftDate,
   todayLocalStr,
+  formatLocalDate,
   koDow,
   hexToRgba,
+  timeToMinutes,
+  minutesToTime,
+  occurrenceEndTime,
   type Task,
   type TaskCompletion,
+  type Category,
 } from "@/lib/wann-data";
 import { useWannDashboard } from "@/lib/use-wann-dashboard";
 import { CategoryFilterBar } from "@/components/wann/CategoryFilterBar";
@@ -65,6 +70,7 @@ function DailyFocusPage() {
     toggleOccurrence,
     moveTask,
     setPinnedDate,
+    reorderPinned,
   } = useWannDashboard(user, { initialDate: date });
 
   const tasks = tasksQ.data ?? [];
@@ -90,19 +96,29 @@ function DailyFocusPage() {
   const completedCount = filtered.filter((o) => isOccurrenceCompleted(o.task, o.originalDate, completions)).length;
   const pct = filtered.length > 0 ? Math.round((completedCount / filtered.length) * 100) : 0;
 
-  const pinned = tasks.filter((t) => t.pinned_date === date);
+  // Pinned ("Top Priorities") — sorted by the user's own drag order, not by
+  // date. Rendered at the top of the Today box itself (2026-11-13: user
+  // asked NOT to keep this as a separate box), so build a Set to keep the
+  // rest of Today's lists from also showing these same tasks twice.
+  const pinned = tasks
+    .filter((t) => t.pinned_date === date)
+    .slice()
+    .sort((a, b) => a.pinned_order - b.pinned_order);
+  const pinnedIds = new Set(pinned.map((t) => t.id));
 
   const timed = filtered
     .filter((o) => !!o.effectiveTime)
     .slice()
     .sort((a, b) => (a.effectiveTime ?? "").localeCompare(b.effectiveTime ?? ""));
 
-  // Group the rest by Project — a project's own occurrences stay grouped
-  // under its name; everything without a multiple_task_id is "No project".
-  const groups = useMemo(() => {
+  // Group the rest (minus anything already shown pinned) by Project — a
+  // project's own occurrences stay grouped under its name; everything
+  // without a multiple_task_id is "No project".
+  const groups = (() => {
     const byProject = new Map<string, typeof filtered>();
     const solo: typeof filtered = [];
     for (const o of filtered) {
+      if (pinnedIds.has(o.task.id)) continue;
       if (o.task.multiple_task_id) {
         const arr = byProject.get(o.task.multiple_task_id) ?? [];
         arr.push(o);
@@ -112,7 +128,18 @@ function DailyFocusPage() {
       }
     }
     return { byProject, solo };
-  }, [filtered]);
+  })();
+
+  // "오늘 추가된 작업" — tasks created on the viewed date whose due_date
+  // doesn't fall on it (so they'd otherwise never surface here), e.g. a
+  // Task jotted down today but dated for later or left undated.
+  const addedToday = tasks.filter((t) => {
+    if (pinnedIds.has(t.id)) return false;
+    if (filtered.some((o) => o.task.id === t.id)) return false;
+    if (filter.categoryId && !taskCategoryIds(t).includes(filter.categoryId)) return false;
+    if (filter.subtagId && t.subtag_id !== filter.subtagId) return false;
+    return !!t.created_at && formatLocalDate(new Date(t.created_at)) === date;
+  });
 
   return (
     <div className="min-h-screen">
@@ -195,71 +222,41 @@ function DailyFocusPage() {
           onDeleteSubtag={widgetCtx.taskActions.onDeleteSubtag}
         />
 
-        {/* Top Priorities — pinned_date === date */}
-        <section className="card-flat p-4">
-          <p className="label-caps mb-2">Top Priorities</p>
-          {pinned.length === 0 ? (
-            <p className="text-xs text-muted-foreground italic">
-              아직 고정된 작업이 없습니다. Tasks 목록에서 핀 아이콘으로 오늘의 우선순위를 고정하세요.
-            </p>
-          ) : (
-            <div className="space-y-1">
-              {pinned.map((t) => {
-                const done = isOccurrenceCompleted(t, date, completions);
-                return (
-                  <OccRow
-                    key={t.id}
-                    task={t}
-                    occurrenceDate={date}
-                    done={done}
-                    categories={widgetCtx.categories}
-                    projects={projects}
-                    onToggle={() => toggleOccurrence.mutate({ task: t, date })}
-                    onEdit={() => widgetCtx.taskActions.onEditTask(t)}
-                    onUnpin={() => setPinnedDate.mutate({ id: t.id, date: null })}
-                    pinned
-                  />
-                );
-              })}
-            </div>
-          )}
-        </section>
-
-        {/* Timed mini-timeline */}
+        {/* Timed items as a horizontal hour-axis timeline (matching the
+            PILOT Daily Focus mockup) instead of a plain time-sorted list. */}
         {timed.length > 0 && (
           <section className="card-flat p-4">
             <p className="label-caps mb-2">Timeline</p>
-            <div className="space-y-1">
-              {timed.map((o) => {
-                const done = isOccurrenceCompleted(o.task, o.originalDate, completions);
-                return (
-                  <div key={`${o.task.id}-${o.originalDate}`} className="flex items-center gap-2 py-1 border-b border-border/50">
-                    <span className="text-xs tabular-nums text-muted-foreground w-16 flex-shrink-0">
-                      {shortTimeAmPm(o.effectiveTime)}
-                    </span>
-                    <OccRow
-                      task={o.task}
-                      occurrenceDate={o.originalDate}
-                      done={done}
-                      categories={widgetCtx.categories}
-                      projects={projects}
-                      onToggle={() => toggleOccurrence.mutate({ task: o.task, date: o.originalDate })}
-                      onEdit={() => widgetCtx.taskActions.onEditTask(o.task)}
-                      onPin={() => setPinnedDate.mutate({ id: o.task.id, date: o.task.pinned_date === date ? null : date })}
-                      pinned={o.task.pinned_date === date}
-                      bare
-                    />
-                  </div>
-                );
-              })}
-            </div>
+            <DailyTimelineBar
+              items={timed}
+              categories={widgetCtx.categories}
+              onEdit={(t) => widgetCtx.taskActions.onEditTask(t)}
+            />
           </section>
         )}
 
-        {/* Today's tasks, grouped by project + a "No project" bucket */}
+        {/* Today's tasks — pinned Top Priorities first (manually reorderable),
+            then grouped by project + a "No project" bucket, then anything
+            added today but dated elsewhere. */}
         <section className="card-flat p-4 space-y-4">
           <p className="label-caps">Today</p>
-          {filtered.length === 0 && <p className="text-xs text-muted-foreground italic">No tasks for this day</p>}
+          {filtered.length === 0 && pinned.length === 0 && addedToday.length === 0 && (
+            <p className="text-xs text-muted-foreground italic">No tasks for this day</p>
+          )}
+
+          {pinned.length > 0 && (
+            <PinnedList
+              items={pinned}
+              date={date}
+              completions={completions}
+              categories={widgetCtx.categories}
+              projects={projects}
+              onToggle={(t) => toggleOccurrence.mutate({ task: t, date })}
+              onEdit={(t) => widgetCtx.taskActions.onEditTask(t)}
+              onUnpin={(t) => setPinnedDate.mutate({ id: t.id, date: null })}
+              onReorder={(ids) => reorderPinned.mutate(ids)}
+            />
+          )}
 
           {[...groups.byProject.entries()].map(([projectId, occs]) => {
             const project = projects.find((p) => p.id === projectId);
@@ -321,8 +318,134 @@ function DailyFocusPage() {
               </div>
             </div>
           )}
+
+          {addedToday.length > 0 && (
+            <div>
+              <p className="text-[10px] label-caps text-muted-foreground mb-1">오늘 추가된 작업</p>
+              <div className="space-y-1">
+                {addedToday.map((t) => {
+                  const occ = t.due_date ?? date;
+                  const done = isOccurrenceCompleted(t, occ, completions);
+                  return (
+                    <div key={t.id} className="flex items-center gap-2">
+                      <div className="flex-1 min-w-0">
+                        <OccRow
+                          task={t}
+                          occurrenceDate={occ}
+                          done={done}
+                          categories={widgetCtx.categories}
+                          projects={projects}
+                          onToggle={() => toggleOccurrence.mutate({ task: t, date: occ })}
+                          onEdit={() => widgetCtx.taskActions.onEditTask(t)}
+                          onPin={() => setPinnedDate.mutate({ id: t.id, date: t.pinned_date === date ? null : date })}
+                          pinned={t.pinned_date === date}
+                        />
+                      </div>
+                      {t.due_date && (
+                        <span className="text-[10px] text-muted-foreground tabular-nums flex-shrink-0">
+                          {t.due_date.slice(5)}
+                        </span>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
         </section>
       </main>
+    </div>
+  );
+}
+
+/** The pinned ("Top Priorities") list, drag-reorderable among itself — same
+ * plain HTML5 drag pattern as the Shopping List widget's day columns. */
+function PinnedList({
+  items,
+  date,
+  completions,
+  categories,
+  projects,
+  onToggle,
+  onEdit,
+  onUnpin,
+  onReorder,
+}: {
+  items: Task[];
+  date: string;
+  completions: TaskCompletion[];
+  categories: { id: string; name: string }[];
+  projects: { id: string; name: string }[];
+  onToggle: (t: Task) => void;
+  onEdit: (t: Task) => void;
+  onUnpin: (t: Task) => void;
+  onReorder: (orderedIds: string[]) => void;
+}) {
+  const [dragId, setDragId] = useState<string | null>(null);
+  const [overId, setOverId] = useState<string | null>(null);
+
+  const handleDrop = (targetId: string) => {
+    if (!dragId || dragId === targetId) {
+      setDragId(null);
+      setOverId(null);
+      return;
+    }
+    const ids = items.map((t) => t.id);
+    const from = ids.indexOf(dragId);
+    const to = ids.indexOf(targetId);
+    if (from !== -1 && to !== -1) {
+      ids.splice(to, 0, ids.splice(from, 1)[0]);
+      onReorder(ids);
+    }
+    setDragId(null);
+    setOverId(null);
+  };
+
+  return (
+    <div>
+      <p className="text-[10px] label-caps text-muted-foreground mb-1">Top Priorities</p>
+      <div className="space-y-1">
+        {items.map((t) => {
+          const done = isOccurrenceCompleted(t, date, completions);
+          return (
+            <div
+              key={t.id}
+              draggable
+              onDragStart={() => setDragId(t.id)}
+              onDragOver={(e) => {
+                e.preventDefault();
+                if (overId !== t.id) setOverId(t.id);
+              }}
+              onDrop={(e) => {
+                e.preventDefault();
+                handleDrop(t.id);
+              }}
+              onDragEnd={() => {
+                setDragId(null);
+                setOverId(null);
+              }}
+              className={`flex items-center gap-1 ${
+                overId === t.id && dragId && dragId !== t.id ? "border-t-2 border-foreground" : ""
+              } ${dragId === t.id ? "opacity-40" : ""}`}
+            >
+              <GripVertical size={11} className="text-muted-foreground flex-shrink-0 cursor-grab" />
+              <div className="flex-1 min-w-0">
+                <OccRow
+                  task={t}
+                  occurrenceDate={date}
+                  done={done}
+                  categories={categories}
+                  projects={projects}
+                  onToggle={() => onToggle(t)}
+                  onEdit={() => onEdit(t)}
+                  onUnpin={() => onUnpin(t)}
+                  pinned
+                />
+              </div>
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }
@@ -444,6 +567,101 @@ function OccRowWithCarry({
           <ArrowRightCircle size={13} />
         </button>
       )}
+    </div>
+  );
+}
+
+/** Horizontal hour-axis timeline — hour marks across the top, each timed
+ * occurrence drawn as a bar positioned/sized by its start–end time, tinted
+ * by its category colour (a plain pale fill when it has none). Matches the
+ * PILOT Daily Focus mockup's timeline strip rather than a vertical list. */
+function DailyTimelineBar({
+  items,
+  categories,
+  onEdit,
+}: {
+  items: { task: Task; originalDate: string; effectiveTime: string | null }[];
+  categories: Category[];
+  onEdit: (t: Task) => void;
+}) {
+  const blocks = items
+    .map((o) => {
+      const start = timeToMinutes(o.effectiveTime);
+      if (start == null) return null;
+      const endStr = occurrenceEndTime(o.task, o.effectiveTime);
+      const end = endStr ? (timeToMinutes(endStr) ?? start + 60) : start + 60;
+      return { o, start, end: Math.max(end, start + 15) };
+    })
+    .filter((b): b is { o: (typeof items)[number]; start: number; end: number } => b != null);
+
+  if (blocks.length === 0) return null;
+
+  // Window: the data's own span, floored/ceiled to the hour, padded an hour
+  // either side, with a sane minimum width so a single short task doesn't
+  // render as one giant bar.
+  const dataStart = Math.min(...blocks.map((b) => b.start));
+  const dataEnd = Math.max(...blocks.map((b) => b.end));
+  const windowStart = Math.max(0, Math.floor(dataStart / 60) * 60 - 60);
+  const windowEnd = Math.min(24 * 60, Math.max(Math.ceil(dataEnd / 60) * 60 + 60, windowStart + 4 * 60));
+  const span = windowEnd - windowStart;
+
+  const hourMarks: number[] = [];
+  for (let m = Math.ceil(windowStart / 60) * 60; m <= windowEnd; m += 60) hourMarks.push(m);
+
+  const DEFAULT_COLOR = "#F87171";
+
+  return (
+    <div className="overflow-x-auto">
+      <div className="relative min-w-[640px]" style={{ height: "4.5rem" }}>
+        {/* Hour marks */}
+        <div className="absolute inset-x-0 top-0 h-5 border-b border-border">
+          {hourMarks.map((m) => (
+            <span
+              key={m}
+              className="absolute top-0 text-[10px] tabular-nums text-muted-foreground -translate-x-1/2"
+              style={{ left: `${((m - windowStart) / span) * 100}%` }}
+            >
+              {minutesToTime(m)}
+            </span>
+          ))}
+        </div>
+        {/* Hour gridlines */}
+        <div className="absolute inset-x-0 top-5 bottom-0">
+          {hourMarks.map((m) => (
+            <div
+              key={m}
+              className="absolute top-0 bottom-0 border-l border-border/40"
+              style={{ left: `${((m - windowStart) / span) * 100}%` }}
+            />
+          ))}
+        </div>
+        {/* Bars */}
+        <div className="absolute inset-x-0 top-7 h-9">
+          {blocks.map(({ o, start, end }) => {
+            const color = o.task.category_id
+              ? (categories.find((c) => c.id === o.task.category_id)?.color ?? DEFAULT_COLOR)
+              : DEFAULT_COLOR;
+            const left = ((start - windowStart) / span) * 100;
+            const width = ((end - start) / span) * 100;
+            return (
+              <button
+                key={`${o.task.id}-${o.originalDate}`}
+                onClick={() => onEdit(o.task)}
+                title={`${shortTimeAmPm(o.effectiveTime)} — ${o.task.title}`}
+                className="absolute top-0 h-full flex items-center justify-center px-2 text-xs truncate hover:brightness-95"
+                style={{
+                  left: `${left}%`,
+                  width: `${Math.max(width, 2)}%`,
+                  background: hexToRgba(color, 0.22),
+                  borderLeft: `2px solid ${color}`,
+                }}
+              >
+                <span className="truncate">{o.task.title}</span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
     </div>
   );
 }
