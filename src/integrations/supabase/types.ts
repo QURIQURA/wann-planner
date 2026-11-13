@@ -1643,6 +1643,7 @@ export type Database = {
           multiple_task_id: string | null
           notes: string | null
           pinned_date: string | null
+          pinned_order: number
           product_line: string | null
           recurrence: string
           series_id: string | null
@@ -1674,6 +1675,7 @@ export type Database = {
           multiple_task_id?: string | null
           notes?: string | null
           pinned_date?: string | null
+          pinned_order?: number
           product_line?: string | null
           recurrence?: string
           series_id?: string | null
@@ -1705,6 +1707,7 @@ export type Database = {
           multiple_task_id?: string | null
           notes?: string | null
           pinned_date?: string | null
+          pinned_order?: number
           product_line?: string | null
           recurrence?: string
           series_id?: string | null
@@ -1815,6 +1818,14 @@ export type Database = {
             }
             Returns: undefined
           }
+      sync_kora_popup: {
+        Args: {
+          p_order_link_task: Json
+          p_production_task_ids?: string[]
+          p_project: Json
+        }
+        Returns: undefined
+      }
     }
     Enums: {
       [_ in never]: never
