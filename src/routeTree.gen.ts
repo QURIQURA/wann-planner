@@ -9,22 +9,22 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
+import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedIndexRouteImport } from './routes/_authenticated/index'
-import { Route as AuthenticatedWidgetsRouteImport } from './routes/_authenticated/widgets'
-import { Route as AuthenticatedPatternsRouteImport } from './routes/_authenticated/patterns'
-import { Route as AuthenticatedMonthRouteImport } from './routes/_authenticated/month'
-import { Route as AuthenticatedDiaryRouteImport } from './routes/_authenticated/diary'
 import { Route as AuthenticatedDailyRouteImport } from './routes/_authenticated/daily'
+import { Route as AuthenticatedDiaryRouteImport } from './routes/_authenticated/diary'
+import { Route as AuthenticatedMonthRouteImport } from './routes/_authenticated/month'
+import { Route as AuthenticatedPatternsRouteImport } from './routes/_authenticated/patterns'
+import { Route as AuthenticatedWidgetsRouteImport } from './routes/_authenticated/widgets'
 
+const AuthenticatedRouteRoute = AuthenticatedRouteRouteImport.update({
+  id: '/_authenticated',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AuthRoute = AuthRouteImport.update({
   id: '/auth',
   path: '/auth',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AuthenticatedRouteRoute = AuthenticatedRouteRouteImport.update({
-  id: '/_authenticated',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthenticatedIndexRoute = AuthenticatedIndexRouteImport.update({
@@ -32,19 +32,9 @@ const AuthenticatedIndexRoute = AuthenticatedIndexRouteImport.update({
   path: '/',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
-const AuthenticatedWidgetsRoute = AuthenticatedWidgetsRouteImport.update({
-  id: '/widgets',
-  path: '/widgets',
-  getParentRoute: () => AuthenticatedRouteRoute,
-} as any)
-const AuthenticatedPatternsRoute = AuthenticatedPatternsRouteImport.update({
-  id: '/patterns',
-  path: '/patterns',
-  getParentRoute: () => AuthenticatedRouteRoute,
-} as any)
-const AuthenticatedMonthRoute = AuthenticatedMonthRouteImport.update({
-  id: '/month',
-  path: '/month',
+const AuthenticatedDailyRoute = AuthenticatedDailyRouteImport.update({
+  id: '/daily',
+  path: '/daily',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedDiaryRoute = AuthenticatedDiaryRouteImport.update({
@@ -52,9 +42,19 @@ const AuthenticatedDiaryRoute = AuthenticatedDiaryRouteImport.update({
   path: '/diary',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
-const AuthenticatedDailyRoute = AuthenticatedDailyRouteImport.update({
-  id: '/daily',
-  path: '/daily',
+const AuthenticatedMonthRoute = AuthenticatedMonthRouteImport.update({
+  id: '/month',
+  path: '/month',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedPatternsRoute = AuthenticatedPatternsRouteImport.update({
+  id: '/patterns',
+  path: '/patterns',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedWidgetsRoute = AuthenticatedWidgetsRouteImport.update({
+  id: '/widgets',
+  path: '/widgets',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 
@@ -90,13 +90,7 @@ export interface FileRoutesById {
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
-    | '/'
-    | '/auth'
-    | '/daily'
-    | '/diary'
-    | '/month'
-    | '/patterns'
-    | '/widgets'
+    '/' | '/auth' | '/daily' | '/diary' | '/month' | '/patterns' | '/widgets'
   fileRoutesByTo: FileRoutesByTo
   to: '/auth' | '/daily' | '/diary' | '/month' | '/patterns' | '/widgets' | '/'
   id:
@@ -118,18 +112,18 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/auth': {
-      id: '/auth'
-      path: '/auth'
-      fullPath: '/auth'
-      preLoaderRoute: typeof AuthRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/_authenticated': {
       id: '/_authenticated'
       path: ''
       fullPath: '/'
       preLoaderRoute: typeof AuthenticatedRouteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/auth': {
+      id: '/auth'
+      path: '/auth'
+      fullPath: '/auth'
+      preLoaderRoute: typeof AuthRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_authenticated/': {
@@ -139,25 +133,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedIndexRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
-    '/_authenticated/widgets': {
-      id: '/_authenticated/widgets'
-      path: '/widgets'
-      fullPath: '/widgets'
-      preLoaderRoute: typeof AuthenticatedWidgetsRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
-    }
-    '/_authenticated/patterns': {
-      id: '/_authenticated/patterns'
-      path: '/patterns'
-      fullPath: '/patterns'
-      preLoaderRoute: typeof AuthenticatedPatternsRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
-    }
-    '/_authenticated/month': {
-      id: '/_authenticated/month'
-      path: '/month'
-      fullPath: '/month'
-      preLoaderRoute: typeof AuthenticatedMonthRouteImport
+    '/_authenticated/daily': {
+      id: '/_authenticated/daily'
+      path: '/daily'
+      fullPath: '/daily'
+      preLoaderRoute: typeof AuthenticatedDailyRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/diary': {
@@ -167,11 +147,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedDiaryRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
-    '/_authenticated/daily': {
-      id: '/_authenticated/daily'
-      path: '/daily'
-      fullPath: '/daily'
-      preLoaderRoute: typeof AuthenticatedDailyRouteImport
+    '/_authenticated/month': {
+      id: '/_authenticated/month'
+      path: '/month'
+      fullPath: '/month'
+      preLoaderRoute: typeof AuthenticatedMonthRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/patterns': {
+      id: '/_authenticated/patterns'
+      path: '/patterns'
+      fullPath: '/patterns'
+      preLoaderRoute: typeof AuthenticatedPatternsRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/widgets': {
+      id: '/_authenticated/widgets'
+      path: '/widgets'
+      fullPath: '/widgets'
+      preLoaderRoute: typeof AuthenticatedWidgetsRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
   }
