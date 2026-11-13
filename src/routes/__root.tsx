@@ -38,7 +38,7 @@ function ErrorComponent({ error, reset }: ErrorComponentProps) {
     <div className="flex min-h-screen items-center justify-center px-4">
       <div className="max-w-md text-center">
         <p className="label-caps">Something went wrong</p>
-        <p className="mt-2 text-sm text-muted-foreground">{error.message}</p>
+        <p className="mt-2 text-sm text-muted-foreground">{error instanceof Error ? error.message : String(error)}</p>
         <button
           onClick={() => { router.invalidate(); reset(); }}
           className="mt-6 border border-border px-4 py-2 label-caps hover:bg-muted"
