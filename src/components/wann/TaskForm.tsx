@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { Category, MultipleTask, MultipleTaskItem, Subtag, Task } from "@/lib/wann-data";
 import { todayLocalStr, shortTime, formatDateKo, koDow } from "@/lib/wann-data";
-import { PRODUCT_LINES } from "@/lib/wann-groups";
+import { useProductLines } from "@/lib/wann-groups";
 import type { Stage } from "@/lib/wann-stages";
 import { stageColorOf } from "@/lib/wann-stages";
 import { Plus, Trash2, X, AlertTriangle, ShoppingCart, Link2 } from "lucide-react";
@@ -103,6 +103,7 @@ export function TaskForm({
   stages?: Stage[];
   filter: CategoryFilter;
 }) {
+  const productLines = useProductLines();
   const emptyForm = (): TaskFormValues => ({
     title: "",
     categoryIds: filter.categoryId ? [filter.categoryId] : [],
@@ -385,7 +386,7 @@ export function TaskForm({
             className="bg-transparent outline-none text-sm border-b border-border py-1"
           >
             <option value="">제품 라인 없음</option>
-            {PRODUCT_LINES.map((l) => (
+            {productLines.map((l) => (
               <option key={l.key} value={l.key}>{l.label}</option>
             ))}
           </select>
