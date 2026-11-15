@@ -155,8 +155,12 @@ function DailyFocusPage() {
   const { date: dateParam } = Route.useSearch();
   const navigate = Route.useNavigate();
   const [date, setDate] = useState(() => dateParam ?? todayLocalStr());
+  const [calendarOpen, setCalendarOpen] = useState(false);
+  const [calendarMonth, setCalendarMonth] = useState(() => (dateParam ?? todayLocalStr()).slice(0, 7));
 
   const changeDate = (next: string) => {
+    setCalendarOpen(false);
+    setCalendarMonth(next.slice(0, 7));
     setDate(next);
     void navigate({ search: { date: next }, replace: true });
   };
@@ -360,9 +364,59 @@ function DailyFocusPage() {
           >
             <ChevronLeft size={14} />
           </button>
-          <p className="text-lg font-light tracking-tight min-w-[12rem]">
-            {date} ({koDow(date)}){isToday && <span className="ml-2 text-xs label-caps text-muted-foreground">TODAY</span>}
-          </p>
+          <div className="relative">
+            <button
+              type="button"
+              onClick={() => { setCalendarMonth(date.slice(0, 7)); setCalendarOpen((open) => !open); }}
+              aria-label="Choose date from monthly calendar"
+              aria-expanded={calendarOpen}
+              className="flex items-center gap-2 text-lg font-light tracking-tight hover:underline underline-offset-4"
+            >
+              {date} ({koDow(date)}) <CalendarDays size={17} className="text-muted-foreground" />
+              {isToday && <span className="text-xs label-caps text-muted-foreground">TODAY</span>}
+            </button>
+            {calendarOpen && (
+              <>
+                <button type="button" aria-label="Close calendar" className="fixed inset-0 z-40 cursor-default" onClick={() => setCalendarOpen(false)} />
+                <div className="absolute top-full left-0 mt-2 z-50 w-[min(19rem,calc(100vw-2rem))] border border-border bg-background shadow-lg p-3">
+                  <div className="flex items-center justify-between mb-3">
+                    <button type="button" aria-label="Previous month" className="border border-border p-1.5 hover:bg-muted" onClick={() => {
+                      const [y, m] = calendarMonth.split("-").map(Number);
+                      const d = new Date(y, m - 2, 1);
+                      setCalendarMonth(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`);
+                    }}><ChevronLeft size={15} /></button>
+                    <strong className="text-sm font-medium">{calendarMonth}</strong>
+                    <button type="button" aria-label="Next month" className="border border-border p-1.5 hover:bg-muted" onClick={() => {
+                      const [y, m] = calendarMonth.split("-").map(Number);
+                      const d = new Date(y, m, 1);
+                      setCalendarMonth(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`);
+                    }}><ChevronRight size={15} /></button>
+                  </div>
+                  <div className="grid grid-cols-7 text-center text-[11px] text-muted-foreground mb-1">
+                    {["일", "월", "화", "수", "목", "금", "토"].map((day) => <span key={day} className="py-1">{day}</span>)}
+                  </div>
+                  <div className="grid grid-cols-7 gap-0.5">
+                    {(() => {
+                      const [year, month] = calendarMonth.split("-").map(Number);
+                      const firstDay = new Date(year, month - 1, 1).getDay();
+                      const days = new Date(year, month, 0).getDate();
+                      return Array.from({ length: firstDay + days }, (_, i) => {
+                        const day = i - firstDay + 1;
+                        if (day < 1) return <span key={`empty-${i}`} />;
+                        const value = `${calendarMonth}-${String(day).padStart(2, "0")}`;
+                        return <button type="button" key={value} onClick={() => changeDate(value)}
+                          aria-label={value} aria-current={value === date ? "date" : undefined}
+                          className={`h-9 text-sm hover:bg-muted ${value === date ? "bg-foreground text-background hover:bg-foreground/80" : value === today ? "border border-foreground" : ""}`}>
+                          {day}
+                        </button>;
+                      });
+                    })()}
+                  </div>
+                  <button type="button" className="w-full mt-3 border border-border py-1.5 text-xs hover:bg-muted" onClick={() => changeDate(today)}>Today</button>
+                </div>
+              </>
+            )}
+          </div>
           <button
             onClick={() => changeDate(shiftDate(date, 1))}
             className="border border-border p-1 hover:bg-muted"
