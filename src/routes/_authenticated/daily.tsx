@@ -21,6 +21,7 @@ import {
   type MultipleTask,
   type MultipleTaskItem,
 } from "@/lib/wann-data";
+import { useChildcareSync } from "@/lib/use-childcare-sync";
 import { useWannDashboard } from "@/lib/use-wann-dashboard";
 import { CategoryFilterBar } from "@/components/wann/CategoryFilterBar";
 import { ShoppingListWidget } from "@/components/wann/ShoppingListWidget";
@@ -58,26 +59,10 @@ function ChildcareDayWidget({ date, compact = false }: { date: string; compact?:
   type Carer = 'Youn' | 'Lach' | 'Childcare' | 'Shared' | 'Unassigned';
   type Block = { day: number; start: number; end: number; carer: Carer };
   type Override = { date:string; start:number; end:number; carer:Carer };
-  const overrideKey = 'wann-childcare-overrides-v1';
-  const [blocks, setBlocks] = useState<Block[] | null>(null);
-  const [overrides,setOverrides] = useState<Override[]>([]);
-  const [editing,setEditing] = useState<number | null>(null);
+  const {weekly:blocks,overrides,ready,error,saveWeekly,saveOverrides}=useChildcareSync();
+  const [editing,setEditing] = useState<number|null>(null);
   const [draftCarer,setDraftCarer] = useState<Carer>('Unassigned');
   const [scope,setScope] = useState<'date'|'weekly'>('date');
-  useEffect(() => {
-    const load = () => {
-      try {
-        const saved = localStorage.getItem('wann-childcare-weekly-v1');
-        setBlocks(saved ? JSON.parse(saved) as Block[] : null);
-        const savedOverrides = localStorage.getItem(overrideKey);
-        setOverrides(savedOverrides ? JSON.parse(savedOverrides) as Override[] : []);
-      } catch { setBlocks(null); }
-    };
-    load();
-    window.addEventListener('storage', load);
-    window.addEventListener('focus', load);
-    return () => { window.removeEventListener('storage', load); window.removeEventListener('focus', load); };
-  }, [date]);
   const day = new Date(date + 'T12:00:00').getDay();
   const defaults: Record<number, Block[]> = {
     0:[{day:0,start:8,end:20,carer:'Youn'}],
@@ -88,7 +73,7 @@ function ChildcareDayWidget({ date, compact = false }: { date: string; compact?:
     5:[{day:5,start:8,end:10,carer:'Unassigned'},{day:5,start:10,end:16,carer:'Childcare'},{day:5,start:16,end:20,carer:'Unassigned'}],
     6:[{day:6,start:8,end:20,carer:'Lach'}],
   };
-  const routine = (blocks ?? Object.values(defaults).flat()).filter(b=>b.day===day).sort((a,b)=>a.start-b.start);
+  const routine = blocks.filter(b=>b.day===day).sort((a,b)=>a.start-b.start);
   const dateOverrides = overrides.filter(o=>o.date===date);
   const hours = Array.from({length:24},(_,hour)=>{
     const routineCarer = routine.find(b=>b.start<=hour&&b.end>hour)?.carer ?? 'Unassigned';
@@ -113,7 +98,7 @@ function ChildcareDayWidget({ date, compact = false }: { date: string; compact?:
         if(o.end>target.end)next.push({...o,start:target.end});
       }
       next.push({date,start:target.start,end:target.end,carer:draftCarer});
-      setOverrides(next);localStorage.setItem(overrideKey,JSON.stringify(next));
+      void saveOverrides(next);
     }else{
       const all=blocks??Object.values(defaults).flat();
       const next:Block[]=[];
@@ -123,7 +108,7 @@ function ChildcareDayWidget({ date, compact = false }: { date: string; compact?:
         if(b.end>target.end)next.push({...b,start:target.end});
       }
       next.push({day,start:target.start,end:target.end,carer:draftCarer});
-      setBlocks(next);localStorage.setItem('wann-childcare-weekly-v1',JSON.stringify(next));
+      void saveWeekly(next);
     }
     setEditing(null);
   };
@@ -133,10 +118,10 @@ function ChildcareDayWidget({ date, compact = false }: { date: string; compact?:
       if(o.date!==date||o.end<=target.start||o.start>=target.end)return [o];
       return [...(o.start<target.start?[{...o,end:target.start}]:[]),...(o.end>target.end?[{...o,start:target.end}]:[])];
     });
-    setOverrides(next);localStorage.setItem(overrideKey,JSON.stringify(next));setEditing(null);
+    void saveOverrides(next);setEditing(null);
   };
   const openEditor=(index:number)=>{setEditing(editing===index?null:index);setDraftCarer(items[index].carer);setScope('date')};
-  if(compact) return <div className="space-y-2">
+  if(compact) return <div className="space-y-2">{!ready&&<p className="text-xs">Loading childcare…</p>}{error&&<p role="alert" className="text-xs text-red-600">Sync error: {error}</p>}
     <div className="flex h-10 w-full rounded-sm bg-muted/50 relative">
       {items.map((b,i)=><div key={i} className="absolute top-0 h-full flex items-center justify-center text-[11px] text-slate-800" style={{left:`${b.start/24*100}%`,width:`${(b.end-b.start)/24*100}%`,background:colours[b.carer]}}>
         <button onClick={()=>openEditor(i)} className="w-full h-full truncate px-1" title="Edit childcare">{carerLabel(b.carer)}{b.modified?' ↻':''} · {String(b.start).padStart(2,'0')}:00–{String(b.end).padStart(2,'0')}:00</button>
