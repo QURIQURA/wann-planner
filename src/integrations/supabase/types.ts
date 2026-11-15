@@ -14,6 +14,12 @@ export type Database = {
   }
   public: {
     Tables: {
+      planner_product_lines: {
+        Row: { user_id: string; key: string; label: string; active: boolean; launch_date: string | null; sort_order: number; updated_at: string }
+        Insert: { user_id: string; key: string; label: string; active?: boolean; launch_date?: string | null; sort_order?: number; updated_at?: string }
+        Update: { user_id?: string; key?: string; label?: string; active?: boolean; launch_date?: string | null; sort_order?: number; updated_at?: string }
+        Relationships: []
+      }
       croijang_consumed_items: {
         Row: {
           category: string | null
