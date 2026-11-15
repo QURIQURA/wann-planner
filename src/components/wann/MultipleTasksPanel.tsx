@@ -9,6 +9,20 @@ import { StageTracker, StageDot } from "./StageTracker";
 import type { Stage } from "@/lib/wann-stages";
 
 
+/** Keep synced SHCS CS tasks in operational sequence, regardless of dates or completion. */
+const CS_TASK_SEQUENCE = [
+  "CS · Order accepted",
+  "CS · Confirmation email",
+  "CS · Order confirmation SMS",
+  "CS · Day-before delivery SMS",
+  "CS · Customer delivery confirmation",
+  "CS · Payment received",
+  "CS · Order completed",
+];
+function csTaskRank(title: string): number {
+  return CS_TASK_SEQUENCE.indexOf(title);
+}
+
 export type MultipleTaskForm = {
   name: string;
   categoryId: string | null;
@@ -228,6 +242,15 @@ export function MultipleTasksPanel({
               // top of the checklist, ahead of date-sorted items.
               const linkRank = (b.link_url ? 1 : 0) - (a.link_url ? 1 : 0);
               if (linkRank !== 0) return linkRank;
+              // Synced CS tasks have an explicit workflow sequence, not
+              // alphabetical order (and not a mix of dated/undated tasks).
+              const aCs = csTaskRank(a.title);
+              const bCs = csTaskRank(b.title);
+              if (aCs !== -1 || bCs !== -1) {
+                if (aCs === -1) return -1; // Keep production/other tasks first.
+                if (bCs === -1) return 1;
+                return aCs - bCs;
+              }
               const k = taskSortKey(a).localeCompare(taskSortKey(b));
               return k !== 0 ? k : a.title.localeCompare(b.title);
             });
