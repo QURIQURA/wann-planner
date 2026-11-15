@@ -43,12 +43,14 @@ Updated 2026-11-15. Evidence: live Supabase schema/function metadata and GitHub 
 - Current underlying carer enum uses `Youn` and `Childcare`; display labels use `Yeon` and `Sage`. Keep canonical/storage mappings explicit.
 - Runtime realtime delivery, multi-device conflict handling and RLS behavior remain unverified.
 
-### E. Planner availability → Pilot Daily timeline — PROPOSED
-- Planner is the source of truth for childcare-derived availability.
-- Pilot must **reuse existing** daily production timeline and unscheduled queue; show Planner availability as read-only background, capacity summary and non-blocking conflicts.
-- No cross-project availability endpoint or successful Pilot consumption was verified in this audit.
-- Authenticated server-side integration required. Never embed service-role credentials in browser.
-- Open policy: shared/unassigned childcare, operator identity mapping, date overrides, DST and error handling.
+### E. Planner availability → Pilot Daily timeline — IN REVIEW (draft PRs, not applied or deployed)
+- Planner is the source of truth for childcare-derived availability and decides each segment's state.
+- Pilot **reuses its existing** DASHBOARD daily timeline and unscheduled queue; it shows Planner availability as a read-only background layer, a capacity line (Available / Allocated / Remaining / Check) and non-blocking conflict chips. Scheduling is never blocked or changed.
+- Contract: Pilot edge function `planner-availability` (Pilot owner JWT only) → WANN `public.pilot_availability(p_from, p_to, p_exclude_task_ids)` (service_role only, SECURITY DEFINER). Returns derived segments `{start, end, state, reason, carer, label, override}` per Australia/Sydney date; no raw schedule JSON, no task titles. Failures return `{status: "unavailable", reason}` and the UI shows "Planner availability unavailable", never zero capacity.
+- Identity: one Planner user mapped server-side in WANN `public.integration_links (source = 'pilot')`; no ids in the frontend.
+- Policy approved by 연 2026-11-15 (final). Pilot operator is Yeon alone. Priority: (1) timed Planner task = busy, whoever the carer (no end time blocks 30 min); (2) Tanji with Yeon = busy, 24 h; (3) Shared / Unassigned = unknown, 24 h; (4) no carer recorded = unknown, 24 h; (5) Tanji with Lach / Tanji at Sage = available 08:00–20:00, check otherwise. Check applies only to confirmed Lach/Sage time. Planner tasks created by Pilot are excluded. 15-minute resolution.
+- Allocated = union of Pilot production blocks and daily tasks inside available time.
+- Not yet verified end to end: migration not applied, edge function not deployed. Tracking: QURIQURA/pastry-pilot#4.
 
 ### F. Pilot production tasks → Planner — PARTIALLY IMPLEMENTED; SCOPE UNVERIFIED
 - WANN popup receiver `sync_kora_popup` can re-parent production task IDs into the popup project.
