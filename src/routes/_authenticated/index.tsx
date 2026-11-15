@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState } from "react";
-import { Settings as SettingsIcon, LogOut, BookOpen, LineChart, CalendarDays, LayoutGrid, Target } from "lucide-react";
+import { Settings as SettingsIcon, LogOut, BookOpen, LineChart, CalendarDays, LayoutGrid, Target, Baby } from "lucide-react";
 
 import { isDPlusEvent, dPlusLabel, formatLocalDate, parseLocalDate } from "@/lib/wann-data";
 import { useWannDashboard } from "@/lib/use-wann-dashboard";
@@ -189,6 +189,14 @@ function Dashboard() {
             >
               <Target size={14} />
               <span className="label-caps hidden sm:inline">Daily</span>
+            </Link>
+            <Link
+              to="/childcare"
+              className="border border-border p-2 hover:bg-muted flex items-center gap-1"
+              aria-label="Childcare schedule"
+            >
+              <Baby size={14} />
+              <span className="label-caps hidden sm:inline">Childcare</span>
             </Link>
             <Link
               to="/month"
