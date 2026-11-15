@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedIndexRouteImport } from './routes/_authenticated/index'
+import { Route as AuthenticatedChildcareRouteImport } from './routes/_authenticated/childcare'
 import { Route as AuthenticatedDailyRouteImport } from './routes/_authenticated/daily'
 import { Route as AuthenticatedDiaryRouteImport } from './routes/_authenticated/diary'
 import { Route as AuthenticatedMonthRouteImport } from './routes/_authenticated/month'
@@ -30,6 +31,11 @@ const AuthRoute = AuthRouteImport.update({
 const AuthenticatedIndexRoute = AuthenticatedIndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedChildcareRoute = AuthenticatedChildcareRouteImport.update({
+  id: '/childcare',
+  path: '/childcare',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedDailyRoute = AuthenticatedDailyRouteImport.update({
@@ -61,6 +67,7 @@ const AuthenticatedWidgetsRoute = AuthenticatedWidgetsRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof AuthenticatedIndexRoute
   '/auth': typeof AuthRoute
+  '/childcare': typeof AuthenticatedChildcareRoute
   '/daily': typeof AuthenticatedDailyRoute
   '/diary': typeof AuthenticatedDiaryRoute
   '/month': typeof AuthenticatedMonthRoute
@@ -69,6 +76,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/auth': typeof AuthRoute
+  '/childcare': typeof AuthenticatedChildcareRoute
   '/daily': typeof AuthenticatedDailyRoute
   '/diary': typeof AuthenticatedDiaryRoute
   '/month': typeof AuthenticatedMonthRoute
@@ -80,6 +88,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/auth': typeof AuthRoute
+  '/_authenticated/childcare': typeof AuthenticatedChildcareRoute
   '/_authenticated/daily': typeof AuthenticatedDailyRoute
   '/_authenticated/diary': typeof AuthenticatedDiaryRoute
   '/_authenticated/month': typeof AuthenticatedMonthRoute
@@ -90,13 +99,29 @@ export interface FileRoutesById {
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
-    '/' | '/auth' | '/daily' | '/diary' | '/month' | '/patterns' | '/widgets'
+    | '/'
+    | '/auth'
+    | '/childcare'
+    | '/daily'
+    | '/diary'
+    | '/month'
+    | '/patterns'
+    | '/widgets'
   fileRoutesByTo: FileRoutesByTo
-  to: '/auth' | '/daily' | '/diary' | '/month' | '/patterns' | '/widgets' | '/'
+  to:
+    | '/auth'
+    | '/childcare'
+    | '/daily'
+    | '/diary'
+    | '/month'
+    | '/patterns'
+    | '/widgets'
+    | '/'
   id:
     | '__root__'
     | '/_authenticated'
     | '/auth'
+    | '/_authenticated/childcare'
     | '/_authenticated/daily'
     | '/_authenticated/diary'
     | '/_authenticated/month'
@@ -131,6 +156,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof AuthenticatedIndexRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/childcare': {
+      id: '/_authenticated/childcare'
+      path: '/childcare'
+      fullPath: '/childcare'
+      preLoaderRoute: typeof AuthenticatedChildcareRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/daily': {
@@ -172,6 +204,7 @@ declare module '@tanstack/react-router' {
 }
 
 interface AuthenticatedRouteRouteChildren {
+  AuthenticatedChildcareRoute: typeof AuthenticatedChildcareRoute
   AuthenticatedDailyRoute: typeof AuthenticatedDailyRoute
   AuthenticatedDiaryRoute: typeof AuthenticatedDiaryRoute
   AuthenticatedMonthRoute: typeof AuthenticatedMonthRoute
@@ -181,6 +214,7 @@ interface AuthenticatedRouteRouteChildren {
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
+  AuthenticatedChildcareRoute: AuthenticatedChildcareRoute,
   AuthenticatedDailyRoute: AuthenticatedDailyRoute,
   AuthenticatedDiaryRoute: AuthenticatedDiaryRoute,
   AuthenticatedMonthRoute: AuthenticatedMonthRoute,
