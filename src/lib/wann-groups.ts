@@ -12,6 +12,7 @@
  * both by a DB CHECK constraint and by mutually-exclusive UI in TaskForm.
  */
 import { supabase } from "@/integrations/supabase/client";
+import { useQuery } from "@tanstack/react-query";
 import type { Tables } from "@/integrations/supabase/types";
 
 export type Group = Tables<"planner_groups">;
@@ -35,6 +36,28 @@ export const PRODUCT_LINES: ProductLine[] = [
   { key: "weekly_cake", label: "Weekly Surprise Cake", launchDate: null },
   { key: "confectionery", label: "컨펙셔너리 박스", launchDate: "2026-12-12" },
 ];
+
+/** Catalog is synced into planner_product_lines; fallback keeps legacy cards available. */
+export function useProductLines() {
+  const query = useQuery({
+    queryKey: ["planner-product-lines"],
+    queryFn: async (): Promise<ProductLine[]> => {
+      const { data: auth } = await supabase.auth.getUser();
+      if (!auth.user) return PRODUCT_LINES;
+      const { data, error } = await supabase.from("planner_product_lines")
+        .select("key,label,active,launch_date,sort_order")
+        .eq("user_id", auth.user.id).order("sort_order", { ascending: true });
+      if (error) throw error;
+      if (!data?.length) return PRODUCT_LINES;
+      return data.filter((line) => line.active).map((line) => ({
+        key: line.key, label: line.label, launchDate: line.launch_date,
+      }));
+    },
+    staleTime: 60_000,
+    refetchInterval: 60_000,
+  });
+  return query.data ?? PRODUCT_LINES;
+}
 
 export async function fetchGroups(_userId: string): Promise<Group[]> {
   const { data, error } = await supabase
