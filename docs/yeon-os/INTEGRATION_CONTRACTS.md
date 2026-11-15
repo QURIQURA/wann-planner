@@ -1,43 +1,72 @@
-# YEON OS — Integration Contracts
-Status: proposed contracts; **not yet implemented or verified end-to-end**. Updated 2026-11-15.
+# YEON OS — Integration Contracts & Implementation Audit
+Updated 2026-11-15. Evidence: live Supabase schema/function metadata and GitHub source on default branches. **No end-to-end writes, deployment, or user-facing smoke tests performed.**
 
-## 1. SHCS → Pilot order handoff
-- Trigger: a customer order reaches an agreed accepted/confirmed state (exact state and mapping to be verified).
-- Source: SHCS customer request, contact and communication data.
-- Destination: Pilot operational order/production planning.
-- Use stable external IDs, idempotent upserts, explicit status mapping and failure/retry handling.
-- Pilot production completion may feed a minimal customer-safe status back to SHCS. Never expose internal notes, recipes or private operational data.
-- Before implementation: inspect actual tables, RPCs, authentication and existing synchronization.
+## Status definitions
+- **Implemented**: corresponding code, SQL function or enabled trigger exists; runtime success not implied.
+- **Verified**: a representative end-to-end operation has been observed and checked, including expected destination state.
+- **Proposed**: intended architecture with no confirmed implementation.
+- **Unverified**: evidence is insufficient to classify runtime behavior.
 
-## 2. Planner → Pilot availability (priority)
-- Planner source: childcare weekly routine + date overrides, calculated for a selected date and person.
-- Pilot consumer: existing Daily Work Session timeline, **read-only availability** layer.
-- Suggested response shape (proposal, not current API):
-```json
-{"date":"2026-11-17","timezone":"Australia/Sydney","person":"Yeon","intervals":[{"start":"08:00","end":"20:00","status":"available"}],"version":"opaque"}
-```
-- Determine unavailable intervals from the person's childcare responsibility; treat unassigned/shared responsibility as unresolved unless a clear family policy is defined.
-- Pilot combines availability with its own scheduled tasks to calculate remaining capacity and non-blocking conflicts.
-- Do not create a second childcare schedule in Pilot. Editing childcare routes to Planner.
-- Respect date overrides first, including partial intervals, and recalculate when the date changes.
-- Cross-project authentication and family/person mapping must be designed and verified before deployment.
-- No service-role keys or sensitive personal schedules in frontend bundles. Use authenticated server-to-server access, least privilege, RLS, and minimal payloads.
-- Failure mode: preserve existing Pilot timeline and show an unobtrusive availability-unavailable state, not fabricated zero capacity.
+## Confirmed infrastructure
+- WANN Supabase: `txrxzsrjqwhvjosutotp` (family/planner).
+- SHCS Supabase: `meswjzwxldhqkjglnmzt` (SHCS customer site **and** Pilot business operations).
+- Repositories: `QURIQURA/wann-planner`, `QURIQURA/pastry-pilot`, `QURIQURA/shcs-order`.
+- GitHub code search returned no indexed results; direct source files and database functions/triggers were inspected instead.
 
-## 3. Pilot ↔ Planner task summary
-- Pilot owns component workflow and execution status; Planner owns personal planning context and scheduling priorities.
-- Reuse existing identifiers and mappings where present. Prevent duplicate task creation on retries.
-- Planner should show compact production summaries and links back to Pilot, not replicate every component or formula.
-- Resolve scheduling edit authority and conflict rules before implementing bidirectional updates.
+## Integration inventory
 
-## 4. Cross-cutting requirements
-- Use Australia/Sydney for local dates; explicit timezone for timestamps.
-- Define event origin, external IDs, revision/version, retries and audit logging.
-- Keep customer personal data and family childcare data in their respective trust boundaries.
-- Test: weekly routine, date overrides, changed dates, overlapping tasks, access denial, stale/offline data, duplicate events and DST transitions.
+### A. SHCS order request → Pilot order — IMPLEMENTED, NOT END-TO-END VERIFIED
+- SHCS DB `public.accept_order_request(p_request_id uuid)` checks admin permissions, creates/links a customer, inserts into shared `public.orders`, and marks `shco_order_requests` as ACCEPTED with `order_id`.
+- The business operational record is already in the same SHCS Supabase project; **do not build a second cross-database handoff without evidence it is needed**.
+- `shco_order_requests` and `orders` tables both exist. Current observed table row counts are nonzero; this does not prove a particular handoff succeeded.
+- The accepted request initially inserts a Pilot order with `INTAKE` status. This is distinct from a later Pilot `CONFIRMED` state.
 
-## Open decisions
-- Which identity maps a Pilot operator to a Planner person?
-- Is shared childcare time considered available for either person?
-- How do unassigned childcare periods affect capacity?
-- Exact SHCS/Pilot order statuses, canonical IDs and existing integration paths.
+### B. Pilot CONFIRMED order → Planner — IMPLEMENTED, NOT END-TO-END VERIFIED
+- SHCS DB `public.sync_confirmed_order_to_planner()` is attached to `public.orders` via `trg_sync_confirmed_order_to_planner` AFTER INSERT/UPDATE.
+- Trigger only proceeds for relevant orders with status `CONFIRMED`; excludes POPUP orders.
+- WANN DB `public.sync_kora_order(...)` supports project creation/update, Delivery task and an optional order-link task; uses stable IDs and upsert semantics.
+- The SHCS trigger code references a Vault secret named `wann_os_secret_key`; secret contents were **not** read.
+- Existing project/task linking should be preserved. Do not describe this integration as merely proposed.
+- Runtime delivery, network responses and identity permissions require explicit verification.
+
+### C. Pilot popup → Planner — IMPLEMENTED, NOT END-TO-END VERIFIED
+- SHCS DB `public.sync_popup_order_to_planner()` is attached to `orders` via BEFORE INSERT/UPDATE trigger `b_sync_popup_order_to_planner`.
+- Function handles POPUP orders, confirmed/production stages and existing linked projects, using `wann_project_id` and `wann_order_link_task_id`; uses `net.http_post`.
+- WANN DB `public.sync_kora_popup(...)` upserts Planner project and link task and re-associates existing production tasks.
+- Current trigger has an explicit single-user ownership condition. Do not assume family-wide multi-user support.
+- Existing implementation should be audited for delivery success and retries before changes.
+
+### D. Planner childcare schedule persistence — IMPLEMENTED, NOT END-TO-END VERIFIED
+- WANN `public.childcare_schedules` exists with RLS enabled and a nonzero row count.
+- Planner `src/lib/use-childcare-sync.ts` reads/writes weekly and override schedules, subscribes to realtime changes, and uses localStorage fallback/migration.
+- Planner `src/routes/_authenticated/daily.tsx` renders the childcare timeline with date-specific overrides and weekly routine edits.
+- Current underlying carer enum uses `Youn` and `Childcare`; display labels use `Yeon` and `Sage`. Keep canonical/storage mappings explicit.
+- Runtime realtime delivery, multi-device conflict handling and RLS behavior remain unverified.
+
+### E. Planner availability → Pilot Daily timeline — PROPOSED
+- Planner is the source of truth for childcare-derived availability.
+- Pilot must **reuse existing** daily production timeline and unscheduled queue; show Planner availability as read-only background, capacity summary and non-blocking conflicts.
+- No cross-project availability endpoint or successful Pilot consumption was verified in this audit.
+- Authenticated server-side integration required. Never embed service-role credentials in browser.
+- Open policy: shared/unassigned childcare, operator identity mapping, date overrides, DST and error handling.
+
+### F. Pilot production tasks → Planner — PARTIALLY IMPLEMENTED; SCOPE UNVERIFIED
+- WANN popup receiver `sync_kora_popup` can re-parent production task IDs into the popup project.
+- SHCS DB popup trigger collects linked `planner_task_id` values from `work_session_formula_versions` and `work_blocks`.
+- This confirms integration hooks exist, but does **not** establish full coverage or reliability of every production task lifecycle. Inspect work-session sync paths before expanding.
+
+## Security finding — ACTION REQUIRED (no change applied)
+The Supabase table listing reported **RLS disabled** on SHCS `public._ddl_probe` and `public._sync_debug_log`. These tables may be accessible to anon/authenticated clients depending on grants. Review purpose, contents, privileges and any consumers. Decide whether to remove obsolete debug tables or enable RLS with suitable policies. **Do not blindly enable RLS without understanding application dependencies.**
+
+## Next verification checklist
+1. Use a safe existing order/project pair to verify Pilot CONFIRMED → Planner project, Delivery task and order-link task; do not create a production customer order solely for testing.
+2. Inspect popup synchronization network logs and Planner destination, including idempotent re-sync.
+3. Inspect SHCS accepted request → Pilot `orders` linkage using non-sensitive IDs only.
+4. Verify childcare schedule saves, reloads, overrides, RLS and realtime on an authenticated account.
+5. Audit security of cross-project RPC/HTTP handlers, Vault secret use, identity mapping and error/retry paths.
+6. Confirm app build/tests and production deployment separately.
+
+## Proposed future contracts
+- Read-only authenticated Planner availability for Pilot with Australia/Sydney date semantics and interval provenance.
+- Explicit ownership of status transitions, stable IDs, idempotency, retries, observability and minimal data transfer.
+- No duplicate editable childcare data in Pilot and no duplicate production workflow in Planner.
