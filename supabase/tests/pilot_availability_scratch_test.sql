@@ -44,7 +44,8 @@ insert into public.planner_tasks(id, user_id, due_date, due_time, end_time, recu
  ('10000000-0000-0000-0000-000000000003','00000000-0000-0000-0000-000000000001','2026-11-20','10:00','11:00','none'),   -- excluded (Pilot-owned)
  ('10000000-0000-0000-0000-000000000004','00000000-0000-0000-0000-000000000001','2026-11-06','10:00','10:30','weekly'), -- Fridays; 11-20 moved away
  ('10000000-0000-0000-0000-000000000005','00000000-0000-0000-0000-000000000001','2026-11-27','13:00','13:30','none'),   -- moved earlier onto 11-20 at 14:00
- ('10000000-0000-0000-0000-000000000006','00000000-0000-0000-0000-000000000002','2026-11-20','10:00','16:00','none');   -- other user: ignored
+ ('10000000-0000-0000-0000-000000000006','00000000-0000-0000-0000-000000000002','2026-11-20','10:00','16:00','none'),   -- other user: ignored
+ ('10000000-0000-0000-0000-000000000007','00000000-0000-0000-0000-000000000001','2026-11-21','06:30','07:00','none');   -- task beats Lach check
 insert into public.planner_recurring_task_exceptions(task_id, original_date, new_date, new_time) values
  ('10000000-0000-0000-0000-000000000004','2026-11-20','2026-11-21','09:00'),
  ('10000000-0000-0000-0000-000000000005','2026-11-27','2026-11-20','14:00');
@@ -67,30 +68,32 @@ select * from r where date = '2026-11-20' order by s;
 do $$
 declare got text;
 begin
-  -- Friday 2026-11-20: 00-08 check (nothing recorded), 08-10 unknown, 10-11 available (excluded Pilot task ignored),
+  -- Friday 2026-11-20: 00-08 unknown (nothing recorded), 08-10 unknown, 10-11 available (excluded Pilot task ignored),
   -- 11:00-11:30 busy task, 11:30-12 available, 12-13 override Youn first match -> busy, 13-14 Youn busy override,
   -- 14:00-14:30 moved-in task busy, 14:30-15 available, 15:00-15:30 no-end task busy, 15:30-16 available,
-  -- 16-20 unknown, 20-24 check (nothing recorded).
+  -- 16-20 unknown, 20-24 unknown (nothing recorded).
   select string_agg(s||'-'||e||':'||state, ' ' order by s) into got from r where date = '2026-11-20';
-  assert got = '00:00-08:00:check 08:00-10:00:unknown 10:00-11:00:available 11:00-11:30:busy 11:30-12:00:available '
+  assert got = '00:00-08:00:unknown 08:00-10:00:unknown 10:00-11:00:available 11:00-11:30:busy 11:30-12:00:available '
             || '12:00-14:00:busy 14:00-14:30:busy 14:30-15:00:available 15:00-15:30:busy 15:30-16:00:available '
-            || '16:00-20:00:unknown 20:00-24:00:check', 'friday mismatch: ' || got;
+            || '16:00-20:00:unknown 20:00-24:00:unknown', 'friday mismatch: ' || got;
+  assert (select reason from r where date='2026-11-20' and s='00:00') = 'no_record', 'unrecorded night reason';
   assert (select ovr from r where date='2026-11-20' and s='12:00'), 'override flag expected';
   assert (select reason from r where date='2026-11-20' and s='14:00') = 'planner_task', 'moved-in task reason';
   -- Saturday 2026-11-21: Lach all day; Lach override 06-08 -> check (window only softens Lach/Sage);
   -- Shared override 09-11 -> unknown, but the weekly task moved in at 09:00 is busy (task beats any carer);
-  -- Sage override 20-21 -> check.
+  -- Sage override 20-21 -> check; nights with nothing recorded -> unknown (never check).
   select string_agg(s||'-'||e||':'||state||':'||reason, ' ' order by s) into got from r where date = '2026-11-21';
-  assert got = '00:00-06:00:check:outside_window 06:00-08:00:check:outside_window 08:00-09:00:available:childcare '
+  assert got = '00:00-06:00:unknown:no_record 06:00-06:30:check:outside_window 06:30-07:00:busy:planner_task '
+            || '07:00-08:00:check:outside_window 08:00-09:00:available:childcare '
             || '09:00-09:30:busy:planner_task 09:30-11:00:unknown:childcare 11:00-20:00:available:childcare '
-            || '20:00-21:00:check:outside_window 21:00-24:00:check:outside_window',
+            || '20:00-21:00:check:outside_window 21:00-24:00:unknown:no_record',
     'saturday mismatch: ' || got;
   assert (select carer from r where date='2026-11-21' and s='06:00') = 'Lach', 'outside-window Lach keeps carer';
   assert (select carer from r where date='2026-11-21' and s='00:00') is null, 'unrecorded night has no carer';
   -- Sunday 2026-11-22 (weekday from date string = 0 -> Youn 08-20). Carer beats the window:
-  -- Youn override 05-08 stays busy (not check), Shared 20-22 and Unassigned 22-23 stay unknown (not check).
+  -- Youn override 05-08 stays busy, Shared 20-22 and Unassigned 22-23 unknown, unrecorded hours unknown.
   select string_agg(s||'-'||e||':'||state, ' ' order by s) into got from r where date = '2026-11-22';
-  assert got = '00:00-05:00:check 05:00-08:00:busy 08:00-20:00:busy 20:00-22:00:unknown 22:00-23:00:unknown 23:00-24:00:check',
+  assert got = '00:00-05:00:unknown 05:00-08:00:busy 08:00-20:00:busy 20:00-22:00:unknown 22:00-23:00:unknown 23:00-24:00:unknown',
     'sunday mismatch: ' || got;
 end $$;
 

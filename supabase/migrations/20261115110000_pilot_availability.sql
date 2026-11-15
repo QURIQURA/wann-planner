@@ -14,9 +14,7 @@
 --   Tanji with Yeon                  -> busy at any hour
 --   Tanji with Lach / Tanji at Sage  -> available from 08:00 to 20:00, check before 08:00 / from 20:00
 --   Shared (who cares is not decided) / Unassigned -> unknown at any hour (not counted as available)
---   Hour with no routine or override recorded:
---     inside 08:00–20:00 -> Unassigned -> unknown (same as Planner's Daily view)
---     outside 08:00–20:00 -> check (Planner does not record nights; work is possible but must be confirmed)
+--   Hour with no routine or override recorded -> unknown at any hour (check is only for confirmed Lach / Sage time)
 --   Tasks Pilot created itself (p_exclude_task_ids) are ignored so Pilot work is not double counted.
 -- Resolution: 15 minutes.
 
@@ -100,17 +98,17 @@ begin
         ),
         slots as (
           select s, start_min,
-            case when c.carer is null and in_window then 'Unassigned' else c.carer end as carer,
+            c.carer,
             c.is_override,
-            -- carer first; the window only turns Lach / Sage time (or unrecorded night hours) into check
+            -- carer first; the window only turns confirmed Lach / Sage time into check
             case
               when c.carer = 'Youn' then 'busy'
               when c.carer in ('Lach', 'Childcare') then case when in_window then 'available' else 'check' end
-              when c.carer is null and not in_window then 'check'
-              else 'unknown'
+              else 'unknown' -- Shared, Unassigned, or nothing recorded: at any hour
             end as care_state,
             case
-              when not in_window and (c.carer is null or c.carer in ('Lach', 'Childcare')) then 'outside_window'
+              when c.carer is null then 'no_record'
+              when not in_window and c.carer in ('Lach', 'Childcare') then 'outside_window'
               else 'childcare'
             end as care_reason
           from (select s, s * 15 as start_min, s * 15 >= 8 * 60 and s * 15 < 20 * 60 as in_window
@@ -221,7 +219,7 @@ begin
                 when 'Childcare' then 'Tanji at Sage'
                 when 'Shared' then 'Tanji with Yeon & Lach'
                 when 'Unassigned' then 'Tanji · Unassigned'
-                else 'Outside Planner hours' end
+                else 'No carer recorded' end
                 || case when reason = 'outside_window' and carer is not null then ' · outside 08–20' else '' end
               end,
             'override', is_override
