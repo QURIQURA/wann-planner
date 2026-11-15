@@ -81,6 +81,7 @@ function ChildcareDayWidget({ date, compact = false }: { date: string; compact?:
     6:[{day:6,start:8,end:20,carer:'Lach'}],
   };
   const items = (blocks ?? defaults[day]).filter(b=>b.day===day).sort((a,b)=>a.start-b.start);
+  const carerLabel = (carer: Carer) => ({Youn:'Tanji with Yeon',Lach:'Tanji with Lach',Childcare:'Tanji at Sage',Shared:'Tanji with Yeon & Lach',Unassigned:'Tanji · Unassigned'}[carer]);
   const colours: Record<Carer,string> = {Youn:'#E9B46A',Lach:'#79ACD0',Childcare:'#A6B99A',Shared:'#C9B4D9',Unassigned:'#E5E7EB'};
   const [editing,setEditing] = useState<number | null>(null);
   const updateCarer = (index:number,carer:Carer) => {
@@ -93,7 +94,7 @@ function ChildcareDayWidget({ date, compact = false }: { date: string; compact?:
   };
   if(compact) return <div className="flex h-10 w-full rounded-sm bg-muted/50 relative">
     {items.map((b,i)=><div key={i} className="absolute top-0 h-full flex items-center justify-center text-[11px] text-slate-800" style={{left:`${b.start/24*100}%`,width:`${(b.end-b.start)/24*100}%`,background:colours[b.carer]}}>
-      <button onClick={()=>setEditing(editing===i?null:i)} className="w-full h-full truncate px-1" title="Change childcare responsibility">{b.carer} · {String(b.start).padStart(2,'0')}:00–{String(b.end).padStart(2,'0')}:00</button>
+      <button onClick={()=>setEditing(editing===i?null:i)} className="w-full h-full truncate px-1" title="Change childcare responsibility">{carerLabel(b.carer)} · {String(b.start).padStart(2,'0')}:00–{String(b.end).padStart(2,'0')}:00</button>
       {editing===i&&<select autoFocus aria-label="Childcare carer" className="absolute top-full left-0 z-30 bg-background text-foreground border border-border shadow-lg p-2" value={b.carer} onChange={e=>updateCarer(i,e.target.value as Carer)} onBlur={()=>setEditing(null)}>{(Object.keys(colours) as Carer[]).map(c=><option key={c} value={c}>{c}</option>)}</select>}
     </div>)}
   </div>;
@@ -104,7 +105,7 @@ function ChildcareDayWidget({ date, compact = false }: { date: string; compact?:
     </div>
     <div className="flex min-h-12 w-full overflow-hidden rounded-sm border border-border">
       {items.map((b,i)=><div key={i} style={{background:colours[b.carer],flex:Math.max(1,b.end-b.start)}} className="min-w-0 px-1 py-2 text-center text-[11px] text-slate-800 flex flex-col justify-center">
-        <strong className="truncate">{b.carer}</strong>
+        <strong className="truncate">{carerLabel(b.carer)}</strong>
         <span className="text-[10px]">{String(b.start).padStart(2,'0')}:00–{String(b.end).padStart(2,'0')}:00</span>
       </div>)}
     </div>
