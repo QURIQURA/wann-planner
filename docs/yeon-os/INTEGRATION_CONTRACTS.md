@@ -43,14 +43,17 @@ Updated 2026-11-15. Evidence: live Supabase schema/function metadata and GitHub 
 - Current underlying carer enum uses `Youn` and `Childcare`; display labels use `Yeon` and `Sage`. Keep canonical/storage mappings explicit.
 - Runtime realtime delivery, multi-device conflict handling and RLS behavior remain unverified.
 
-### E. Planner availability → Pilot Daily timeline — IN REVIEW (draft PRs, not applied or deployed)
+### E. Planner availability → Pilot Daily timeline — IMPLEMENTED & DEPLOYED; DATA PATH VERIFIED, UI NOT VERIFIED
 - Planner is the source of truth for childcare-derived availability and decides each segment's state.
 - Pilot **reuses its existing** DASHBOARD daily timeline and unscheduled queue; it shows Planner availability as a read-only background layer, a capacity line (Available / Allocated / Remaining / Check) and non-blocking conflict chips. Scheduling is never blocked or changed.
 - Contract: Pilot edge function `planner-availability` (Pilot owner JWT only) → WANN `public.pilot_availability(p_from, p_to, p_exclude_task_ids)` (service_role only, SECURITY DEFINER). Returns derived segments `{start, end, state, reason, carer, label, override}` per Australia/Sydney date; no raw schedule JSON, no task titles. Failures return `{status: "unavailable", reason}` and the UI shows "Planner availability unavailable", never zero capacity.
 - Identity: one Planner user mapped server-side in WANN `public.integration_links (source = 'pilot')`; no ids in the frontend.
 - Policy approved by 연 2026-11-15 (final). Pilot operator is Yeon alone. Priority: (1) timed Planner task = busy, whoever the carer (no end time blocks 30 min); (2) Tanji with Yeon = busy, 24 h; (3) Shared / Unassigned = unknown, 24 h; (4) no carer recorded = unknown, 24 h; (5) Tanji with Lach / Tanji at Sage = available 08:00–20:00, check otherwise. Check applies only to confirmed Lach/Sage time. Planner tasks created by Pilot are excluded. 15-minute resolution.
 - Allocated = union of Pilot production blocks and daily tasks inside available time.
-- Not yet verified end to end: migration not applied, edge function not deployed. Tracking: QURIQURA/pastry-pilot#4.
+- Deployed 2026-11-15: WANN migration `pilot_availability` applied and `integration_links` row set (wann-planner#4); Pilot edge function `planner-availability` v1 deployed (verify_jwt off, owner check in code); pastry-pilot#9 merged and built by GitHub Actions.
+- **Verified (live, 2026-11-15):** WANN privileges (anon/authenticated cannot execute or read the mapping; service_role can; RLS on, no policies); RPC output matches the stored weekly routine for 2026-11-13..24; Pilot-created Planner tasks are excluded (2026-11-13/14 production blocks no longer counted) while other Planner schedules stay busy (incl. a no-end-time task as 30 min); edge function returns 401 without/with an invalid token and returns the expected segments with the Pilot owner's session; ranges over 14 days return `invalid_range`.
+- **Not verified:** the new DASHBOARD layer/capacity line/conflict chip in the deployed UI (the deploy workflow now publishes to the `quriqura-pastry-pilot` Worker after the repo rename, while the signed-in address is the older `quriqura-kora-pilot` Worker, which still serves the previous build); a live Planner override change round-trip; Check on live data (no Lach/Sage time outside 08–20 is recorded yet).
+- Tracking: QURIQURA/pastry-pilot#4.
 
 ### F. Pilot production tasks → Planner — PARTIALLY IMPLEMENTED; SCOPE UNVERIFIED
 - WANN popup receiver `sync_kora_popup` can re-parent production task IDs into the popup project.
