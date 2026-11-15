@@ -1,5 +1,5 @@
 # YEON OS — Architecture
-Status: agreed responsibilities, implementation details subject to code review. Updated 2026-11-15.
+Status: agreed responsibilities; integration inventory audited against live DB metadata on 2026-11-15. Runtime verification pending.
 
 ## Systems
 | OS | Responsibility | Repository |
@@ -22,11 +22,13 @@ Status: agreed responsibilities, implementation details subject to code review. 
 
 ## Repository and infrastructure facts
 - GitHub: QURIQURA/wann-planner, QURIQURA/pastry-pilot, QURIQURA/shcs-order.
-- Separate Supabase contexts exist for home/WANN and business/SHCS. Verify actual client environment variables and project IDs before making integration changes. Do not infer DB ownership from repository names alone.
+- WANN Supabase project: `txrxzsrjqwhvjosutotp` (Planner). SHCS Supabase project: `meswjzwxldhqkjglnmzt` (SHCS customer intake **and** Pilot operational tables). Verify client configurations and permissions before changes.
+- Existing SQL implementations: SHCS accepted request creates a Pilot `orders` record; Pilot `CONFIRMED` order triggers Planner project/Delivery/link task sync; popup triggers Planner project/link task sync. These are **implemented but not end-to-end verified**. See [integration audit](INTEGRATION_CONTRACTS.md).
+- Planner childcare schedule persistence is implemented; Planner-derived availability consumption by Pilot remains proposed.
 - Existing README files may reflect early scaffolding and are **not** reliable proof of current runtime behavior.
 
 ## Change governance
 - Preserve established flows and data. Audit actual code, database schema, RLS and authentication before changes.
 - Keep user-facing application labels in English where established, and respect Australia/Sydney date semantics.
 - Do not assert a deployment or test passed unless verified.
-- This document is architecture guidance, not proof that any cross-app integration is deployed.
+- This document distinguishes existing database integration code from unverified runtime operation; see [integration audit](INTEGRATION_CONTRACTS.md).
