@@ -77,7 +77,7 @@ begin
       'segments', coalesce((
         with
         -- Effective carer per hour: first matching date override wins, else the weekly routine
-        -- (sorted by start, first match), else Unassigned. Same as daily.tsx.
+        -- (sorted by start, first match), else null (nothing recorded). Same lookup order as daily.tsx.
         hours as (
           select h,
             (select o.value->>'carer' from jsonb_array_elements(v_overrides) with ordinality o(value, ord)
