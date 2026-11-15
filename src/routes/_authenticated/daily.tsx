@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { ArrowLeft, ChevronLeft, ChevronRight, ChevronDown, Pin, ArrowRightCircle, ArrowRightToLine, GripVertical, Check, CalendarDays } from "lucide-react";
 
@@ -53,6 +53,50 @@ export const Route = createFileRoute("/_authenticated/daily")({
  * "Pin to Daily" = Task.pinned_date (single date, no auto-expiry/unpin —
  * 2026-11-13 user decision). Top Priorities = tasks pinned to the viewed day.
  */
+
+function ChildcareDayWidget({ date }: { date: string }) {
+  type Carer = 'Youn' | 'Lach' | 'Childcare' | 'Shared' | 'Unassigned';
+  type Block = { day: number; start: number; end: number; carer: Carer };
+  const [blocks, setBlocks] = useState<Block[] | null>(null);
+  useEffect(() => {
+    const load = () => {
+      try {
+        const saved = localStorage.getItem('wann-childcare-weekly-v1');
+        setBlocks(saved ? JSON.parse(saved) as Block[] : null);
+      } catch { setBlocks(null); }
+    };
+    load();
+    window.addEventListener('storage', load);
+    window.addEventListener('focus', load);
+    return () => { window.removeEventListener('storage', load); window.removeEventListener('focus', load); };
+  }, [date]);
+  const day = new Date(date + 'T12:00:00').getDay();
+  const defaults: Record<number, Block[]> = {
+    0:[{day:0,start:8,end:20,carer:'Youn'}],
+    1:[{day:1,start:8,end:20,carer:'Youn'}],
+    2:[{day:2,start:8,end:20,carer:'Lach'}],
+    3:[{day:3,start:8,end:14,carer:'Youn'},{day:3,start:14,end:20,carer:'Lach'}],
+    4:[{day:4,start:8,end:10,carer:'Unassigned'},{day:4,start:10,end:16,carer:'Childcare'},{day:4,start:16,end:20,carer:'Unassigned'}],
+    5:[{day:5,start:8,end:10,carer:'Unassigned'},{day:5,start:10,end:16,carer:'Childcare'},{day:5,start:16,end:20,carer:'Unassigned'}],
+    6:[{day:6,start:8,end:20,carer:'Lach'}],
+  };
+  const items = (blocks ?? defaults[day]).filter(b=>b.day===day).sort((a,b)=>a.start-b.start);
+  const colours: Record<Carer,string> = {Youn:'#E9B46A',Lach:'#79ACD0',Childcare:'#A6B99A',Shared:'#C9B4D9',Unassigned:'#E5E7EB'};
+  return <section className="card-flat p-4 space-y-2">
+    <div className="flex justify-between items-center gap-2">
+      <p className="label-caps">Tanji · Childcare</p>
+      <Link to="/childcare" className="text-xs underline text-muted-foreground">Edit weekly schedule</Link>
+    </div>
+    <div className="flex min-h-12 w-full overflow-hidden rounded-sm border border-border">
+      {items.map((b,i)=><div key={i} style={{background:colours[b.carer],flex:Math.max(1,b.end-b.start)}} className="min-w-0 px-1 py-2 text-center text-[11px] text-slate-800 flex flex-col justify-center">
+        <strong className="truncate">{b.carer}</strong>
+        <span className="text-[10px]">{String(b.start).padStart(2,'0')}:00–{String(b.end).padStart(2,'0')}:00</span>
+      </div>)}
+    </div>
+    <p className="text-[10px] text-muted-foreground">Care responsibility · selected day · 08:00–20:00 planning window</p>
+  </section>;
+}
+
 function DailyFocusPage() {
   const { user } = Route.useRouteContext() as { user: { id: string } };
   const { date: dateParam } = Route.useSearch();
@@ -290,6 +334,8 @@ function DailyFocusPage() {
             </span>
           </div>
         </div>
+
+        <ChildcareDayWidget date={date} />
 
         <CategoryFilterBar
           categories={widgetCtx.categories}
