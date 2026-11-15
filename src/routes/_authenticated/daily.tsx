@@ -57,12 +57,20 @@ export const Route = createFileRoute("/_authenticated/daily")({
 function ChildcareDayWidget({ date, compact = false }: { date: string; compact?: boolean }) {
   type Carer = 'Youn' | 'Lach' | 'Childcare' | 'Shared' | 'Unassigned';
   type Block = { day: number; start: number; end: number; carer: Carer };
+  type Override = { date:string; start:number; end:number; carer:Carer };
+  const overrideKey = 'wann-childcare-overrides-v1';
   const [blocks, setBlocks] = useState<Block[] | null>(null);
+  const [overrides,setOverrides] = useState<Override[]>([]);
+  const [editing,setEditing] = useState<number | null>(null);
+  const [draftCarer,setDraftCarer] = useState<Carer>('Unassigned');
+  const [scope,setScope] = useState<'date'|'weekly'>('date');
   useEffect(() => {
     const load = () => {
       try {
         const saved = localStorage.getItem('wann-childcare-weekly-v1');
         setBlocks(saved ? JSON.parse(saved) as Block[] : null);
+        const savedOverrides = localStorage.getItem(overrideKey);
+        setOverrides(savedOverrides ? JSON.parse(savedOverrides) as Override[] : []);
       } catch { setBlocks(null); }
     };
     load();
@@ -80,23 +88,67 @@ function ChildcareDayWidget({ date, compact = false }: { date: string; compact?:
     5:[{day:5,start:8,end:10,carer:'Unassigned'},{day:5,start:10,end:16,carer:'Childcare'},{day:5,start:16,end:20,carer:'Unassigned'}],
     6:[{day:6,start:8,end:20,carer:'Lach'}],
   };
-  const items = (blocks ?? defaults[day]).filter(b=>b.day===day).sort((a,b)=>a.start-b.start);
+  const routine = (blocks ?? Object.values(defaults).flat()).filter(b=>b.day===day).sort((a,b)=>a.start-b.start);
+  const dateOverrides = overrides.filter(o=>o.date===date);
+  const hours = Array.from({length:24},(_,hour)=>{
+    const routineCarer = routine.find(b=>b.start<=hour&&b.end>hour)?.carer ?? 'Unassigned';
+    const override = dateOverrides.find(o=>o.start<=hour&&o.end>hour);
+    return {day,start:hour,end:hour+1,carer:override?.carer??routineCarer,modified:!!override};
+  });
+  const items = hours.reduce<(Block & {modified:boolean})[]>((acc,h)=>{
+    const last=acc[acc.length-1];
+    if(last&&last.end===h.start&&last.carer===h.carer&&last.modified===h.modified)last.end=h.end;
+    else acc.push({...h});
+    return acc;
+  },[]).filter(b=>b.end>8&&b.start<20).map(b=>({...b,start:Math.max(8,b.start),end:Math.min(20,b.end)}));
   const carerLabel = (carer: Carer) => ({Youn:'Tanji with Yeon',Lach:'Tanji with Lach',Childcare:'Tanji at Sage',Shared:'Tanji with Yeon & Lach',Unassigned:'Tanji · Unassigned'}[carer]);
   const colours: Record<Carer,string> = {Youn:'#E9B46A',Lach:'#79ACD0',Childcare:'#A6B99A',Shared:'#C9B4D9',Unassigned:'#E5E7EB'};
-  const [editing,setEditing] = useState<number | null>(null);
-  const updateCarer = (index:number,carer:Carer) => {
-    const current = blocks ?? Object.values(defaults).flat();
-    const target = items[index];
-    const next = current.map(b=>b.day===target.day && b.start===target.start && b.end===target.end ? {...b,carer}:b);
-    setBlocks(next);
-    localStorage.setItem('wann-childcare-weekly-v1',JSON.stringify(next));
+  const updateCarer = (index:number) => {
+    const target=items[index];
+    if(!target)return;
+    if(scope==='date'){
+      const next=overrides.filter(o=>o.date!==date||o.end<=target.start||o.start>=target.end);
+      for(const o of overrides.filter(o=>o.date===date&&o.start<target.end&&o.end>target.start)){
+        if(o.start<target.start)next.push({...o,end:target.start});
+        if(o.end>target.end)next.push({...o,start:target.end});
+      }
+      next.push({date,start:target.start,end:target.end,carer:draftCarer});
+      setOverrides(next);localStorage.setItem(overrideKey,JSON.stringify(next));
+    }else{
+      const all=blocks??Object.values(defaults).flat();
+      const next:Block[]=[];
+      for(const b of all){
+        if(b.day!==day||b.end<=target.start||b.start>=target.end){next.push(b);continue}
+        if(b.start<target.start)next.push({...b,end:target.start});
+        if(b.end>target.end)next.push({...b,start:target.end});
+      }
+      next.push({day,start:target.start,end:target.end,carer:draftCarer});
+      setBlocks(next);localStorage.setItem('wann-childcare-weekly-v1',JSON.stringify(next));
+    }
     setEditing(null);
   };
-  if(compact) return <div className="flex h-10 w-full rounded-sm bg-muted/50 relative">
-    {items.map((b,i)=><div key={i} className="absolute top-0 h-full flex items-center justify-center text-[11px] text-slate-800" style={{left:`${b.start/24*100}%`,width:`${(b.end-b.start)/24*100}%`,background:colours[b.carer]}}>
-      <button onClick={()=>setEditing(editing===i?null:i)} className="w-full h-full truncate px-1" title="Change childcare responsibility">{carerLabel(b.carer)} · {String(b.start).padStart(2,'0')}:00–{String(b.end).padStart(2,'0')}:00</button>
-      {editing===i&&<select autoFocus aria-label="Childcare carer" className="absolute top-full left-0 z-30 bg-background text-foreground border border-border shadow-lg p-2" value={b.carer} onChange={e=>updateCarer(i,e.target.value as Carer)} onBlur={()=>setEditing(null)}>{(Object.keys(colours) as Carer[]).map(c=><option key={c} value={c}>{c}</option>)}</select>}
-    </div>)}
+  const revert = (index:number)=>{
+    const target=items[index];
+    const next=overrides.flatMap(o=>{
+      if(o.date!==date||o.end<=target.start||o.start>=target.end)return [o];
+      return [...(o.start<target.start?[{...o,end:target.start}]:[]),...(o.end>target.end?[{...o,start:target.end}]:[])];
+    });
+    setOverrides(next);localStorage.setItem(overrideKey,JSON.stringify(next));setEditing(null);
+  };
+  const openEditor=(index:number)=>{setEditing(editing===index?null:index);setDraftCarer(items[index].carer);setScope('date')};
+  if(compact) return <div className="space-y-2">
+    <div className="flex h-10 w-full rounded-sm bg-muted/50 relative">
+      {items.map((b,i)=><div key={i} className="absolute top-0 h-full flex items-center justify-center text-[11px] text-slate-800" style={{left:`${b.start/24*100}%`,width:`${(b.end-b.start)/24*100}%`,background:colours[b.carer]}}>
+        <button onClick={()=>openEditor(i)} className="w-full h-full truncate px-1" title="Edit childcare">{carerLabel(b.carer)}{b.modified?' ↻':''} · {String(b.start).padStart(2,'0')}:00–{String(b.end).padStart(2,'0')}:00</button>
+      </div>)}
+    </div>
+    {editing!==null&&items[editing]&&<div className="border border-border rounded-lg bg-background p-3 space-y-2 relative z-20">
+      <div className="flex justify-between items-center"><strong className="text-xs">{date} · {String(items[editing].start).padStart(2,'0')}:00–{String(items[editing].end).padStart(2,'0')}:00</strong><button onClick={()=>setEditing(null)} aria-label="Close">×</button></div>
+      <select aria-label="Carer" value={draftCarer} onChange={e=>setDraftCarer(e.target.value as Carer)} className="w-full border border-border rounded p-2 bg-background">{(Object.keys(colours) as Carer[]).map(c=><option key={c} value={c}>{carerLabel(c)}</option>)}</select>
+      <label className="flex gap-2 items-center text-xs"><input type="radio" checked={scope==='date'} onChange={()=>setScope('date')}/> This date only</label>
+      <label className="flex gap-2 items-center text-xs"><input type="radio" checked={scope==='weekly'} onChange={()=>setScope('weekly')}/> Every week (update routine)</label>
+      <div className="flex gap-2 justify-end">{items[editing].modified&&<button className="border rounded px-3 py-1 text-xs" onClick={()=>revert(editing)}>Revert to routine</button>}<button className="bg-foreground text-background rounded px-4 py-1 text-xs" onClick={()=>updateCarer(editing)}>Apply</button></div>
+    </div>}
   </div>;
   return <section className="card-flat p-4 space-y-2">
     <div className="flex justify-between items-center gap-2">
