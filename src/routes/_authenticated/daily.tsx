@@ -54,7 +54,7 @@ export const Route = createFileRoute("/_authenticated/daily")({
  * 2026-11-13 user decision). Top Priorities = tasks pinned to the viewed day.
  */
 
-function ChildcareDayWidget({ date }: { date: string }) {
+function ChildcareDayWidget({ date, compact = false }: { date: string; compact?: boolean }) {
   type Carer = 'Youn' | 'Lach' | 'Childcare' | 'Shared' | 'Unassigned';
   type Block = { day: number; start: number; end: number; carer: Carer };
   const [blocks, setBlocks] = useState<Block[] | null>(null);
@@ -82,6 +82,21 @@ function ChildcareDayWidget({ date }: { date: string }) {
   };
   const items = (blocks ?? defaults[day]).filter(b=>b.day===day).sort((a,b)=>a.start-b.start);
   const colours: Record<Carer,string> = {Youn:'#E9B46A',Lach:'#79ACD0',Childcare:'#A6B99A',Shared:'#C9B4D9',Unassigned:'#E5E7EB'};
+  const [editing,setEditing] = useState<number | null>(null);
+  const updateCarer = (index:number,carer:Carer) => {
+    const current = blocks ?? Object.values(defaults).flat();
+    const target = items[index];
+    const next = current.map(b=>b.day===target.day && b.start===target.start && b.end===target.end ? {...b,carer}:b);
+    setBlocks(next);
+    localStorage.setItem('wann-childcare-weekly-v1',JSON.stringify(next));
+    setEditing(null);
+  };
+  if(compact) return <div className="flex h-10 w-full rounded-sm bg-muted/50 relative">
+    {items.map((b,i)=><div key={i} className="absolute top-0 h-full flex items-center justify-center text-[11px] text-slate-800" style={{left:`${b.start/24*100}%`,width:`${(b.end-b.start)/24*100}%`,background:colours[b.carer]}}>
+      <button onClick={()=>setEditing(editing===i?null:i)} className="w-full h-full truncate px-1" title="Change childcare responsibility">{b.carer} · {String(b.start).padStart(2,'0')}:00–{String(b.end).padStart(2,'0')}:00</button>
+      {editing===i&&<select autoFocus aria-label="Childcare carer" className="absolute top-full left-0 z-30 bg-background text-foreground border border-border shadow-lg p-2" value={b.carer} onChange={e=>updateCarer(i,e.target.value as Carer)} onBlur={()=>setEditing(null)}>{(Object.keys(colours) as Carer[]).map(c=><option key={c} value={c}>{c}</option>)}</select>}
+    </div>)}
+  </div>;
   return <section className="card-flat p-4 space-y-2">
     <div className="flex justify-between items-center gap-2">
       <p className="label-caps">Tanji · Childcare</p>
@@ -335,8 +350,6 @@ function DailyFocusPage() {
           </div>
         </div>
 
-        <ChildcareDayWidget date={date} />
-
         <CategoryFilterBar
           categories={widgetCtx.categories}
           subtags={widgetCtx.subtags}
@@ -351,14 +364,21 @@ function DailyFocusPage() {
           onDeleteSubtag={widgetCtx.taskActions.onDeleteSubtag}
         />
 
-        {/* Timed items as a horizontal hour-axis timeline (matching the
-            PILOT Daily Focus mockup) instead of a plain time-sorted list. */}
-        {timed.length > 0 && (
-          <section className="card-flat p-4">
-            <p className="label-caps mb-2">Timeline</p>
-            <DailyTimelineBar items={timed} categories={widgetCtx.categories} />
-          </section>
-        )}
+        <section className="card-flat p-4 space-y-3">
+          <div className="flex items-center justify-between gap-3 flex-wrap">
+            <p className="label-caps">Timeline</p>
+            <Link to="/childcare" className="text-xs underline text-muted-foreground">Edit weekly schedule</Link>
+          </div>
+          <div className="overflow-x-auto">
+            <div className="min-w-[760px] space-y-2">
+              <div className="relative h-6 text-[10px] text-muted-foreground tabular-nums">
+                {[0,4,8,12,16,20,24].map(h=><span key={h} className="absolute -translate-x-1/2" style={{left:`${h/24*100}%`}}>{String(h).padStart(2,'0')}:00</span>)}
+              </div>
+              <ChildcareDayWidget date={date} compact />
+              <DailyTimelineBar items={timed} categories={widgetCtx.categories} />
+            </div>
+          </div>
+        </section>
 
         {/* Today's tasks (left) + a quick-glance Active Projects panel with
             inline "+ Add item" (right) — side by side so adding a project
@@ -1099,49 +1119,18 @@ function DailyTimelineBar({
     })
     .filter((b): b is { o: (typeof items)[number]; start: number; end: number } => b != null);
 
-  if (blocks.length === 0) return null;
+  // Keep the task track visible even on days with no timed tasks.
 
-  // Window: the data's own span, floored/ceiled to the hour, padded an hour
-  // either side, with a sane minimum width so a single short task doesn't
-  // render as one giant bar.
-  const dataStart = Math.min(...blocks.map((b) => b.start));
-  const dataEnd = Math.max(...blocks.map((b) => b.end));
-  const windowStart = Math.max(0, Math.floor(dataStart / 60) * 60 - 60);
-  const windowEnd = Math.min(24 * 60, Math.max(Math.ceil(dataEnd / 60) * 60 + 60, windowStart + 4 * 60));
-  const span = windowEnd - windowStart;
-
-  const hourMarks: number[] = [];
-  for (let m = Math.ceil(windowStart / 60) * 60; m <= windowEnd; m += 60) hourMarks.push(m);
+  const windowStart = 0;
+  const span = 24 * 60;
 
   const DEFAULT_COLOR = "#F87171";
 
   return (
     <div className="overflow-x-auto">
-      <div className="relative min-w-[640px]" style={{ height: "4.5rem" }}>
-        {/* Hour marks */}
-        <div className="absolute inset-x-0 top-0 h-5 border-b border-border">
-          {hourMarks.map((m) => (
-            <span
-              key={m}
-              className="absolute top-0 text-[10px] tabular-nums text-muted-foreground -translate-x-1/2"
-              style={{ left: `${((m - windowStart) / span) * 100}%` }}
-            >
-              {minutesToTime(m)}
-            </span>
-          ))}
-        </div>
-        {/* Hour gridlines */}
-        <div className="absolute inset-x-0 top-5 bottom-0">
-          {hourMarks.map((m) => (
-            <div
-              key={m}
-              className="absolute top-0 bottom-0 border-l border-border/40"
-              style={{ left: `${((m - windowStart) / span) * 100}%` }}
-            />
-          ))}
-        </div>
+      <div className="relative w-full" style={{ height: "2.5rem" }}>
         {/* Bars */}
-        <div className="absolute inset-x-0 top-7 h-9">
+        <div className="absolute inset-x-0 top-0 h-10 bg-muted/50">
           {blocks.map(({ o, start, end }) => {
             const color = o.task.category_id
               ? (categories.find((c) => c.id === o.task.category_id)?.color ?? DEFAULT_COLOR)
