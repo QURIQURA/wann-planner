@@ -1,4 +1,4 @@
-import { PRODUCT_LINES, compareGroupsRecency } from "@/lib/wann-groups";
+import { useProductLines, compareGroupsRecency } from "@/lib/wann-groups";
 import type { MultipleTask, Task } from "@/lib/wann-data";
 import { projectSpan, todayLocalStr, currentOccurrenceDate } from "@/lib/wann-data";
 import { ChevronRight } from "lucide-react";
@@ -30,6 +30,7 @@ export function ProductLineCards({
   onEditTask?: (t: Task) => void;
 }) {
   const today = todayLocalStr();
+  const productLines = useProductLines();
 
   const pctOfProject = (p: { id: string }) => {
     const items = projectItems.filter((i) => i.multiple_task_id === p.id);
@@ -38,7 +39,7 @@ export function ProductLineCards({
       : null;
   };
 
-  const cards = PRODUCT_LINES.map((line) => {
+  const cards = productLines.map((line) => {
     const lineProjects = projects
       .filter((p) => p.product_line === line.key)
       .map((p) => {
@@ -82,7 +83,7 @@ export function ProductLineCards({
   });
 
   return (
-    <section className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+    <section className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
       {cards.map(({ line, current, projectCount, lineTasks }) => {
         const daysToLaunch = line.launchDate
           ? Math.ceil(
