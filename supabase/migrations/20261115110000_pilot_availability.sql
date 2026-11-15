@@ -8,15 +8,17 @@
 --     user mapped in public.integration_links (source = 'pilot'). Never returns raw JSON or task titles.
 --   * Dates are Australia/Sydney local dates; times are local wall-clock (same as Planner storage).
 --
--- Availability policy approved by 연 on 2026-11-15:
---   Tanji with Lach / Tanji at Sage  -> available
---   Tanji with Yeon                  -> busy
---   Shared (who cares is not decided) / Unassigned -> unknown (not counted as available)
---   Outside Planner childcare window (before 08:00, from 20:00) -> check (possible, must be confirmed)
---   Timed Planner task with an end time    -> busy
---   Timed Planner task without an end time -> check for 30 minutes
+-- Availability policy approved by 연 on 2026-11-15 (revised the same day: the carer decides first,
+-- the 08:00–20:00 window only softens Lach / Sage time and never overrides Yeon or Shared/Unassigned):
+--   Timed Planner task (any carer)   -> busy (a task without an end time blocks 30 minutes)
+--   Tanji with Yeon                  -> busy at any hour
+--   Tanji with Lach / Tanji at Sage  -> available from 08:00 to 20:00, check before 08:00 / from 20:00
+--   Shared (who cares is not decided) / Unassigned -> unknown at any hour (not counted as available)
+--   Hour with no routine or override recorded:
+--     inside 08:00–20:00 -> Unassigned -> unknown (same as Planner's Daily view)
+--     outside 08:00–20:00 -> check (Planner does not record nights; work is possible but must be confirmed)
 --   Tasks Pilot created itself (p_exclude_task_ids) are ignored so Pilot work is not double counted.
--- Precedence when sources overlap: busy > unknown > check > available. Resolution: 15 minutes.
+-- Resolution: 15 minutes.
 
 create table if not exists public.integration_links (
   source text primary key,
@@ -92,21 +94,28 @@ begin
         ),
         care as (
           select h,
-            coalesce(override_carer, routine_carer, 'Unassigned') as carer,
+            coalesce(override_carer, routine_carer) as carer, -- null = nothing recorded for this hour
             override_carer is not null as is_override
           from hours
         ),
         slots as (
-          select s, s * 15 as start_min, c.carer, c.is_override,
+          select s, start_min,
+            case when c.carer is null and in_window then 'Unassigned' else c.carer end as carer,
+            c.is_override,
+            -- carer first; the window only turns Lach / Sage time (or unrecorded night hours) into check
             case
-              when s * 15 < 8 * 60 or s * 15 >= 20 * 60 then 'check'
-              when c.carer in ('Lach', 'Childcare') then 'available'
               when c.carer = 'Youn' then 'busy'
+              when c.carer in ('Lach', 'Childcare') then case when in_window then 'available' else 'check' end
+              when c.carer is null and not in_window then 'check'
               else 'unknown'
             end as care_state,
-            case when s * 15 < 8 * 60 or s * 15 >= 20 * 60 then 'outside_window' else 'childcare' end as care_reason
-          from generate_series(0, 95) s
-          join care c on c.h = (s * 15) / 60
+            case
+              when not in_window and (c.carer is null or c.carer in ('Lach', 'Childcare')) then 'outside_window'
+              else 'childcare'
+            end as care_reason
+          from (select s, s * 15 as start_min, s * 15 >= 8 * 60 and s * 15 < 20 * 60 as in_window
+                from generate_series(0, 95) s) g
+          join care c on c.h = g.start_min / 60
         ),
         tasks as (
           select t.id, t.due_date, t.due_time, t.end_time, coalesce(t.recurrence, 'none') as recurrence
@@ -162,7 +171,7 @@ begin
         ),
         task_slots as (
           select sl.s,
-            max(case when o.dur is not null then 3 else 1 end) as task_rank
+            3 as task_rank
           from slots sl
           join occ_min o
             on sl.start_min < least(o.s_min + coalesce(o.dur, 30), 1440)
@@ -186,8 +195,8 @@ begin
         final as (
           -- carer/override only describe childcare segments, so other segments merge cleanly
           select s, start_min, state, reason,
-            case when reason = 'childcare' then carer end as carer,
-            reason = 'childcare' and is_override as is_override
+            case when reason <> 'planner_task' then carer end as carer,
+            reason <> 'planner_task' and is_override as is_override
           from decided
         ),
         grouped as (
@@ -206,13 +215,14 @@ begin
             'carer', carer,
             'label', case reason
               when 'planner_task' then 'Planner schedule'
-              when 'outside_window' then 'Outside Planner hours'
               else case carer
                 when 'Youn' then 'Tanji with Yeon'
                 when 'Lach' then 'Tanji with Lach'
                 when 'Childcare' then 'Tanji at Sage'
                 when 'Shared' then 'Tanji with Yeon & Lach'
-                else 'Tanji · Unassigned' end
+                when 'Unassigned' then 'Tanji · Unassigned'
+                else 'Outside Planner hours' end
+                || case when reason = 'outside_window' and carer is not null then ' · outside 08–20' else '' end
               end,
             'override', is_override
           ) order by start_min)
