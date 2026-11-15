@@ -2,7 +2,7 @@ import type { WidgetDef } from "@/lib/widget-registry";
 import { useState } from "react";
 import type { Category, MultipleTask, MultipleTaskItem, Subtag, Task } from "@/lib/wann-data";
 import { todayLocalStr, taskSortKey, formatDateKo, koDow, amPmOnly, hexToRgba, isOccurrenceOverdue, currentOccurrenceDate, dDayBadge } from "@/lib/wann-data";
-import { PRODUCT_LINES } from "@/lib/wann-groups";
+import { useProductLines } from "@/lib/wann-groups";
 import { Plus, Trash2, X, Pencil, ChevronDown, ChevronRight, Check, Truck } from "lucide-react";
 import type { CategoryFilter } from "./TaskForm";
 import { StageTracker, StageDot } from "./StageTracker";
@@ -83,6 +83,7 @@ export function MultipleTasksPanel({
    * to the stage tracker/dot picker. Empty until the caller wires it up. */
   stages?: Stage[];
 }) {
+  const productLines = useProductLines();
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState<MultipleTaskForm>(emptyMultipleTaskForm());
   // A Set so any number of Projects can stay expanded at once — toggling one
@@ -236,7 +237,7 @@ export function MultipleTasksPanel({
           const expanded = expandedIds.has(e.id);
           const editing = editingId === e.id;
           const productLine = (e as MultipleTask & { product_line: string | null }).product_line ?? null;
-          const productLineInfo = productLine ? PRODUCT_LINES.find((l) => l.key === productLine) : null;
+          const productLineInfo = productLine ? productLines.find((l) => l.key === productLine) : null;
           // Reads the real Tasks belonging to this Project (not the
           // lightweight checklist `items`), since that's where the stage
           // dropdown lives.
@@ -724,7 +725,7 @@ export function MultipleTaskEditor({
           className="bg-transparent outline-none border-b border-border py-1 text-sm"
         >
           <option value="">제품 라인 없음</option>
-          {PRODUCT_LINES.map((l) => (
+          {productLines.map((l) => (
             <option key={l.key} value={l.key}>{l.label}</option>
           ))}
         </select>
