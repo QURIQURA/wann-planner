@@ -16,14 +16,15 @@ Updated 2026-11-15. Evidence: live Supabase schema/function metadata and GitHub 
 ## Integration inventory
 
 ### A. SHCS order request → Pilot order — IMPLEMENTED; PERSISTED STATE VERIFIED, NEW ACCEPT NOT RE-RUN
-- Path: SHCS admin `src/routes/admin.requests.$id.tsx` → edge function `shco-stripe` (action `accept`; deployed v8 matches `shcs-order` `main`) → SHCS DB `public.accept_order_request(p_request_id uuid)` (SECURITY DEFINER).
+- Path: SHCS admin `src/routes/admin.requests.$id.tsx` → edge function `shco-stripe` (action `accept`; deployed v8 matched `shcs-order` `main` on 2026-11-15, before shcs-order#14) → SHCS DB `public.accept_order_request(p_request_id uuid)` (SECURITY DEFINER).
 - `accept_order_request`: `shco_is_admin()` check, row lock (`FOR UPDATE`), rejects non-`PENDING` requests (no duplicate order per request); `shco_link_customer` matches by email, then AU phone (`shco_phone_key`), else creates (never by name); inserts `public.orders` with `product_line='weekly_cake'`, `status='INTAKE'`, `payment_status='Unpaid'`, `occasion='Other'` + customer text, `delivery_address`, `recipient_relationship` (enum match only), `audience` (`shco_audience_label`), `dietary_requirements` (`shco_dietary_text`), `notes` (`shco_order_note`); links `order_dietary_tags`; marks request `ACCEPTED` with `order_id`, `customer_id`.
 - Order number: `orders_set_order_number` → `set_order_number` + `shco_week_number` → `SH-WWW.n` (Mon–Sun, week 1 starts 2026-08-24, Australia/Sydney, suffix from `.1`).
 - Calendar: request `ACCEPTED` → `trg_shco_notify_order_request` → `shco-notify` (`accepted`) creates the SHCS Google Calendar event and stores `google_calendar_event_id`. The older `sync_order_to_google_calendar` skips web orders.
 - Status: `INTAKE` on insert does not fire Planner sync. `CONFIRMED` is a separate step (Pilot manual, `mark_order_request_paid`, or Stripe `markPaid`). `shco_settings.stripe_enabled = false` as of 2026-11-15, so Accept does not charge.
 - The business operational record is already in the same SHCS Supabase project; **do not build a second cross-database handoff without evidence it is needed**.
 - **Verified (read-only, 2026-11-15):** all 3 linked requests (REQ-0001, REQ-0002, REQ-0004) have exactly one order each, created in the accept transaction, with matching week number, note, customer link, pickup time and a calendar event; no unlinked `Web request` orders. The initial `INTAKE` value is confirmed by code only (no status history table).
-- **Open risks (no change applied; tracked in shcs-order#1):** with Stripe enabled, `shco-stripe accept` charges before the RPC, so an RPC failure leaves a paid request in `PENDING` and a retry or concurrent click can charge twice (no idempotency key); `markPaid` writes Pilot `orders.status` with service role (ownership of this transition should be explicit); unmatched `recipient_relationship` becomes NULL silently; `shco_week_number` maps 1–6 days before 2026-08-24 to week 1 (integer truncation); with dietary tags present, excluded-ingredient text is kept only as tags.
+- **Fixed in code, deployment unverified:** shcs-order#14 (merged 2026-11-16) adds Stripe idempotency keys per request for the Accept charge and payment link, and reuses a recorded payment on a retried Accept, so a double click or a retry after an RPC failure no longer charges twice. Confirm the deployed `shco-stripe` version before enabling Stripe.
+- **Open risks (no change applied; tracked in shcs-order#1):** `markPaid` writes Pilot `orders.status` with service role (ownership of this transition should be explicit); unmatched `recipient_relationship` becomes NULL silently; `shco_week_number` maps 1–6 days before 2026-08-24 to week 1 (integer truncation); with dietary tags present, excluded-ingredient text is kept only as tags.
 
 ### B. Pilot CONFIRMED order → Planner — IMPLEMENTED, NOT END-TO-END VERIFIED
 - SHCS DB `public.sync_confirmed_order_to_planner()` is attached to `public.orders` via `trg_sync_confirmed_order_to_planner` AFTER INSERT/UPDATE.
@@ -70,7 +71,7 @@ The Supabase table listing reported **RLS disabled** on SHCS `public._ddl_probe`
 ## Next verification checklist
 1. Use a safe existing order/project pair to verify Pilot CONFIRMED → Planner project, Delivery task and order-link task; do not create a production customer order solely for testing.
 2. Inspect popup synchronization network logs and Planner destination, including idempotent re-sync.
-3. ~~Inspect SHCS accepted request → Pilot `orders` linkage using non-sensitive IDs only.~~ Done 2026-11-15 (see A). Remaining: observe one new Accept end to end, and resolve the Stripe accept risks before enabling payments.
+3. ~~Inspect SHCS accepted request → Pilot `orders` linkage using non-sensitive IDs only.~~ Done 2026-11-15 (see A). Remaining: observe one new Accept end to end, and confirm shcs-order#14 is deployed before enabling payments.
 4. Verify childcare schedule saves, reloads, overrides, RLS and realtime on an authenticated account.
 5. Audit security of cross-project RPC/HTTP handlers, Vault secret use, identity mapping and error/retry paths.
 6. Confirm app build/tests and production deployment separately.
