@@ -21,13 +21,20 @@ Updated 2026-11-15. Evidence: live Supabase schema/function metadata and GitHub 
 - `shco_order_requests` and `orders` tables both exist. Current observed table row counts are nonzero; this does not prove a particular handoff succeeded.
 - The accepted request initially inserts a Pilot order with `INTAKE` status. This is distinct from a later Pilot `CONFIRMED` state.
 
-### B. Pilot CONFIRMED order → Planner — IMPLEMENTED, NOT END-TO-END VERIFIED
-- SHCS DB `public.sync_confirmed_order_to_planner()` is attached to `public.orders` via `trg_sync_confirmed_order_to_planner` AFTER INSERT/UPDATE.
-- Trigger only proceeds for relevant orders with status `CONFIRMED`; excludes POPUP orders.
-- WANN DB `public.sync_kora_order(...)` supports project creation/update, Delivery task and an optional order-link task; uses stable IDs and upsert semantics.
-- The SHCS trigger code references a Vault secret named `wann_os_secret_key`; secret contents were **not** read.
-- Existing project/task linking should be preserved. Do not describe this integration as merely proposed.
-- Runtime delivery, network responses and identity permissions require explicit verification.
+### B. Pilot CONFIRMED order → Planner — VERIFIED (DB state, 2026-11-15; Issue #1)
+- SHCS DB `public.sync_confirmed_order_to_planner()` is attached to `public.orders` via `trg_sync_confirmed_order_to_planner` AFTER INSERT/UPDATE (enabled).
+- Fires only for non-POPUP orders with status `CONFIRMED`, and on UPDATE only when status, product, recipient, pickup_at, product_line, customer or size changed.
+- Calls WANN `rpc/sync_kora_order` via `net.http_post` (async, fire-and-forget) with Vault secret `wann_os_secret_key` (new-style secret key → service_role; contents not read).
+- Stable IDs: project/Delivery/link task IDs are generated once and written back to `orders.wann_project_id`, `wann_delivery_task_id`, `wann_order_link_task_id`; every later sync reuses them.
+- WANN `public.sync_kora_order(p_project, p_delivery_task, p_order_link_task)` upserts by id: project name/end_date/product_line updated, start `date` never changed after insert; Delivery task due date/time, stage “배달” and `is_delivery=true`; link task title/link_url.
+- **Observed**: all 9 orders with stored WANN IDs (SH-008.1 … SH-014.1) have the Planner project, Delivery task and link task present, correctly parented, exactly one Delivery task per project. Latest CONFIRMED order (SH-014.1) synced ~1 s after its last order update. Sydney time conversion of due date/time matches `pickup_at`.
+- **Idempotency**: retries/re-syncs are safe (upsert on stable IDs; no duplicates observed). The write-back UPDATE does not re-trigger the sync (wann_* columns are not in the change check).
+- **Gaps (not fixed)**:
+  - HTTP result is never checked; IDs are stored even if the call fails. A failed call heals only on the next qualifying edit while still CONFIRMED.
+  - Edits after the order leaves CONFIRMED (e.g. pickup_at change in PRODUCTION) and CANCELLED do not sync; Planner keeps the old project/Delivery task.
+  - Orders that skipped CONFIRMED (e.g. SH-001…007.x, SH-009.1, SH-010.3, now COMPLETED) never got Planner projects.
+  - Hard-coded Planner user_id, category_id, stage id and a Lovable preview URL for `link_url`.
+- **Security (fix approved 2026-11-16, applied manually via SQL editor)**: `sync_kora_order` is SECURITY DEFINER and was executable by `anon`/`authenticated`, so anyone with the public WANN anon key could write or overwrite Planner projects/tasks. Migration `supabase/migrations/20261115100000_restrict_sync_kora_order.sql` revokes this and drops the unused 2-arg overload. Post-apply privilege check and one live re-sync still to be recorded.
 
 ### C. Pilot popup → Planner — IMPLEMENTED, NOT END-TO-END VERIFIED
 - SHCS DB `public.sync_popup_order_to_planner()` is attached to `orders` via BEFORE INSERT/UPDATE trigger `b_sync_popup_order_to_planner`.
@@ -64,7 +71,7 @@ Updated 2026-11-15. Evidence: live Supabase schema/function metadata and GitHub 
 The Supabase table listing reported **RLS disabled** on SHCS `public._ddl_probe` and `public._sync_debug_log`. These tables may be accessible to anon/authenticated clients depending on grants. Review purpose, contents, privileges and any consumers. Decide whether to remove obsolete debug tables or enable RLS with suitable policies. **Do not blindly enable RLS without understanding application dependencies.**
 
 ## Next verification checklist
-1. Use a safe existing order/project pair to verify Pilot CONFIRMED → Planner project, Delivery task and order-link task; do not create a production customer order solely for testing.
+1. ~~Use a safe existing order/project pair to verify Pilot CONFIRMED → Planner project, Delivery task and order-link task~~ — done 2026-11-15 (Issue #1, DB state).
 2. Inspect popup synchronization network logs and Planner destination, including idempotent re-sync.
 3. Inspect SHCS accepted request → Pilot `orders` linkage using non-sensitive IDs only.
 4. Verify childcare schedule saves, reloads, overrides, RLS and realtime on an authenticated account.
