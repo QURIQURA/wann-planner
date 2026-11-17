@@ -65,3 +65,13 @@ Read the canonical YEON OS architecture documents at https://github.com/QURIQURA
 **Claude project instruction to install in each project (SHCS ORDER / PILOT / PLANNER):**
 
 > Before any task or resuming a paused task, check the linked GitHub Issue for `handoff:locked`, `owner:chatgpt`, or closed status. If any apply, STOP immediately without edits, tool calls, commits or PRs. Re-check before every push and PR. Never restart automatically after usage limits without checking ownership. Continue only after an explicit `owner:claude` handoff comment.
+
+
+## Token-efficient execution policy (2026-11-17)
+- **No Claude polling:** never call Claude to check progress, read status, summarize existing logs, wait, or confirm deployment. Use GitHub Issues/PRs/check-runs and Supabase/Cloudflare status through deterministic APIs. Event-driven triggers only; no scheduled Claude status probes.
+- **Zero-token preflight:** GitHub Actions checks issue OPEN, owner, `handoff:locked`, `owner:chatgpt`, existing PR, attempt count and credentials *before* invoking Claude. Recheck immediately before every Claude invocation, including the optional repair attempt.
+- **One bounded implementation attempt** per explicit trigger. CI builds/tests/lint run without Claude. On failure, classify deterministic infrastructure/config/permissions issues and block without Claude; call Claude for a single bounded fix only when failure is demonstrably related to changed code and issue remains owned by Claude. No automatic repeated retries.
+- **No redundant verification:** use the existing CI result and deployment event as evidence; do not repeatedly re-run the same checks absent new commits or a changed dependency.
+- **Budget:** track per-issue Claude invocations and attempts in GitHub labels/comments and Dev Board. When budget reached, mark blocked and await explicit owner decision. Never use a second Claude invocation solely to generate a status report.
+- **Paused Claude web sessions:** GitHub workflow gates cannot control existing Claude web/chat sessions. Add project instructions to check ownership only at the beginning of a new/resumed work session and at meaningful write boundaries; do not loop or repeatedly check on every read/edit. If ChatGPT takes over, explicitly stop the old session where possible.
+- **Status notifications:** trigger on Issue/PR/check/deploy events; GitHub Actions handles updates without invoking Claude. Preserve single active owner.
