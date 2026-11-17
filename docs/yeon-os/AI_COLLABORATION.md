@@ -40,3 +40,11 @@ Read the canonical YEON OS architecture documents at https://github.com/QURIQURA
 **Future Development Board:** PILOT hosts table/Kanban/graph views for SHCS/PILOT/Planner linked work. GitHub Issues and PRs remain source of truth; status distinguishes Specified, Implementing, PR Open, Merged, Deployed, Verified. Never claim verified without actual runtime evidence.
 
 **Open follow-up:** After PR #19 is deployed, test customer-selection-to-order persistence and cross-OS visibility; then run an Auto-Pilot dry-run Issue, inspect checks/review and actual deploy, and only then roll out to SHCS ORDER and PLANNER.
+
+
+### Our Story Phase 1 handoff — 2026-11-17
+- SHCS `QURIQURA/shcs-order` PR #25 merged to main (squash `37486e0`).
+- Applied production migration `20261117120000_our_story_phase1.sql` to shared SHCS/PILOT Supabase. Verified `shco_stories` and `shco_story_members` exist, `shco-our-story` Storage bucket is private, zero customer stories created.
+- Deployed `shco-our-story` Edge Function v1, ACTIVE, verify_jwt=false because function handles its own invite/code/session authentication.
+- Includes admin invitations, nickname URLs, 14-question interview autosave, memory board, browser image optimisation, 50 photos / 50MB per story, existing SHCS visual design.
+- **Not yet verified:** SHCS production frontend deployment (no GitHub Actions workflow found in shcs-order main), live invite email, customer verification/login, signed photo upload, real-device HEIC, non-admin RLS checks. Do not claim live release or enable Wedding order option until these pass. PR #25 was merged after DB and function deployment; no GitHub Actions deploy workflow was added for SHCS in this operation.
