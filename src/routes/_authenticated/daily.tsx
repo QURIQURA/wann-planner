@@ -475,7 +475,7 @@ function DailyFocusPage() {
         {/* Today's tasks (left) + a quick-glance Active Projects panel with
             inline "+ Add item" (right) — side by side so adding a project
             item doesn't require leaving this page. */}
-        <div className="grid gap-6 lg:grid-cols-2 items-start">
+        <div className="flex flex-col gap-6">
           <div className="space-y-6">
           <section className="card-flat p-4 space-y-4">
             <div className="flex items-center justify-between gap-2 flex-wrap">
@@ -649,13 +649,21 @@ function DailyFocusPage() {
           </div>
 
           <div className="space-y-6">
-            <ActiveProjectsPanel
-              projects={projects}
-              projectItems={projectItems}
-              categories={widgetCtx.categories}
-              onAddItem={widgetCtx.projectActions.onAddItem}
-              onToggleItem={widgetCtx.projectActions.onToggleItem}
-            />
+            <details className="group card-flat">
+              <summary className="flex cursor-pointer list-none items-center justify-between gap-3 p-4 [&::-webkit-details-marker]:hidden">
+                <span className="label-caps">Projects · 펼쳐서 보기</span>
+                <ChevronDown size={16} className="text-muted-foreground transition-transform group-open:rotate-180" />
+              </summary>
+              <div className="border-t border-border p-3">
+                <ActiveProjectsPanel
+                  projects={projects}
+                  projectItems={projectItems}
+                  categories={widgetCtx.categories}
+                  onAddItem={widgetCtx.projectActions.onAddItem}
+                  onToggleItem={widgetCtx.projectActions.onToggleItem}
+                />
+              </div>
+            </details>
 
             {/* Day log — "오늘 추가된 작업" + "오늘 완료한 작업" in ONE box
                 (2026-11-13), split by a dashed rule. Both are keyed on
