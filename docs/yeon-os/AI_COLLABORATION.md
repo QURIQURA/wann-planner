@@ -25,3 +25,18 @@ Read the canonical YEON OS architecture documents at https://github.com/QURIQURA
 - Never paste tokens, passwords, service-role keys or customer records into Issues or shared documentation.
 - Do not expose private repo content in public repo documentation.
 - The canonical documentation repo is public; keep it architectural and non-sensitive.
+
+
+## Operational handoff and status — 2026-11-17
+
+**User's standing instruction:** A feature implementation request authorizes routine work to start and continue without repeated intermediate approval. ChatGPT creates/updates the GitHub Issue and, while Auto-Pilot is not active, provides the responsible Claude project name plus a short copyable Issue-number prompt. Claude implements/tests/PRs; ChatGPT or automated checks review. Do not equate merge, deploy and verified runtime behavior. Stop on irreversible/destructive changes or missing permissions rather than inventing success.
+
+**System owners:** SHCS ORDER = `QURIQURA/shcs-order`; PILOT = `QURIQURA/pastry-pilot`; PLANNER = `QURIQURA/wann-planner`. SHCS and PILOT share Supabase business project but currently have different login identities. Preserve the two logins; manual-order customer/order ownership is aligned to PILOT through SHCS sync logic. Never delete or merge auth users as a shortcut.
+
+**SHCS completed work:** WEB/MANUAL order badges and newest event-date sort PR #21; manual-order PILOT customer search/autofill PR #30; manual-order PILOT order visibility and historical archive sync PR #29; dynamic PILOT ownership and explicit customer reuse PR #31. SHCS Issue #23 closed after user confirmed customer search working; Issue #28 closed. Historical archived orders should appear in PILOT as COMPLETED without creating Planner tasks. User confirmed manual orders are visible in PILOT. End-to-end customer selection + order save was not independently verified.
+
+**Pending PILOT work:** `QURIQURA/pastry-pilot` Draft PR #19 covers Issues #17 (Development Board), #18 (Auto-Pilot), and #20 (deploy automation). GitHub PR checks and setup-status workflow passed, but PR #19 is not merged or deployed, and Auto-Pilot has not been end-to-end verified. The setup-status log on 2026-11-17 showed `production` GitHub environment missing and `AUTOPILOT_AUTOMERGE` unset. Required owner-only step: create a `production` environment with a required reviewer in pastry-pilot repository settings; then merge PR #19 and approve high-risk deployment after reviewing the migration plan. Do not merge PR #19 ahead of that gate merely to mark the work done. The owner wants minimal manual approvals for routine tasks; retain the high-risk safety gate.
+
+**Future Development Board:** PILOT hosts table/Kanban/graph views for SHCS/PILOT/Planner linked work. GitHub Issues and PRs remain source of truth; status distinguishes Specified, Implementing, PR Open, Merged, Deployed, Verified. Never claim verified without actual runtime evidence.
+
+**Open follow-up:** After PR #19 is deployed, test customer-selection-to-order persistence and cross-OS visibility; then run an Auto-Pilot dry-run Issue, inspect checks/review and actual deploy, and only then roll out to SHCS ORDER and PLANNER.
