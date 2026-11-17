@@ -48,3 +48,20 @@ Read the canonical YEON OS architecture documents at https://github.com/QURIQURA
 - Deployed `shco-our-story` Edge Function v1, ACTIVE, verify_jwt=false because function handles its own invite/code/session authentication.
 - Includes admin invitations, nickname URLs, 14-question interview autosave, memory board, browser image optimisation, 50 photos / 50MB per story, existing SHCS visual design.
 - **Not yet verified:** SHCS production frontend deployment (no GitHub Actions workflow found in shcs-order main), live invite email, customer verification/login, signed photo upload, real-device HEIC, non-admin RLS checks. Do not claim live release or enable Wedding order option until these pass. PR #25 was merged after DB and function deployment; no GitHub Actions deploy workflow was added for SHCS in this operation.
+
+
+## Handoff Lock — prevent duplicate Claude usage (2026-11-17)
+
+**Trigger:** The user asks ChatGPT to take over a Claude task because Claude has hit its usage limit, stalled, or paused.
+
+1. **Identify work:** locate the GitHub Issue, open PR(s), working branch and latest commit. Do not begin a second implementation before reconciling them.
+2. **Acquire lock:** mark the Issue with `handoff:locked` and `owner:chatgpt` (create labels if needed), and comment: `HANDOFF LOCK — ChatGPT owns this Issue as of <timestamp>. Claude: STOP, do not resume, edit, commit, push, or open PRs. Wait for explicit release.` Record existing Claude PRs/branches and whether they are superseded.
+3. **Claude preflight:** Every Claude project instruction and Auto-Pilot entrypoint must check the Issue state/labels and latest comments **before starting work, after resuming from a usage limit, before pushing commits, and before creating a PR**. If `handoff:locked` or `owner:chatgpt` is present, exit without further tool use. Closed Issues must not be resumed.
+4. **Continue safely:** ChatGPT reviews existing Claude work, reuses it where possible, implements only the remaining scope, and comments on the Issue/PR with outcomes and deployment status. Avoid opening competing PRs without documenting supersession.
+5. **Release:** After merge/deploy/verification, close the Issue and replace lock with `handoff:completed`. If work must return to Claude, remove the lock, set `owner:claude`, and comment with a precise remaining scope and current base commit. Only one owner at a time.
+6. **Critical limitation:** A GitHub label/comment is a coordination signal, **not a remote stop command**. Already-running Claude Code sessions, queued jobs, and a Claude chat that never reads GitHub will not stop automatically. For immediate prevention, manually stop the Claude run and/or disable its workflow. Implement an explicit GitHub Actions/Auto-Pilot guard for machine enforcement. Never claim a label alone prevents token use.
+7. **Cost-saving default:** When the user says 'ChatGPT, finish Claude's work', ChatGPT owns the task until explicit release; do not send Claude a new implementation prompt for the same Issue.
+
+**Claude project instruction to install in each project (SHCS ORDER / PILOT / PLANNER):**
+
+> Before any task or resuming a paused task, check the linked GitHub Issue for `handoff:locked`, `owner:chatgpt`, or closed status. If any apply, STOP immediately without edits, tool calls, commits or PRs. Re-check before every push and PR. Never restart automatically after usage limits without checking ownership. Continue only after an explicit `owner:claude` handoff comment.
