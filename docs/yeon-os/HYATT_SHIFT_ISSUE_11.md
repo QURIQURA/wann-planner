@@ -31,7 +31,7 @@ The additive migration `20261120010000_hyatt_shift_columns.sql` adds `work_weekl
 5. Verify Pilot edge function returns Hyatt busy and UI capacity subtracts it, without counting a Pilot task twice.
 6. Update Issue #11 with actual commit, test, merge, deploy, and runtime evidence.
 
-**Current status:** branch and draft PR #12 only. No production DB migration, no confirmed CI run, no deployment. Do not mark DONE.
+**Current status (2026-11-20):** PR #12 merged as `92e27dd`; WANN Supabase columns and availability RPC applied and verified. No production site deployment verification. Do not mark DONE.
 
 ## 2026-11-20 · PILOT business availability follow-up
 - Confirmed live WANN `pilot_availability` currently considers childcare and timed `planner_tasks`, but does not include independent Hyatt shifts. Therefore Sage/Lach care alone can overstate business capacity.
@@ -39,3 +39,11 @@ The additive migration `20261120010000_hyatt_shift_columns.sql` adds `work_weekl
 - CI run 44640192725: 4 Hyatt unit tests passed; TypeScript failed on pre-existing `MultipleTasksPanel.tsx` `productLines` undefined; production build skipped. Branch currently contains a `useProductLines()` declaration inside `MultipleTaskEditor`; rerun CI to determine if this has resolved the reported failure.
 - Required verification: Hyatt 10–18 and Sage 10–16 must result in PILOT busy 10–18 despite childcare availability; without Hyatt, Sage/Lach remains available; never subtract PILOT work twice.
 - No database or deployment changes were made during this inspection. Do not merge until CI and migration checks pass.
+
+## 2026-11-20 · Applied and merged
+- GitHub Actions #6 `44640636797` completed success on PR head `c7a2675` (unit tests, TypeScript, build).
+- WANN Supabase `txrxzsrjqwhvjosutotp`: migrations `hyatt_shift_columns` and `hyatt_pilot_availability` both applied successfully.
+- SQL verification: `work_weekly` and `work_overrides` columns exist with empty-array defaults; RPC returns status `ok`; execute privilege is `service_role` only (not `anon` or `authenticated`); childcare owner RLS remains enabled.
+- PR #12 squash merged into `main` at `92e27ddc36e18a1ced94bf6edf78b2ee5657082a`.
+- Existing childcare schedule row count 1; work_weekly is still empty for that row. User must add an actual shift to see Hyatt busy segments; no historical or guessed shift was seeded.
+- **Outstanding:** determine production hosting/deployment pipeline (no deployment tool exposed here), verify live site serves merge SHA, authenticated weekly/daily UX and PILOT capacity. GitHub merge is not evidence of a production publish.
