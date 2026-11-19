@@ -16,7 +16,8 @@ jobs:
         with:
           node-version: '22'
           cache: npm
-      - run: npm ci
+      # package-lock.json predates current package.json; use dependency resolution until lock is regenerated.
+      - run: npm install --no-package-lock --no-audit --no-fund
       - name: Hyatt scheduling unit tests
         run: node --experimental-strip-types --test src/lib/hyatt-shifts.test.ts
       - name: TypeScript typecheck
