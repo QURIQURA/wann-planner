@@ -56,7 +56,7 @@ export function useChildcareSync(){
  },[userId]);
  const saveWorkOverrides=useCallback(async(next:WorkOverride[])=>{
   if(!userId){setError('Not signed in');return}
-  if(!next.every(o=>/^\\d{4}-\\d{2}-\\d{2}$/.test(o.date)&&validShift(o.start,o.end))){setError('Invalid Hyatt override');return}
+  if(!next.every(o=>/^\d{4}-\d{2}-\d{2}$/.test(o.date)&&validShift(o.start,o.end))){setError('Invalid Hyatt override');return}
   const {error:saveError}=await (supabase as any).from('childcare_schedules').update({work_overrides:next,updated_at:new Date().toISOString()}).eq('user_id',userId);
   if(saveError){setError(saveError.message);return}
   setWorkOverrides(next);setError(null);window.dispatchEvent(new Event('wann-childcare-changed'));
