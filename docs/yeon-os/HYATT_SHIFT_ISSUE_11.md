@@ -32,3 +32,10 @@ The additive migration `20261120010000_hyatt_shift_columns.sql` adds `work_weekl
 6. Update Issue #11 with actual commit, test, merge, deploy, and runtime evidence.
 
 **Current status:** branch and draft PR #12 only. No production DB migration, no confirmed CI run, no deployment. Do not mark DONE.
+
+## 2026-11-20 · PILOT business availability follow-up
+- Confirmed live WANN `pilot_availability` currently considers childcare and timed `planner_tasks`, but does not include independent Hyatt shifts. Therefore Sage/Lach care alone can overstate business capacity.
+- Live `childcare_schedules` currently has only `user_id`, `weekly`, `overrides`, `updated_at`; `work_weekly` and `work_overrides` are not yet deployed.
+- CI run 44640192725: 4 Hyatt unit tests passed; TypeScript failed on pre-existing `MultipleTasksPanel.tsx` `productLines` undefined; production build skipped. Branch currently contains a `useProductLines()` declaration inside `MultipleTaskEditor`; rerun CI to determine if this has resolved the reported failure.
+- Required verification: Hyatt 10–18 and Sage 10–16 must result in PILOT busy 10–18 despite childcare availability; without Hyatt, Sage/Lach remains available; never subtract PILOT work twice.
+- No database or deployment changes were made during this inspection. Do not merge until CI and migration checks pass.
