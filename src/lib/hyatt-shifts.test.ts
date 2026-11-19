@@ -1,6 +1,6 @@
 import { strict as assert } from 'node:assert';
 import { test } from 'node:test';
-import { effectiveCareSlots, shiftsOnDate, validShift } from './hyatt-shifts';
+import { effectiveCareSlots, shiftsOnDate, validShift } from './hyatt-shifts.ts';
 
 test('30-minute boundaries and invalid shifts', () => {
   assert.equal(validShift(14.5,20),true);
