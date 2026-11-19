@@ -662,6 +662,7 @@ export function MultipleTaskEditor({
   onCancel: () => void;
   submitLabel: string;
 }) {
+  const productLines = useProductLines();
   return (
     <div className="card-flat p-3 mb-3 space-y-2">
       <div className="flex items-center gap-2">
