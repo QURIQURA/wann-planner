@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useId, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { type WorkBlock, type WorkOverride, validateWorkBlock, validShift } from './hyatt-shifts';
 export type Carer = 'Youn'|'Lach'|'Childcare'|'Shared'|'Unassigned';
@@ -9,6 +9,7 @@ export const overrideKey='wann-childcare-overrides-v1';
 export const defaultWeekly:CareBlock[]=Array.from({length:7},(_,day)=>day).flatMap(day=>day===0||day===1?[{day,start:8,end:20,carer:'Youn' as Carer}]:day===2||day===6?[{day,start:8,end:20,carer:'Lach' as Carer}]:day===3?[{day,start:8,end:14,carer:'Youn' as Carer},{day,start:14,end:20,carer:'Lach' as Carer}]:[{day,start:8,end:10,carer:'Unassigned' as Carer},{day,start:10,end:16,carer:'Childcare' as Carer},{day,start:16,end:20,carer:'Unassigned' as Carer}]);
 const parse=<T,>(key:string,fallback:T):T=>{try{const raw=localStorage.getItem(key);return raw?JSON.parse(raw) as T:fallback}catch{return fallback}};
 export function useChildcareSync(){
+ const subscriptionId=useId().replace(/[^a-zA-Z0-9_-]/g,'_');
  const [weekly,setWeekly]=useState<CareBlock[]>(defaultWeekly);
  const [overrides,setOverrides]=useState<CareOverride[]>([]);
  const [workWeekly,setWorkWeekly]=useState<WorkBlock[]>([]);
@@ -65,11 +66,11 @@ export function useChildcareSync(){
  const saveOverrides=useCallback(async(next:CareOverride[])=>{setOverrides(next);await persist(weekly,next)},[persist,weekly]);
  useEffect(()=>{
   if(!userId)return;
-  const channel=supabase.channel('childcare-'+userId).on('postgres_changes',{event:'*',schema:'public',table:'childcare_schedules',filter:'user_id=eq.'+userId},(payload:any)=>{
+  const channel=supabase.channel('childcare-'+userId+'-'+subscriptionId).on('postgres_changes',{event:'*',schema:'public',table:'childcare_schedules',filter:'user_id=eq.'+userId},(payload:any)=>{
    const row=payload.new;
    if(row?.weekly&&row?.overrides){setWeekly(row.weekly);setOverrides(row.overrides);setWorkWeekly(row.work_weekly??[]);setWorkOverrides(row.work_overrides??[]);localStorage.setItem(weeklyKey,JSON.stringify(row.weekly));localStorage.setItem(overrideKey,JSON.stringify(row.overrides))}
   }).subscribe();
   return()=>{void supabase.removeChannel(channel)};
- },[userId]);
+ },[userId,subscriptionId]);
  return {weekly,overrides,workWeekly,workOverrides,ready,error,saveWeekly,saveOverrides,saveWorkWeekly,saveWorkOverrides};
 }
