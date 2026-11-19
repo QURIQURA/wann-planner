@@ -1,0 +1,26 @@
+name: Hyatt Issue 11 verification
+on:
+  pull_request:
+    paths:
+      - 'src/**'
+      - 'supabase/migrations/**'
+      - 'package*.json'
+      - '.github/workflows/hyatt-issue-11.yml'
+  workflow_dispatch:
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      # package-lock.json predates current package.json; use dependency resolution until lock is regenerated.
+      - run: npm install --no-package-lock --no-audit --no-fund
+      - name: Hyatt scheduling unit tests
+        run: node --experimental-strip-types --test src/lib/hyatt-shifts.test.ts
+      - name: TypeScript typecheck
+        run: npx tsc --noEmit
+      - name: Production build
+        run: npm run build
