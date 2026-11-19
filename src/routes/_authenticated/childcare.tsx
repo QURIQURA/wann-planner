@@ -1,7 +1,7 @@
 import { createFileRoute } from '@tanstack/react-router';
 import { useState } from 'react';
 import { useChildcareSync } from '@/lib/use-childcare-sync';
-import { effectiveCareSlots, type WorkBlock, validShift } from '@/lib/hyatt-shifts';
+import { effectiveCareSlots, validShift } from '@/lib/hyatt-shifts';
 
 export const Route = createFileRoute('/_authenticated/childcare')({ component: ChildcareSchedule });
 type Carer = 'Youn' | 'Lach' | 'Childcare' | 'Shared' | 'Unassigned';
