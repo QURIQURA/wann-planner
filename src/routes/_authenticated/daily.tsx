@@ -60,7 +60,7 @@ function ChildcareDayWidget({ date, compact = false }: { date: string; compact?:
   type Carer = 'Youn' | 'Lach' | 'Childcare' | 'Shared' | 'Unassigned';
   type Block = { day: number; start: number; end: number; carer: Carer };
   type Override = { date:string; start:number; end:number; carer:Carer };
-  const {weekly:blocks,overrides,ready,error,saveWeekly,saveOverrides}=useChildcareSync();
+  const {weekly:blocks,overrides,workWeekly,workOverrides,ready,error,saveWeekly,saveOverrides}=useChildcareSync();
   const [editing,setEditing] = useState<number|null>(null);
   const [draftCarer,setDraftCarer] = useState<Carer>('Unassigned');
   const [scope,setScope] = useState<'date'|'weekly'>('date');
@@ -76,14 +76,17 @@ function ChildcareDayWidget({ date, compact = false }: { date: string; compact?:
   };
   const routine = blocks.filter(b=>b.day===day).sort((a,b)=>a.start-b.start);
   const dateOverrides = overrides.filter(o=>o.date===date);
+  const dayShifts=shiftsOnDate(date,workWeekly,workOverrides);
   const hours = Array.from({length:24},(_,hour)=>{
     const routineCarer = routine.find(b=>b.start<=hour&&b.end>hour)?.carer ?? 'Unassigned';
     const override = dateOverrides.find(o=>o.start<=hour&&o.end>hour);
-    return {day,start:hour,end:hour+1,carer:override?.carer??routineCarer,modified:!!override};
+    const carer=override?.carer??routineCarer;
+    const auto=carer==='Unassigned'&&dayShifts.some(w=>w.start<hour+1&&w.end>hour);
+    return {day,start:hour,end:hour+1,carer:auto?'Lach' as Carer:carer,modified:!!override,auto};
   });
-  const items = hours.reduce<(Block & {modified:boolean})[]>((acc,h)=>{
+  const items = hours.reduce<(Block & {modified:boolean;auto:boolean})[]>((acc,h)=>{
     const last=acc[acc.length-1];
-    if(last&&last.end===h.start&&last.carer===h.carer&&last.modified===h.modified)last.end=h.end;
+    if(last&&last.end===h.start&&last.carer===h.carer&&last.modified===h.modified&&last.auto===h.auto)last.end=h.end;
     else acc.push({...h});
     return acc;
   },[]).filter(b=>b.end>8&&b.start<20).map(b=>({...b,start:Math.max(8,b.start),end:Math.min(20,b.end)}));
@@ -125,7 +128,7 @@ function ChildcareDayWidget({ date, compact = false }: { date: string; compact?:
   if(compact) return <div className="space-y-2">{!ready&&<p className="text-xs">Loading childcare…</p>}{error&&<p role="alert" className="text-xs text-red-600">Sync error: {error}</p>}
     <div className="flex h-10 w-full rounded-sm bg-muted/50 relative">
       {items.map((b,i)=><div key={i} className="absolute top-0 h-full flex items-center justify-center text-[11px] text-slate-800" style={{left:`${b.start/24*100}%`,width:`${(b.end-b.start)/24*100}%`,background:colours[b.carer]}}>
-        <button onClick={()=>openEditor(i)} className="w-full h-full truncate px-1" title="Edit childcare">{carerLabel(b.carer)}{b.modified?' ↻':''} · {String(b.start).padStart(2,'0')}:00–{String(b.end).padStart(2,'0')}:00</button>
+        <button onClick={()=>openEditor(i)} className="w-full h-full truncate px-1" title="Edit childcare">{carerLabel(b.carer)}{b.auto?' · auto':''}{b.modified?' ↻':''} · {String(b.start).padStart(2,'0')}:00–{String(b.end).padStart(2,'0')}:00</button>
       </div>)}
     </div>
     {editing!==null&&items[editing]&&<div className="border border-border rounded-lg bg-background p-3 space-y-2 relative z-20">
