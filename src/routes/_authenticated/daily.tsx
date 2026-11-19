@@ -22,6 +22,7 @@ import {
   type MultipleTaskItem,
 } from "@/lib/wann-data";
 import { useChildcareSync } from "@/lib/use-childcare-sync";
+import { shiftsOnDate, validShift } from "@/lib/hyatt-shifts";
 import { useWannDashboard } from "@/lib/use-wann-dashboard";
 import { CategoryFilterBar } from "@/components/wann/CategoryFilterBar";
 import { ShoppingListWidget } from "@/components/wann/ShoppingListWidget";
@@ -148,6 +149,64 @@ function ChildcareDayWidget({ date, compact = false }: { date: string; compact?:
     </div>
     <p className="text-[10px] text-muted-foreground">Care responsibility · selected day · 08:00–20:00 planning window</p>
   </section>;
+}
+
+
+/** A distinct Hyatt row in the existing Daily Timeline frame. */
+function HyattDayRow({date}:{date:string}) {
+  const {workWeekly,workOverrides,ready,error,saveWorkWeekly,saveWorkOverrides}=useChildcareSync();
+  const [editing,setEditing]=useState(false);
+  const [start,setStart]=useState(10);
+  const [end,setEnd]=useState(18);
+  const [scope,setScope]=useState<'date'|'weekly'>('date');
+  const [off,setOff]=useState(false);
+  const [localError,setLocalError]=useState<string|null>(null);
+  const shifts=shiftsOnDate(date,workWeekly,workOverrides);
+  const day=new Date(date+'T12:00:00').getDay();
+  const dateChanged=workOverrides.some(o=>o.date===date);
+  const open=(s=10,e=18)=>{setStart(s);setEnd(e);setOff(false);setScope('date');setLocalError(null);setEditing(true)};
+  const apply=()=>{
+    if(!validShift(start,end)){setLocalError('Use 30-minute intervals; end must be after start.');return}
+    if(scope==='weekly'){
+      // Update the recurring shift covering this interval, not unrelated shifts.
+      const next=workWeekly.filter(w=>w.day!==day||w.end<=start||w.start>=end);
+      if(!off)next.push({day,start,end});
+      void saveWorkWeekly(next);
+    }else{
+      const current=workOverrides.filter(o=>o.date!==date);
+      // A date override replaces the entire recurring set for that day:
+      // remove routine shifts, then re-add the chosen date-specific shifts.
+      const routine=workWeekly.filter(w=>w.day===day);
+      const remove=routine.map(w=>({date,start:w.start,end:w.end,off:true}));
+      const replacement=off?[]:[{date,start,end}];
+      void saveWorkOverrides([...current,...remove,...replacement]);
+    }
+    setEditing(false);
+  };
+  const revert=()=>{void saveWorkOverrides(workOverrides.filter(o=>o.date!==date));setEditing(false)};
+  return <div className="space-y-2">
+    <div className="flex justify-between items-center gap-2">
+      <span className="label-caps text-muted-foreground">Yeon · Hyatt</span>
+      <button type="button" onClick={()=>open()} className="text-xs underline">+ Add shift</button>
+    </div>
+    {!ready&&<p className="text-xs">Loading Hyatt shifts…</p>}
+    {error&&<p className="text-xs text-red-600" role="alert">{error}</p>}
+    <div className="relative h-10 w-full rounded-sm bg-muted/50">
+      {shifts.map((shift,i)=><button key={i} type="button" onClick={()=>open(shift.start,shift.end)}
+        className="absolute top-0 h-full rounded-sm text-white text-[11px] truncate px-2"
+        style={{background:'#3070C7',left:`${shift.start/24*100}%`,width:`${(shift.end-shift.start)/24*100}%`}}
+        title="Edit Hyatt shift">Hyatt{dateChanged?' ↻':''} · {String(Math.floor(shift.start)).padStart(2,'0')}:{shift.start%1?'30':'00'}–{String(Math.floor(shift.end)).padStart(2,'0')}:{shift.end%1?'30':'00'}</button>)}
+    </div>
+    {editing&&<div className="relative z-20 border border-border rounded-lg p-3 space-y-2 bg-background">
+      <div className="flex justify-between"><strong className="text-xs">Hyatt · {date}</strong><button onClick={()=>setEditing(false)} aria-label="Close Hyatt editor">×</button></div>
+      <div className="flex items-center gap-2 text-xs"><label>From <input aria-label="Hyatt start" type="number" min="0" max="23.5" step="0.5" className="w-20 border rounded p-1 bg-background" value={start} onChange={e=>setStart(Number(e.target.value))}/></label><label>to <input aria-label="Hyatt end" type="number" min="0.5" max="24" step="0.5" className="w-20 border rounded p-1 bg-background" value={end} onChange={e=>setEnd(Number(e.target.value))}/></label></div>
+      <label className="flex gap-2 text-xs items-center"><input type="checkbox" checked={off} onChange={e=>setOff(e.target.checked)}/> Off / remove shift</label>
+      <label className="flex gap-2 text-xs items-center"><input type="radio" checked={scope==='date'} onChange={()=>setScope('date')}/> This date only</label>
+      <label className="flex gap-2 text-xs items-center"><input type="radio" checked={scope==='weekly'} onChange={()=>setScope('weekly')}/> Every week (update routine)</label>
+      {localError&&<p role="alert" className="text-xs text-red-600">{localError}</p>}
+      <div className="flex gap-2 justify-end">{dateChanged&&<button type="button" className="border rounded px-2 py-1 text-xs" onClick={revert}>Revert to routine</button>}<button type="button" className="rounded px-3 py-1 text-xs text-white" style={{background:'#3070C7'}} onClick={apply}>Apply</button></div>
+    </div>}
+  </div>;
 }
 
 function DailyFocusPage() {
@@ -467,6 +526,7 @@ function DailyFocusPage() {
                 {[0,4,8,12,16,20,24].map(h=><span key={h} className="absolute -translate-x-1/2" style={{left:`${h/24*100}%`}}>{String(h).padStart(2,'0')}:00</span>)}
               </div>
               <ChildcareDayWidget date={date} compact />
+              <HyattDayRow date={date} />
               <DailyTimelineBar items={timed} categories={widgetCtx.categories} />
             </div>
           </div>
