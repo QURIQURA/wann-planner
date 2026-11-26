@@ -582,6 +582,7 @@ export function useWannDashboard(
       if (error) throw error;
     },
     onSuccess: () => invalidate("tasks"),
+    onError: () => toast.error("Could not delete task"),
   });
 
   /** Daily Focus "Pin to Daily" — `pinned_date` is a single plain date on the

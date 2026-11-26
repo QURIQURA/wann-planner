@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { ArrowLeft, ChevronLeft, ChevronRight, ChevronDown, Pin, ArrowRightCircle, ArrowRightToLine, GripVertical, Check, CalendarDays } from "lucide-react";
+import { ArrowLeft, ChevronLeft, ChevronRight, ChevronDown, Pin, ArrowRightCircle, ArrowRightToLine, GripVertical, Check, CalendarDays, Trash2 } from "lucide-react";
 
 import {
   effectiveOccurrencesOnDate,
@@ -255,6 +255,22 @@ function DailyFocusPage() {
     } else if (newTime) {
       moveTask.mutate({ task, originalDate, newDate: shownDate, newTime });
     }
+  };
+
+  // Delete from Daily Detail (Issue #13) — same hard delete as the Dashboard
+  // Tasks panel (taskActions.onDeleteTask), behind a confirm. Recurring and
+  // PILOT-synced tasks get an extra warning in the confirm text.
+  const confirmDelete = (task: Task) => {
+    const lines = [`"${task.title}" 작업을 삭제할까요?`];
+    if ((task.recurrence ?? "none") !== "none") {
+      lines.push("반복 작업이라 이 날만이 아니라 반복 전체가 삭제돼요.");
+    }
+    if (isPilotSyncedTask(task)) {
+      lines.push(
+        "PILOT에서 연동된 작업이에요. 플래너에서만 지워지고 PILOT 주문/작업은 그대로라, 다음 연동 때 다시 생길 수 있어요.",
+      );
+    }
+    if (confirm(lines.join("\n\n"))) widgetCtx.taskActions.onDeleteTask(task.id);
   };
 
   const tasks = tasksQ.data ?? [];
@@ -601,6 +617,7 @@ function DailyFocusPage() {
                 onReorder={(ids) => reorderPinned.mutate(ids)}
                 onChangeDate={(t, d) => changeOccDate(t, t.due_date ?? date, t.due_time, d)}
                 onChangeTime={(t, tm) => changeOccTime(t, t.due_date ?? date, t.due_date ?? date, tm)}
+                onDelete={confirmDelete}
               />
             )}
 
@@ -626,6 +643,7 @@ function DailyFocusPage() {
                         onChangeDate={(d) => changeOccDate(o.task, o.originalDate, o.effectiveTime, d)}
                         onChangeTime={(t) => changeOccTime(o.task, o.originalDate, date, t)}
                         onPin={() => setPinnedDate.mutate({ id: o.task.id, date: o.task.pinned_date === date ? null : date })}
+                        onDelete={() => confirmDelete(o.task)}
                         onCarryOver={() =>
                           moveTask.mutate({
                             task: o.task,
@@ -661,6 +679,7 @@ function DailyFocusPage() {
                       onChangeDate={(d) => changeOccDate(o.task, o.originalDate, o.effectiveTime, d)}
                       onChangeTime={(t) => changeOccTime(o.task, o.originalDate, date, t)}
                       onPin={() => setPinnedDate.mutate({ id: o.task.id, date: o.task.pinned_date === date ? null : date })}
+                      onDelete={() => confirmDelete(o.task)}
                       onCarryOver={() =>
                         moveTask.mutate({
                           task: o.task,
@@ -707,6 +726,7 @@ function DailyFocusPage() {
               })
             }
             onReorder={(ids) => widgetCtx.taskActions.onReorderShopping(ids)}
+            onDelete={confirmDelete}
             onBulkMoveOverdueToToday={() => widgetCtx.taskActions.onBulkMoveShoppingOverdueToToday()}
           />
           </div>
@@ -757,6 +777,7 @@ function DailyFocusPage() {
                             timeValue={t.due_time}
                             onChangeDate={(d) => changeOccDate(t, occ, t.due_time, d)}
                             onChangeTime={(tm) => changeOccTime(t, occ, occ, tm)}
+                            onDelete={() => confirmDelete(t)}
                           />
                         </div>
                       </div>
@@ -780,7 +801,7 @@ function DailyFocusPage() {
                         <p className="text-[10px] label-caps text-muted-foreground mb-1">{label}</p>
                         <div className="space-y-1">
                           {rows.map(({ task: t, occurrenceDate: occ }) => (
-                            <div key={`${t.id}-${occ}`} className="flex items-center gap-2">
+                            <div key={`${t.id}-${occ}`} className="group flex items-center gap-2">
                               <div className="flex-1 min-w-0">
                                 <OccRow
                                   task={t}
@@ -797,6 +818,7 @@ function DailyFocusPage() {
                                   {t.due_date.slice(5)}
                                 </span>
                               )}
+                              <DeleteTaskButton onClick={() => confirmDelete(t)} />
                             </div>
                           ))}
                         </div>
@@ -960,6 +982,7 @@ function PinnedList({
   onReorder,
   onChangeDate,
   onChangeTime,
+  onDelete,
 }: {
   items: Task[];
   date: string;
@@ -972,6 +995,7 @@ function PinnedList({
   onReorder: (orderedIds: string[]) => void;
   onChangeDate: (t: Task, date: string) => void;
   onChangeTime: (t: Task, time: string | null) => void;
+  onDelete: (t: Task) => void;
 }) {
   const [dragId, setDragId] = useState<string | null>(null);
   const [overId, setOverId] = useState<string | null>(null);
@@ -1036,6 +1060,7 @@ function PinnedList({
                   timeValue={t.due_time}
                   onChangeDate={(d) => onChangeDate(t, d)}
                   onChangeTime={(tm) => onChangeTime(t, tm)}
+                  onDelete={() => onDelete(t)}
                 />
               </div>
             </div>
@@ -1064,6 +1089,7 @@ function OccRow({
   timeValue,
   onChangeDate,
   onChangeTime,
+  onDelete,
 }: {
   task: Task;
   occurrenceDate: string;
@@ -1085,6 +1111,8 @@ function OccRow({
   timeValue?: string | null;
   onChangeDate?: (date: string) => void;
   onChangeTime?: (time: string | null) => void;
+  /** Trash button at the row's end; the caller confirms before deleting. */
+  onDelete?: () => void;
 }) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(task.title);
@@ -1173,7 +1201,32 @@ function OccRow({
           <Pin size={12} fill={pinned ? "currentColor" : "none"} />
         </button>
       )}
+      {onDelete && <DeleteTaskButton onClick={onDelete} />}
     </div>
+  );
+}
+
+/** PILOT/SHCS-created Planner tasks: the order Delivery task
+ * (`sync_kora_order` always sets is_delivery) and Pilot work-session
+ * production tasks (kora_work_session_id). They're upserted by stable id, so
+ * a later PILOT sync can bring a deleted one back. */
+function isPilotSyncedTask(task: Task) {
+  return task.is_delivery === true || !!task.kora_work_session_id;
+}
+
+/** Row-end delete control — faint on touch screens, hover-revealed on
+ * wider screens, like the other row actions. */
+function DeleteTaskButton({ onClick }: { onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-label="Delete task"
+      title="삭제"
+      className="flex-shrink-0 p-0.5 text-muted-foreground hover:text-destructive opacity-40 sm:opacity-0 sm:group-hover:opacity-100 focus:opacity-100"
+    >
+      <Trash2 size={12} />
+    </button>
   );
 }
 
@@ -1193,6 +1246,7 @@ function OccRowWithCarry({
   onSelect,
   onChangeDate,
   onChangeTime,
+  onDelete,
 }: {
   o: { task: Task; originalDate: string; effectiveTime: string | null };
   date: string;
@@ -1203,6 +1257,7 @@ function OccRowWithCarry({
   onRename: (title: string) => void;
   onPin: () => void;
   onCarryOver: () => void;
+  onDelete?: () => void;
   onChangeDate?: (date: string) => void;
   onChangeTime?: (time: string | null) => void;
   /** "선택해서 내일로" mode — shows a selection box on incomplete rows
@@ -1245,6 +1300,7 @@ function OccRowWithCarry({
           timeValue={o.effectiveTime}
           onChangeDate={onChangeDate}
           onChangeTime={onChangeTime}
+          onDelete={selectMode ? undefined : onDelete}
         />
       </div>
       {!done && !selectMode && (
