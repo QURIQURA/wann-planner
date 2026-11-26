@@ -9,7 +9,7 @@ import {
   taskOccursOn,
   todayLocalStr,
 } from "@/lib/wann-data";
-import { GripVertical, Plus, ShoppingCart, ChevronDown, ChevronRight } from "lucide-react";
+import { GripVertical, Plus, ShoppingCart, ChevronDown, ChevronRight, Trash2 } from "lucide-react";
 import { SHOPPING_TYPES, type ShoppingType } from "./TaskForm";
 
 /**
@@ -30,6 +30,7 @@ export function ShoppingListWidget({
   onEdit,
   onAdd,
   onReorder,
+  onDelete,
   onBulkMoveOverdueToToday,
   dayOffsets = [-1, 0, 1],
 }: {
@@ -50,6 +51,9 @@ export function ShoppingListWidget({
   onAdd: (title: string, date: string, shoppingType: ShoppingType | null, pickupDate: string | null) => void;
   /** Full new top-to-bottom id order for the one day column being reordered. */
   onReorder: (orderedIds: string[]) => void;
+  /** Row trash button (Daily Detail, Issue #13); omit to hide it. The caller
+   * is responsible for confirming. */
+  onDelete?: (t: Task) => void;
   /** Bulk-moves every still-open, one-off Shopping item whose date has
    * already passed up to today. */
   onBulkMoveOverdueToToday: () => void;
@@ -110,6 +114,7 @@ export function ShoppingListWidget({
             onEdit={onEdit}
             onAdd={onAdd}
             onReorder={onReorder}
+            onDelete={onDelete}
           />
         ))}
       </div>
@@ -126,6 +131,7 @@ function ShoppingDayColumn({
   onEdit,
   onAdd,
   onReorder,
+  onDelete,
 }: {
   date: string;
   isToday: boolean;
@@ -135,6 +141,7 @@ function ShoppingDayColumn({
   onEdit?: (t: Task) => void;
   onAdd: (title: string, date: string, shoppingType: ShoppingType | null, pickupDate: string | null) => void;
   onReorder: (orderedIds: string[]) => void;
+  onDelete?: (t: Task) => void;
 }) {
   const [draft, setDraft] = useState("");
   const [dragId, setDragId] = useState<string | null>(null);
@@ -273,7 +280,7 @@ function ShoppingDayColumn({
                 setDragId(null);
                 setOverId(null);
               }}
-              className={`flex items-center gap-1.5 text-sm rounded-sm ${
+              className={`group flex items-center gap-1.5 text-sm rounded-sm ${
                 overId === t.id && dragId && dragId !== t.id ? "border-t-2 border-foreground" : ""
               } ${dragId === t.id ? "opacity-40" : ""}`}
             >
@@ -315,6 +322,17 @@ function ShoppingDayColumn({
                 >
                   → {t.end_date.slice(5)}
                 </span>
+              )}
+              {onDelete && (
+                <button
+                  type="button"
+                  onClick={() => onDelete(t)}
+                  aria-label="Delete item"
+                  title="삭제"
+                  className="flex-shrink-0 p-0.5 text-muted-foreground hover:text-destructive opacity-40 sm:opacity-0 sm:group-hover:opacity-100 focus:opacity-100"
+                >
+                  <Trash2 size={11} />
+                </button>
               )}
             </div>
           );
