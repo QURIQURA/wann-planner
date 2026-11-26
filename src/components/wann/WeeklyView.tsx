@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import {
   effectiveOccurrencesOnDate,
@@ -20,8 +19,9 @@ const DOW = ["S", "M", "T", "W", "T", "F", "S"];
  * A single Sun–Sat row lifted straight out of the Month view's grid-cell
  * style (same item list / critical-border / today-highlight logic as
  * month.tsx) — a compact "this week at a glance" that sits above the
- * Timeline on the Dashboard, paged independently with its own prev/next-week
- * arrows rather than following the Timeline's day anchor. Each day's cell
+ * Timeline on the Dashboard. It is controlled by the Dashboard's shared anchor
+ * date (the same one the Shopping List and Timeline follow), so its
+ * prev/Today/next buttons move every anchored widget together. Each day's cell
  * lists every item (no truncation) and grows taller as a day fills up —
  * since all 7 cells share one CSS grid row, the whole row grows together to
  * match the busiest day.
@@ -32,18 +32,21 @@ export function WeeklyView({
   events,
   eventTypes,
   categories,
-  onSelectDate,
+  anchorKey,
+  onAnchorChange,
 }: {
   tasks: Task[];
   exceptions: RecurringException[];
   events: EventEntry[];
   eventTypes: EventType[];
   categories: Category[];
-  /** Jump the Dashboard's Timeline anchor to the clicked day. */
-  onSelectDate: (date: string) => void;
+  /** formatLocalDate(anchor) — the Dashboard's shared anchor date. */
+  anchorKey: string;
+  /** Set the shared anchor (day click, prev/next week, Today). */
+  onAnchorChange: (date: string) => void;
 }) {
   const today = todayLocalStr();
-  const [weekStart, setWeekStart] = useState(() => startOfWeek(today));
+  const weekStart = startOfWeek(anchorKey);
 
   const catById: Record<string, Category> = {};
   for (const c of categories) catById[c.id] = c;
@@ -63,20 +66,20 @@ export function WeeklyView({
         </div>
         <div className="flex items-center gap-1">
           <button
-            onClick={() => setWeekStart((w) => shiftDate(w, -7))}
+            onClick={() => onAnchorChange(shiftDate(anchorKey, -7))}
             className="border border-border p-1.5 hover:bg-muted"
             aria-label="Previous week"
           >
             <ChevronLeft size={14} />
           </button>
           <button
-            onClick={() => setWeekStart(startOfWeek(today))}
+            onClick={() => onAnchorChange(today)}
             className="border border-border px-3 py-1 label-caps hover:bg-muted"
           >
             Today
           </button>
           <button
-            onClick={() => setWeekStart((w) => shiftDate(w, 7))}
+            onClick={() => onAnchorChange(shiftDate(anchorKey, 7))}
             className="border border-border p-1.5 hover:bg-muted"
             aria-label="Next week"
           >
@@ -113,7 +116,7 @@ export function WeeklyView({
           return (
             <button
               key={dateStr}
-              onClick={() => onSelectDate(dateStr)}
+              onClick={() => onAnchorChange(dateStr)}
               className={`relative min-h-[6rem] border p-1 text-left hover:bg-muted flex flex-col ${
                 isToday ? "border-foreground border-2" : "border-border"
               }`}
