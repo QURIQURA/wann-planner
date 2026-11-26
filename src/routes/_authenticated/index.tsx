@@ -114,7 +114,8 @@ function Dashboard() {
             events={eventsQ.data ?? []}
             eventTypes={eventTypesQ.data ?? []}
             categories={widgetCtx.categories}
-            onSelectDate={(date) => setAnchor(parseLocalDate(date))}
+            anchorKey={formatLocalDate(anchor)}
+            onAnchorChange={(date) => setAnchor(parseLocalDate(date))}
           />
         );
       case "timeline":
